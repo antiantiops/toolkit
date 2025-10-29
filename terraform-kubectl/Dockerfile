@@ -11,6 +11,9 @@ ENV KUBECTL_VERSION=v1.32.3
 # # Set Docker version as an environment variable
 # ENV DOCKER_VERSION=5:23.0.3~3-0~debian
 
+# Azure CLI deb package version (must match repo, e.g. 2.64.0-1~bookworm)
+ENV AZURE_CLI_VERSION=2.64.0-1~bookworm
+
 # Install necessary utilities and tools
 RUN apt-get update && apt-get install -y \
     gpg \
@@ -62,6 +65,14 @@ RUN   echo \
 RUN apt-get update
 RUN apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
 
+# Azure CLI
+RUN mkdir -p /etc/apt/keyrings; \
+    curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor | tee /etc/apt/keyrings/microsoft-archive-keyring.gpg > /dev/null; \
+    echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ $(. /etc/os-release && echo \"$VERSION_CODENAME\") main" > /etc/apt/sources.list.d/azure-cli.list; \
+    apt-get update; \
+    apt-get install -y azure-cli=${AZURE_CLI_VERSION}; \
+    rm -rf /var/lib/apt/lists/*
+
 # Cleanup
 RUN apt-get remove --purge -y curl unzip && \
     apt-get autoremove -y && \
@@ -75,6 +86,7 @@ RUN git --version
 RUN helm version
 RUN aws --version
 RUN eksctl version
+RUN az version
 RUN docker --version  # Check Docker CLI installation
 
 # Command to keep the container running
