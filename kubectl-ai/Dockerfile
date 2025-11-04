@@ -21,8 +21,13 @@ RUN CGO_ENABLED=0 go build -o kubectl-ai ./cmd
 # --- Final Stage ---
 FROM alpine:latest
 
-# Install ca-certificates for HTTPS requests
-RUN apk --no-cache add ca-certificates
+# Install runtime deps: certs for HTTPS, bash (kubectl-ai shells out to /bin/bash), and curl
+RUN apk --no-cache add ca-certificates bash curl
+
+# Install kubectl (latest stable)
+RUN KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt) \
+    && curl -L -o /usr/local/bin/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl" \
+    && chmod +x /usr/local/bin/kubectl
 
 # Set the working directory
 WORKDIR /app
