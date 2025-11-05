@@ -45,116 +45,116 @@ jobs:
           format: 'table'
           exit-code: '1'
           severity: 'CRITICAL'
-  # Job for building and pushing create-kafka-topic image
-  build-create-kafka-topic:
-    runs-on: ubuntu-latest
-    needs: trufflehog
-    steps:
-      - name: Set env
-        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
-      - name: Checkout
-        uses: actions/checkout@v5
-      - name: Login to quay.io
-        uses: docker/login-action@v3
-        with:
-          registry: quay.io
-          username: ${{ secrets.QUAY_IO_USERNAME }}
-          password: ${{ secrets.QUAY_IO_ACCESS_TOKEN }}
-      - name: Build and push "create-kafka-topic" to quay.io
-        uses: docker/build-push-action@v6
-        with:
-          context: ./create-kafka-topic
-          file: ./create-kafka-topic/Dockerfile
-          push: true
-          tags: quay.io/underndog/create-kafka-topic:latest, quay.io/underndog/create-kafka-topic:${{ env.RELEASE_VERSION }}
-      - name: Run Trivy vulnerability scanner For create-kafka-topic (CRITICAL)
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: quay.io/underndog/create-kafka-topic:${{ env.RELEASE_VERSION }}
-          format: 'table'
-          exit-code: '1'
-          severity: 'CRITICAL'
-  # Job for building and pushing terraform-kubectl image
-  build-terraform-kubectl:
-    runs-on: ubuntu-latest
-    needs: trufflehog
-    steps:
-      - name: Set env
-        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
-      - name: Checkout
-        uses: actions/checkout@v5
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./terraform-kubectl/Dockerfile
-          push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/terraform-kubectl:latest, ${{ secrets.DOCKER_HUB_USERNAME }}/terraform-kubectl:${{ env.RELEASE_VERSION }}
-      - name: Login to quay.io
-        uses: docker/login-action@v3
-        with:
-          registry: quay.io
-          username: ${{ secrets.QUAY_IO_USERNAME }}
-          password: ${{ secrets.QUAY_IO_ACCESS_TOKEN }}
-      - name: Build and push to quay.io
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./terraform-kubectl/Dockerfile
-          push: true
-          tags: quay.io/underndog/terraform-kubectl-helm-aws-eks:latest, quay.io/underndog/terraform-kubectl-helm-aws-eks:${{ env.RELEASE_VERSION }}
-      - name: Run Trivy vulnerability scanner (CRITICAL)
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ secrets.DOCKER_HUB_USERNAME }}/terraform-kubectl:${{ env.RELEASE_VERSION }}
-          format: 'table'
-          exit-code: '1'
-          severity: 'CRITICAL'
-          #https://github.com/aquasecurity/trivy/issues/4826
-          #skip-files: '/go/pkg/mod/github.com/aws/aws-sdk-go-v2/service/sts@v1.21.4/api_op_GetAccessKeyInfo.go'
-          #skip-dirs: '/go/pkg/mod/github.com/aws/aws-sdk-go-v2/service'
-  # Job for building and pushing node_kicker image
-  build-node-kicker:
-    runs-on: ubuntu-latest
-    needs: trufflehog
-    steps:
-      - name: Set env
-        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
-      - name: Checkout
-        uses: actions/checkout@v5
-      - name: Login to quay.io
-        uses: docker/login-action@v3
-        with:
-          registry: quay.io
-          username: ${{ secrets.QUAY_IO_USERNAME }}
-          password: ${{ secrets.QUAY_IO_ACCESS_TOKEN }}
-      - name: Build and push to quay.io
-        uses: docker/build-push-action@v6
-        with:
-          context: ./node_kicker
-          file: ./node_kicker/Dockerfile
-          push: true
-          tags: quay.io/underndog/nodekicker:latest, quay.io/underndog/nodekicker:${{ env.RELEASE_VERSION }}
-      - name: Run Trivy vulnerability scanner (CRITICAL)
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: quay.io/underndog/nodekicker:${{ env.RELEASE_VERSION }}
-          format: 'table'
-          exit-code: '1'
-          severity: 'CRITICAL'
-      # - name: Run Trivy vulnerability scanner
-      #   uses: aquasecurity/trivy-action@master
-      #   with:
-      #     image-ref: ${{ secrets.DOCKER_HUB_USERNAME }}/terraform-kubectl:${{ env.RELEASE_VERSION }}
-      #     format: 'table'
-      #     exit-code: '0'
-      #     severity: 'HIGH'
+  # # Job for building and pushing create-kafka-topic image
+  # build-create-kafka-topic:
+  #   runs-on: ubuntu-latest
+  #   needs: trufflehog
+  #   steps:
+  #     - name: Set env
+  #       run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+  #     - name: Checkout
+  #       uses: actions/checkout@v5
+  #     - name: Login to quay.io
+  #       uses: docker/login-action@v3
+  #       with:
+  #         registry: quay.io
+  #         username: ${{ secrets.QUAY_IO_USERNAME }}
+  #         password: ${{ secrets.QUAY_IO_ACCESS_TOKEN }}
+  #     - name: Build and push "create-kafka-topic" to quay.io
+  #       uses: docker/build-push-action@v6
+  #       with:
+  #         context: ./create-kafka-topic
+  #         file: ./create-kafka-topic/Dockerfile
+  #         push: true
+  #         tags: quay.io/underndog/create-kafka-topic:latest, quay.io/underndog/create-kafka-topic:${{ env.RELEASE_VERSION }}
+  #     - name: Run Trivy vulnerability scanner For create-kafka-topic (CRITICAL)
+  #       uses: aquasecurity/trivy-action@master
+  #       with:
+  #         image-ref: quay.io/underndog/create-kafka-topic:${{ env.RELEASE_VERSION }}
+  #         format: 'table'
+  #         exit-code: '1'
+  #         severity: 'CRITICAL'
+  # # Job for building and pushing terraform-kubectl image
+  # build-terraform-kubectl:
+  #   runs-on: ubuntu-latest
+  #   needs: trufflehog
+  #   steps:
+  #     - name: Set env
+  #       run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+  #     - name: Checkout
+  #       uses: actions/checkout@v5
+  #     - name: Login to Docker Hub
+  #       uses: docker/login-action@v3
+  #       with:
+  #         username: ${{ secrets.DOCKER_HUB_USERNAME }}
+  #         password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v3
+  #     - name: Build and push
+  #       uses: docker/build-push-action@v6
+  #       with:
+  #         context: .
+  #         file: ./terraform-kubectl/Dockerfile
+  #         push: true
+  #         tags: ${{ secrets.DOCKER_HUB_USERNAME }}/terraform-kubectl:latest, ${{ secrets.DOCKER_HUB_USERNAME }}/terraform-kubectl:${{ env.RELEASE_VERSION }}
+  #     - name: Login to quay.io
+  #       uses: docker/login-action@v3
+  #       with:
+  #         registry: quay.io
+  #         username: ${{ secrets.QUAY_IO_USERNAME }}
+  #         password: ${{ secrets.QUAY_IO_ACCESS_TOKEN }}
+  #     - name: Build and push to quay.io
+  #       uses: docker/build-push-action@v6
+  #       with:
+  #         context: .
+  #         file: ./terraform-kubectl/Dockerfile
+  #         push: true
+  #         tags: quay.io/underndog/terraform-kubectl-helm-aws-eks:latest, quay.io/underndog/terraform-kubectl-helm-aws-eks:${{ env.RELEASE_VERSION }}
+  #     - name: Run Trivy vulnerability scanner (CRITICAL)
+  #       uses: aquasecurity/trivy-action@master
+  #       with:
+  #         image-ref: ${{ secrets.DOCKER_HUB_USERNAME }}/terraform-kubectl:${{ env.RELEASE_VERSION }}
+  #         format: 'table'
+  #         exit-code: '1'
+  #         severity: 'CRITICAL'
+  #         #https://github.com/aquasecurity/trivy/issues/4826
+  #         #skip-files: '/go/pkg/mod/github.com/aws/aws-sdk-go-v2/service/sts@v1.21.4/api_op_GetAccessKeyInfo.go'
+  #         #skip-dirs: '/go/pkg/mod/github.com/aws/aws-sdk-go-v2/service'
+  # # Job for building and pushing node_kicker image
+  # build-node-kicker:
+  #   runs-on: ubuntu-latest
+  #   needs: trufflehog
+  #   steps:
+  #     - name: Set env
+  #       run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+  #     - name: Checkout
+  #       uses: actions/checkout@v5
+  #     - name: Login to quay.io
+  #       uses: docker/login-action@v3
+  #       with:
+  #         registry: quay.io
+  #         username: ${{ secrets.QUAY_IO_USERNAME }}
+  #         password: ${{ secrets.QUAY_IO_ACCESS_TOKEN }}
+  #     - name: Build and push to quay.io
+  #       uses: docker/build-push-action@v6
+  #       with:
+  #         context: ./node_kicker
+  #         file: ./node_kicker/Dockerfile
+  #         push: true
+  #         tags: quay.io/underndog/nodekicker:latest, quay.io/underndog/nodekicker:${{ env.RELEASE_VERSION }}
+  #     - name: Run Trivy vulnerability scanner (CRITICAL)
+  #       uses: aquasecurity/trivy-action@master
+  #       with:
+  #         image-ref: quay.io/underndog/nodekicker:${{ env.RELEASE_VERSION }}
+  #         format: 'table'
+  #         exit-code: '1'
+  #         severity: 'CRITICAL'
+  #     # - name: Run Trivy vulnerability scanner
+  #     #   uses: aquasecurity/trivy-action@master
+  #     #   with:
+  #     #     image-ref: ${{ secrets.DOCKER_HUB_USERNAME }}/terraform-kubectl:${{ env.RELEASE_VERSION }}
+  #     #     format: 'table'
+  #     #     exit-code: '0'
+  #     #     severity: 'HIGH'
       
       
