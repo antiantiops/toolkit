@@ -32,11 +32,9 @@ RUN KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt) \
 # Set the working directory
 WORKDIR /app
 
-# Copy the compiled binary from the builder stage
-COPY --from=builder /app/kubectl-ai .
-
-# Make it executable
-RUN chmod +x kubectl-ai
+# Copy the compiled binary into PATH and make it executable
+COPY --from=builder /app/kubectl-ai /usr/local/bin/kubectl-ai
+RUN chmod +x /usr/local/bin/kubectl-ai
 
 # Set the entrypoint
-ENTRYPOINT ["./kubectl-ai"]
+ENTRYPOINT ["kubectl-ai"]
