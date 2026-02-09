@@ -83,6 +83,7 @@ docker run -it --rm openclaw:local
 - It installs Bun for build scripts
 - Uses pnpm for package management
 - Builds both the core and UI components
+- Includes Google Gemini CLI (`@google/gemini-cli`)
 
 ## Configuration
 
