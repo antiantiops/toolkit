@@ -31,7 +31,7 @@ jobs:
 
     steps:
       - name: Checkout toolkit repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Clone OpenClaw source repository
         run: |
