@@ -31,7 +31,7 @@ jobs:
 
     steps:
       - name: Checkout toolkit repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Clone OpenClaw source repository
         run: |
@@ -67,7 +67,7 @@ jobs:
             type=raw,value=latest
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./openclaw-source
           file: ./openclaw-source/Dockerfile
