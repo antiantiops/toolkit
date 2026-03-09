@@ -21,6 +21,7 @@ on:
 env:
   IMAGE_NAME: antiantiops/openclaw
   OPENCLAW_TAG: v2026.3.7
+  DEVOPS_TAG_SUFFIX: -devops-tool
 
 jobs:
   build:
@@ -40,9 +41,10 @@ jobs:
           cd openclaw-source
           echo "OPENCLAW_VERSION=$TAG" >> $GITHUB_ENV
 
-      - name: Copy Dockerfile to OpenClaw source
+      - name: Copy Dockerfiles to OpenClaw source
         run: |
           cp openclaw/Dockerfile openclaw-source/
+          cp openclaw/Dockerfile_DevOps openclaw-source/
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -66,6 +68,15 @@ jobs:
             type=raw,value=${{ env.OPENCLAW_VERSION }}
             type=raw,value=latest
 
+      - name: Extract metadata for Docker DevOps image
+        id: meta_devops
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ env.OPENCLAW_VERSION }}${{ env.DEVOPS_TAG_SUFFIX }}
+            type=raw,value=latest${{ env.DEVOPS_TAG_SUFFIX }}
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
@@ -77,12 +88,28 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             OPENCLAW_DOCKER_APT_PACKAGES=${{ github.event.inputs.apt_packages || '' }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=openclaw
+          cache-to: type=gha,mode=max,scope=openclaw
+
+      - name: Build and push Docker DevOps image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./openclaw-source
+          file: ./openclaw-source/Dockerfile_DevOps
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta_devops.outputs.tags }}
+          labels: ${{ steps.meta_devops.outputs.labels }}
+          build-args: |
+            OPENCLAW_DOCKER_APT_PACKAGES=${{ github.event.inputs.apt_packages || '' }}
+          cache-from: type=gha,scope=openclaw-devops
+          cache-to: type=gha,mode=max,scope=openclaw-devops
 
       - name: Output image details
         run: |
           echo "✅ Image built successfully!"
-          echo "📦 Image tags:"
+          echo "📦 Base image tags:"
           echo "${{ steps.meta.outputs.tags }}"
+          echo "📦 DevOps image tags:"
+          echo "${{ steps.meta_devops.outputs.tags }}"
           echo "🔖 OpenClaw version: ${{ env.OPENCLAW_VERSION }}"

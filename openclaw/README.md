@@ -71,6 +71,12 @@ To enable automatic pushes to Docker Hub, add these secrets to your GitHub repos
    docker build --build-arg OPENCLAW_DOCKER_APT_PACKAGES="ffmpeg build-essential" -t openclaw:local .
    ```
 
+5. **Build the DevOps variant with Cursor CLI and kubectl:**
+   ```bash
+   cp ../Dockerfile_DevOps .
+   docker build -f Dockerfile_DevOps -t openclaw:devops .
+   ```
+
 ## Run the Container
 
 ```bash
@@ -84,6 +90,7 @@ docker run -it --rm openclaw:local
 - Uses pnpm for package management
 - Builds both the core and UI components
 - Includes Google Gemini CLI (`@google/gemini-cli`)
+- `Dockerfile_DevOps` also installs Cursor CLI (`agent`) and `kubectl`
 
 ## Configuration
 
