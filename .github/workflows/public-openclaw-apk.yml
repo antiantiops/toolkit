@@ -1,0 +1,44 @@
+name: Build & Release OpenClaw APK
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+    inputs:
+      openclaw_tag:
+        description: 'OpenClaw tag'
+        required: true
+        default: 'v2026.3.13'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions: { contents: write }
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Android
+      uses: android-actions/setup-android@v3
+
+    - name: Build APK
+      run: |
+        TAG="${{ inputs.openclaw_tag || github.sha::8 }}"
+        git clone --depth 1 --branch "$TAG" https://github.com/openclaw/openclaw.git .
+        cd apps/android
+        ./gradlew clean assembleDebug
+        APK="openclaw-android-$TAG.apk"
+        mv app/build/outputs/apk/debug/app-debug.apk "$APK"
+        echo "APK_PATH=$PWD/$APK" >> $GITHUB_ENV
+
+    - name: Create/Release APK
+      uses: softprops/action-gh-release@v2
+      with:
+        files: ${{ env.APK_PATH }}
+        tag_name: openclaw-android-${{ inputs.openclaw_tag || 'latest' }}
+        name: OpenClaw Android APK ${{ inputs.openclaw_tag }}
+        body: Built from OpenClaw ${{ inputs.openclaw_tag }}
+        draft: false
+        prerelease: false
