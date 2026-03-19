@@ -10,7 +10,7 @@ on:
       openclaw_tag:
         description: 'OpenClaw tag'
         required: true
-        default: 'v2026.3.13'
+        default: 'v2026.3.13-1'
 
 jobs:
   build:
