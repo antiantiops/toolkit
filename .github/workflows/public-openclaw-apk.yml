@@ -25,7 +25,10 @@ jobs:
 
     - name: Build APK
       run: |
-        TAG="${{ inputs.openclaw_tag || github.sha::8 }}"
+        TAG="${{ inputs.openclaw_tag }}"
+        if [ -z "$TAG" ]; then
+          TAG="${GITHUB_SHA::8}"
+        fi
         git clone --depth 1 --branch "$TAG" https://github.com/openclaw/openclaw.git .
         cd apps/android
         ./gradlew clean assembleDebug
