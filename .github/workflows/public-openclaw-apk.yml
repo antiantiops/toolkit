@@ -25,33 +25,20 @@ jobs:
 
     - name: Build APK
       run: |
-        REQUESTED_TAG="${{ inputs.openclaw_tag }}"
-        REPO_URL="https://github.com/openclaw/openclaw.git"
-
-        if [ -n "$REQUESTED_TAG" ] && git ls-remote --exit-code --tags "$REPO_URL" "refs/tags/$REQUESTED_TAG" >/dev/null 2>&1; then
-          git clone --depth 1 --branch "$REQUESTED_TAG" "$REPO_URL" openclaw-source
-          BUILD_REF="$REQUESTED_TAG"
-        else
-          if [ -n "$REQUESTED_TAG" ]; then
-            echo "Requested tag '$REQUESTED_TAG' not found in openclaw/openclaw. Falling back to default branch."
-          fi
-          git clone --depth 1 "$REPO_URL" openclaw-source
-          BUILD_REF="$(git -C openclaw-source rev-parse --short HEAD)"
-        fi
-
-        cd openclaw-source/apps/android
+        TAG="${{ inputs.openclaw_tag || github.sha::8 }}"
+        git clone --depth 1 --branch "$TAG" https://github.com/openclaw/openclaw.git .
+        cd apps/android
         ./gradlew clean assembleDebug
-        APK="openclaw-android-$BUILD_REF.apk"
+        APK="openclaw-android-$TAG.apk"
         mv app/build/outputs/apk/debug/app-debug.apk "$APK"
         echo "APK_PATH=$PWD/$APK" >> $GITHUB_ENV
-        echo "BUILD_REF=$BUILD_REF" >> $GITHUB_ENV
 
     - name: Create/Release APK
       uses: softprops/action-gh-release@v2
       with:
         files: ${{ env.APK_PATH }}
-        tag_name: openclaw-android-${{ env.BUILD_REF }}
-        name: OpenClaw Android APK ${{ env.BUILD_REF }}
-        body: Built from OpenClaw ${{ env.BUILD_REF }}
+        tag_name: openclaw-android-${{ inputs.openclaw_tag || 'latest' }}
+        name: OpenClaw Android APK ${{ inputs.openclaw_tag }}
+        body: Built from OpenClaw ${{ inputs.openclaw_tag }}
         draft: false
         prerelease: false

@@ -12,7 +12,7 @@ on:
       openclaw_tag:
         description: 'OpenClaw tag to build'
         required: true
-        default: 'v2026.3.13'
+        default: 'v2026.3.13-1'
       apt_packages:
         description: 'Extra apt packages to install (space-separated)'
         required: false
@@ -20,7 +20,7 @@ on:
 
 env:
   IMAGE_NAME: antiantiops/openclaw
-  OPENCLAW_TAG: v2026.3.13
+  OPENCLAW_TAG: v2026.3.13-1
   DEVOPS_TAG_SUFFIX: -devops-tool
 
 jobs:
@@ -36,10 +36,21 @@ jobs:
 
       - name: Clone OpenClaw source repository
         run: |
-          TAG="${{ inputs.openclaw_tag || env.OPENCLAW_TAG }}"
-          git clone --branch "$TAG" https://github.com/openclaw/openclaw.git openclaw-source
-          cd openclaw-source
-          echo "OPENCLAW_VERSION=$TAG" >> $GITHUB_ENV
+          REQUESTED_TAG="${{ inputs.openclaw_tag || env.OPENCLAW_TAG }}"
+          REPO_URL="https://github.com/openclaw/openclaw.git"
+
+          if [ -n "$REQUESTED_TAG" ] && git ls-remote --exit-code --tags "$REPO_URL" "refs/tags/$REQUESTED_TAG" >/dev/null 2>&1; then
+            git clone --depth 1 --branch "$REQUESTED_TAG" "$REPO_URL" openclaw-source
+            OPENCLAW_VERSION="$REQUESTED_TAG"
+          else
+            if [ -n "$REQUESTED_TAG" ]; then
+              echo "Requested tag '$REQUESTED_TAG' not found in openclaw/openclaw. Falling back to default branch."
+            fi
+            git clone --depth 1 "$REPO_URL" openclaw-source
+            OPENCLAW_VERSION="$(git -C openclaw-source rev-parse --short HEAD)"
+          fi
+
+          echo "OPENCLAW_VERSION=$OPENCLAW_VERSION" >> $GITHUB_ENV
 
       - name: Copy Dockerfiles to OpenClaw source
         run: |
