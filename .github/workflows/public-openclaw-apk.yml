@@ -32,8 +32,8 @@ jobs:
         if [ -z "$TAG" ]; then
           TAG="${GITHUB_SHA::8}"
         fi
-        git clone --depth 1 --branch "$TAG" https://github.com/openclaw/openclaw.git .
-        cd apps/android
+        git clone --depth 1 --branch "$TAG" https://github.com/openclaw/openclaw.git openclaw-source
+        cd openclaw-source/apps/android
         ./gradlew clean assembleDebug
         APK="openclaw-android-$TAG.apk"
         mv app/build/outputs/apk/debug/app-debug.apk "$APK"
