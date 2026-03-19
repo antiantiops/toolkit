@@ -12,6 +12,9 @@ on:
         required: true
         default: 'v2026.3.13-1'
 
+env:
+  OPENCLAW_TAG: v2026.3.13-1
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,7 +28,7 @@ jobs:
 
     - name: Build APK
       run: |
-        TAG="${{ inputs.openclaw_tag }}"
+        TAG="${{ inputs.openclaw_tag || env.OPENCLAW_TAG }}"
         if [ -z "$TAG" ]; then
           TAG="${GITHUB_SHA::8}"
         fi
