@@ -81,7 +81,7 @@ jobs:
 
       - name: Extract metadata for Docker DevOps image
         id: meta_devops
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
