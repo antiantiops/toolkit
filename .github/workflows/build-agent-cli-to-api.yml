@@ -23,6 +23,7 @@ on:
 env:
   DEFAULT_UPSTREAM_REF: main
   DEFAULT_IMAGE_NAME: antiantiops/agent-cli-to-api
+  DEVOPS_TAG_SUFFIX: -devops
 
 jobs:
   docker_build:
@@ -55,9 +56,10 @@ jobs:
 
           echo "AGENT_VERSION=$AGENT_VERSION" >> "$GITHUB_ENV"
 
-      - name: Copy Dockerfile to upstream source
+      - name: Copy Dockerfiles to upstream source
         run: |
           cp agent-cli-to-api/Dockerfile agent-cli-to-api-source/Dockerfile
+          cp agent-cli-to-api/Dockerfile_DevOps agent-cli-to-api-source/Dockerfile_DevOps
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
@@ -81,6 +83,15 @@ jobs:
             type=raw,value=${{ env.AGENT_VERSION }}
             type=raw,value=latest
 
+      - name: Extract metadata for Docker DevOps image
+        id: meta_devops
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ inputs.image_name || env.DEFAULT_IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ env.AGENT_VERSION }}${{ env.DEVOPS_TAG_SUFFIX }}
+            type=raw,value=latest${{ env.DEVOPS_TAG_SUFFIX }}
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v7
         with:
@@ -93,9 +104,23 @@ jobs:
           cache-from: type=gha,scope=agent-cli-to-api
           cache-to: type=gha,mode=max,scope=agent-cli-to-api
 
+      - name: Build and push Docker DevOps image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./agent-cli-to-api-source
+          file: ./agent-cli-to-api-source/Dockerfile_DevOps
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta_devops.outputs.tags }}
+          labels: ${{ steps.meta_devops.outputs.labels }}
+          cache-from: type=gha,scope=agent-cli-to-api-devops
+          cache-to: type=gha,mode=max,scope=agent-cli-to-api-devops
+
       - name: Output image details
         run: |
           echo "Image built successfully"
-          echo "Image tags:"
+          echo "Base image tags:"
           echo "${{ steps.meta.outputs.tags }}"
+          echo "DevOps image tags:"
+          echo "${{ steps.meta_devops.outputs.tags }}"
           echo "Upstream version: ${{ env.AGENT_VERSION }}"

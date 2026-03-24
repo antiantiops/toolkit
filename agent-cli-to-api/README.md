@@ -6,6 +6,11 @@ This folder provides a Dockerfile and GitHub Actions workflow to build a contain
 
 The image is preconfigured for Cursor provider mode and is OpenAI-compatible on `/v1/*`.
 
+Published images:
+
+- `antiantiops/agent-cli-to-api:latest`
+- `antiantiops/agent-cli-to-api:latest-devops` (includes `kubectl`)
+
 ## What gets built
 
 - Base: `python:3.13-slim-bookworm`
@@ -23,9 +28,9 @@ Workflow file:
 What it does:
 
 1. Clones `leeguooooo/agent-cli-to-api`
-2. Copies this repo's Dockerfile into the cloned source
-3. Builds multi-arch image (`linux/amd64`, `linux/arm64`)
-4. Pushes to Docker Hub on non-PR runs
+2. Copies this repo's `Dockerfile` and `Dockerfile_DevOps` into the cloned source
+3. Builds multi-arch images (`linux/amd64`, `linux/arm64`)
+4. Pushes base and DevOps tags to Docker Hub on non-PR runs
 
 ### Required repository secrets
 
@@ -58,6 +63,12 @@ docker run --rm -p 8000:8000 \
   -e CODEX_GATEWAY_TOKEN="devtoken" \
   -e CURSOR_AGENT_MODEL="auto" \
   agent-cli-to-api:local
+```
+
+Run DevOps image from Docker Hub:
+
+```bash
+docker run --rm -it antiantiops/agent-cli-to-api:latest-devops kubectl version --client
 ```
 
 Notes:
