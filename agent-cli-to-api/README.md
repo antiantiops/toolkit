@@ -109,3 +109,28 @@ docker run --rm -p 8000:8000 \
   -e CODEX_GATEWAY_TOKEN="devtoken" \
   agent-cli-to-api:local
 ```
+
+## Troubleshooting: HTTP 500 `[Errno 7] Argument list too long`
+
+If you see this error, the request prompt is too large for a CLI argument on your host.
+
+Use a smaller prompt cap and enable debug logs:
+
+```bash
+docker run --rm -p 8000:8000 \
+  -e CURSOR_AGENT_API_KEY="<YOUR_CURSOR_API_KEY>" \
+  -e CODEX_GATEWAY_TOKEN="devtoken" \
+  -e CURSOR_AGENT_MODEL="gpt-5.3-codex" \
+  -e CURSOR_AGENT_DISABLE_INDEXING="1" \
+  -e CODEX_MAX_PROMPT_CHARS="60000" \
+  -e CODEX_LOG_LEVEL="debug" \
+  -e CODEX_LOG_MODE="full" \
+  -e CODEX_LOG_EVENTS="1" \
+  agent-cli-to-api:local
+```
+
+Additional checks:
+
+- Use streaming (`"stream": true`) so you can see token progress immediately.
+- Reduce request history/context size from the client.
+- Verify host argument limit with `getconf ARG_MAX`.

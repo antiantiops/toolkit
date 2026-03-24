@@ -34,6 +34,7 @@ EXPOSE 8000
 # Cursor-first defaults (override with docker run -e ... when needed)
 ENV CODEX_PROVIDER=cursor-agent \
 	CURSOR_AGENT_MODEL=auto \
-	CURSOR_AGENT_DISABLE_INDEXING=1
+	CURSOR_AGENT_DISABLE_INDEXING=1 \
+	CODEX_MAX_PROMPT_CHARS=60000
 
 CMD ["agent-cli-to-api", "cursor-agent", "--host", "0.0.0.0", "--port", "8000"]
