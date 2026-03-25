@@ -16,7 +16,7 @@ RUN apt-get update && \
 RUN curl https://cursor.com/install -fsS | bash
 
 ENV PATH="/root/.local/bin:${PATH}" \
-	CURSOR_AGENT_BIN=agent
+	CURSOR_AGENT_BIN=/usr/local/bin/cursor-agent-no-max
 
 WORKDIR /app
 
@@ -25,6 +25,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 	pip install --no-cache-dir -r requirements.txt
 
 COPY . .
+
+RUN chmod +x /app/cursor-agent-no-max.sh && \
+	ln -sf /app/cursor-agent-no-max.sh /usr/local/bin/cursor-agent-no-max
 
 # Install local package so `agent-cli-to-api` entrypoint is available.
 RUN pip install --no-cache-dir .

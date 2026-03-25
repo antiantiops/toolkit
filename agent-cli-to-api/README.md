@@ -121,6 +121,27 @@ docker run --rm -p 8000:8000 \
   agent-cli-to-api:local
 ```
 
+## Disable Cursor Max mode via wrapper
+
+This repo includes a wrapper script at `cursor-agent-no-max.sh`.
+
+- For prompt-style invocations (`agent -p ... <prompt>`), it prepends `/max-mode off` to every prompt automatically.
+- For interactive sessions, it starts Cursor CLI normally and prints a reminder to run `/max-mode off` once.
+
+Docker images in this repo are configured to use the wrapper by default:
+
+- `CURSOR_AGENT_BIN=/usr/local/bin/cursor-agent-no-max`
+
+If you want to bypass the wrapper at runtime:
+
+```bash
+docker run --rm -p 8000:8000 \
+  -e CURSOR_AGENT_BIN="agent" \
+  -e CURSOR_AGENT_API_KEY="<YOUR_CURSOR_API_KEY>" \
+  -e CODEX_GATEWAY_TOKEN="devtoken" \
+  agent-cli-to-api:local
+```
+
 ## Troubleshooting: HTTP 500 `[Errno 7] Argument list too long`
 
 If you see this error, the request prompt is too large for a CLI argument on your host.
