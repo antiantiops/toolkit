@@ -1,0 +1,68 @@
+name: Build and Push 9router Image
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: "Branch, tag, or commit from decolua/9router"
+        required: false
+        default: "master"
+  # schedule:
+  #   - cron: "17 2 * * *"
+
+env:
+  SOURCE_REPOSITORY: decolua/9router
+  SOURCE_REF: master
+  IMAGE_NAME: antiantiops/9router
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ env.SOURCE_REPOSITORY }}
+          ref: ${{ inputs.source_ref || env.SOURCE_REF }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+
+      - name: Build and push image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=9router
+          cache-to: type=gha,mode=max,scope=9router
