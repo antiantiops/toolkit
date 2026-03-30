@@ -71,10 +71,19 @@ To enable automatic pushes to Docker Hub, add these secrets to your GitHub repos
    docker build --build-arg OPENCLAW_DOCKER_APT_PACKAGES="ffmpeg build-essential" -t openclaw:local .
    ```
 
-5. **Build the DevOps variant with Cursor CLI and kubectl:**
+5. **Build the DevOps variant with Cursor CLI, kubectl, and 9router:**
    ```bash
    cp ../Dockerfile_DevOps .
    docker build -f Dockerfile_DevOps -t openclaw:devops .
+   ```
+
+6. **Build DevOps with a specific 9router version (optional):**
+   ```bash
+   cp ../Dockerfile_DevOps .
+   docker build \
+     -f Dockerfile_DevOps \
+     --build-arg NINE_ROUTER_VERSION=latest \
+     -t openclaw:devops .
    ```
 
 ## Run the Container
@@ -83,22 +92,51 @@ To enable automatic pushes to Docker Hub, add these secrets to your GitHub repos
 docker run -it --rm openclaw:local
 ```
 
+### Run DevOps variant with 9router data + public port
+
+9router stores local state in `~/.9router`. Mount it to keep data between container runs and publish `20128` for API/dashboard access.
+
+```bash
+mkdir -p "$PWD/.9router"
+
+docker run -it --rm \
+   --name openclaw-devops \
+   -p 20128:20128 \
+   -v "$PWD/.9router:/root/.9router" \
+   openclaw:devops
+```
+
+Inside the container, start 9router:
+
+```bash
+9router
+```
+
+Then access:
+
+- Dashboard: `http://localhost:20128/dashboard`
+- OpenAI-compatible endpoint: `http://localhost:20128/v1`
+
 ## Notes
 
-- The Dockerfile is based on Node.js 22 (Bookworm)
+- The Dockerfile is based on Node.js 24 (Bookworm)
 - It installs Bun for build scripts
 - Uses pnpm for package management
 - Builds both the core and UI components
 - Includes Google Gemini CLI (`@google/gemini-cli`)
-- `Dockerfile_DevOps` also installs Cursor CLI (`agent`) and `kubectl`
+- `Dockerfile_DevOps` also installs Cursor CLI (`agent`), `kubectl`, and `9router`
+- `Dockerfile_DevOps` includes `ENV 9ROUTER_VERSION=...` (backed by build arg `NINE_ROUTER_VERSION`) to control installed 9router version
 
 ## Configuration
 
 ### Build Arguments
 
 - `OPENCLAW_DOCKER_APT_PACKAGES` - Install additional apt packages during build (e.g., `ffmpeg build-essential`)
+- `NINE_ROUTER_VERSION` - Version of `9router` installed in `Dockerfile_DevOps` (default: `latest`)
 
 ### Environment Variables
+
+- `9ROUTER_VERSION` - Exposed in `Dockerfile_DevOps` to reflect/control installed `9router` version
 
 The GitHub Actions workflow supports:
 - Manual trigger with custom apt packages

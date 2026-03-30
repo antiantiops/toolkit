@@ -1,6 +1,8 @@
 FROM node:24-bookworm
 
 ENV KUBECTL_VERSION=v1.32.3
+ARG NINE_ROUTER_VERSION=latest
+ENV 9ROUTER_VERSION=${NINE_ROUTER_VERSION}
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -16,6 +18,9 @@ RUN curl -fsSL https://bun.sh/install | bash
 
 # Install Cursor CLI (agent)
 RUN curl https://cursor.com/install -fsS | bash
+
+# Install 9router globally (version controlled by NINE_ROUTER_VERSION / 9ROUTER_VERSION)
+RUN npm install -g "9router@${NINE_ROUTER_VERSION}"
 
 ENV PATH="/root/.local/bin:/root/.bun/bin:${PATH}"
 
