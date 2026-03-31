@@ -1,8 +1,6 @@
 FROM node:24-bookworm
 
 ENV KUBECTL_VERSION=v1.32.3
-ARG NINE_ROUTER_VERSION=latest
-ENV 9ROUTER_VERSION=${NINE_ROUTER_VERSION}
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -18,9 +16,6 @@ RUN curl -fsSL https://bun.sh/install | bash
 
 # Install Cursor CLI (agent)
 RUN curl https://cursor.com/install -fsS | bash
-
-# Install 9router globally (version controlled by NINE_ROUTER_VERSION / 9ROUTER_VERSION)
-RUN npm install -g "9router@${NINE_ROUTER_VERSION}"
 
 ENV PATH="/root/.local/bin:/root/.bun/bin:${PATH}"
 
@@ -65,6 +60,5 @@ RUN OPENCLAW_A2UI_SKIP_MISSING=1 pnpm build
 RUN cd ui && pnpm build
 
 ENV NODE_ENV=production
-ENV NINE_ROUTER_CMD="9router"
 
-CMD ["/bin/bash", "-lc", "set -euo pipefail; ${NINE_ROUTER_CMD} & ROUTER_PID=$!; node dist/index.js & OPENCLAW_PID=$!; trap 'kill -TERM ${ROUTER_PID} ${OPENCLAW_PID} 2>/dev/null || true' TERM INT; wait -n ${ROUTER_PID} ${OPENCLAW_PID}; EXIT_CODE=$?; kill -TERM ${ROUTER_PID} ${OPENCLAW_PID} 2>/dev/null || true; wait ${ROUTER_PID} ${OPENCLAW_PID} 2>/dev/null || true; exit ${EXIT_CODE}"]
+CMD ["node", "dist/index.js"]
