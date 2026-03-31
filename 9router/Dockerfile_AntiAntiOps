@@ -1,0 +1,10 @@
+FROM node:22-alpine
+
+ARG ROUTER_VERSION=latest
+ARG OPENCLAW_VERSION=latest
+
+RUN npm install -g 9router@$ROUTER_VERSION openclaw@$OPENCLAW_VERSION
+
+EXPOSE 20128
+
+ENTRYPOINT ["9router"]
