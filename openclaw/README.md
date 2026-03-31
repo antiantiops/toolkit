@@ -106,11 +106,7 @@ docker run -it --rm \
    openclaw:devops
 ```
 
-Inside the container, start 9router:
-
-```bash
-9router
-```
+9router starts automatically together with OpenClaw in the DevOps image.
 
 Then access:
 
@@ -126,6 +122,7 @@ Then access:
 - Includes Google Gemini CLI (`@google/gemini-cli`)
 - `Dockerfile_DevOps` also installs Cursor CLI (`agent`), `kubectl`, and `9router`
 - `Dockerfile_DevOps` includes `ENV 9ROUTER_VERSION=...` (backed by build arg `NINE_ROUTER_VERSION`) to control installed 9router version
+- `Dockerfile_DevOps` starts `9router` and OpenClaw together at container startup
 
 ## Configuration
 
@@ -137,6 +134,7 @@ Then access:
 ### Environment Variables
 
 - `9ROUTER_VERSION` - Exposed in `Dockerfile_DevOps` to reflect/control installed `9router` version
+- `NINE_ROUTER_CMD` - Startup command for `9router` in `Dockerfile_DevOps` (default: `9router`)
 
 The GitHub Actions workflow supports:
 - Manual trigger with custom apt packages

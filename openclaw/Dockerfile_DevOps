@@ -65,5 +65,6 @@ RUN OPENCLAW_A2UI_SKIP_MISSING=1 pnpm build
 RUN cd ui && pnpm build
 
 ENV NODE_ENV=production
+ENV NINE_ROUTER_CMD="9router"
 
-CMD ["node", "dist/index.js"]
+CMD ["/bin/bash", "-lc", "set -euo pipefail; ${NINE_ROUTER_CMD} & ROUTER_PID=$!; node dist/index.js & OPENCLAW_PID=$!; trap 'kill -TERM ${ROUTER_PID} ${OPENCLAW_PID} 2>/dev/null || true' TERM INT; wait -n ${ROUTER_PID} ${OPENCLAW_PID}; EXIT_CODE=$?; kill -TERM ${ROUTER_PID} ${OPENCLAW_PID} 2>/dev/null || true; wait ${ROUTER_PID} ${OPENCLAW_PID} 2>/dev/null || true; exit ${EXIT_CODE}"]
