@@ -13,10 +13,6 @@ on:
         description: 'OpenClaw tag to build'
         required: true
         default: 'v2026.3.28'
-      nine_router_version:
-        description: '9router npm version for DevOps image'
-        required: false
-        default: '0.3.68'
       apt_packages:
         description: 'Extra apt packages to install (space-separated)'
         required: false
@@ -25,7 +21,6 @@ on:
 env:
   IMAGE_NAME: antiantiops/openclaw
   OPENCLAW_TAG: v2026.3.28
-  NINE_ROUTER_VERSION: 0.3.68
   DEVOPS_TAG_SUFFIX: -devops-tool
 
 jobs:
@@ -118,7 +113,6 @@ jobs:
           labels: ${{ steps.meta_devops.outputs.labels }}
           build-args: |
             OPENCLAW_DOCKER_APT_PACKAGES=${{ github.event.inputs.apt_packages || '' }}
-            NINE_ROUTER_VERSION=${{ github.event.inputs.nine_router_version || env.NINE_ROUTER_VERSION }}
           cache-from: type=gha,scope=openclaw-devops
           cache-to: type=gha,mode=max,scope=openclaw-devops
 
@@ -130,7 +124,6 @@ jobs:
           echo "📦 DevOps image tags:"
           echo "${{ steps.meta_devops.outputs.tags }}"
           echo "🔖 OpenClaw version: ${{ env.OPENCLAW_VERSION }}"
-          echo "🛰️ 9router version (DevOps): ${{ github.event.inputs.nine_router_version || env.NINE_ROUTER_VERSION }}"
 
   apk_build:
     runs-on: ubuntu-latest
