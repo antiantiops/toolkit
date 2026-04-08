@@ -12,7 +12,7 @@ on:
       openclaw_tag:
         description: 'OpenClaw tag to build'
         required: true
-        default: 'v2026.4.5'
+        default: &openclaw_tag 'v2026.4.7'
       apt_packages:
         description: 'Extra apt packages to install (space-separated)'
         required: false
@@ -20,11 +20,22 @@ on:
 
 env:
   IMAGE_NAME: antiantiops/openclaw
-  OPENCLAW_TAG: v2026.4.5
-  DEVOPS_TAG_SUFFIX: -devops-tool
+  OPENCLAW_TAG: *openclaw_tag
 
 jobs:
   docker_build:
+    strategy:
+      fail-fast: false
+      matrix:
+        image_variant:
+          - name: Base
+            dockerfile: Dockerfile
+            tag_suffix: ''
+            cache_scope: openclaw
+          - name: DevOps
+            dockerfile: Dockerfile_DevOps
+            tag_suffix: -devops-tool
+            cache_scope: openclaw-devops
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -70,59 +81,34 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-      - name: Extract metadata for Docker
+      - name: Extract metadata for Docker image
         id: meta
         uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=${{ env.OPENCLAW_VERSION }}
-            type=raw,value=latest
+            type=raw,value=${{ env.OPENCLAW_VERSION }}${{ matrix.image_variant.tag_suffix }}
+            type=raw,value=latest${{ matrix.image_variant.tag_suffix }}
 
-      - name: Extract metadata for Docker DevOps image
-        id: meta_devops
-        uses: docker/metadata-action@v6
-        with:
-          images: ${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=${{ env.OPENCLAW_VERSION }}${{ env.DEVOPS_TAG_SUFFIX }}
-            type=raw,value=latest${{ env.DEVOPS_TAG_SUFFIX }}
-
-      - name: Build and push Docker image
+      - name: Build and push Docker image (${{ matrix.image_variant.name }})
         uses: docker/build-push-action@v7
         with:
           context: ./openclaw-source
-          file: ./openclaw-source/Dockerfile
+          file: ./openclaw-source/${{ matrix.image_variant.dockerfile }}
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             OPENCLAW_DOCKER_APT_PACKAGES=${{ github.event.inputs.apt_packages || '' }}
-          cache-from: type=gha,scope=openclaw
-          cache-to: type=gha,mode=max,scope=openclaw
-
-      - name: Build and push Docker DevOps image
-        uses: docker/build-push-action@v7
-        with:
-          context: ./openclaw-source
-          file: ./openclaw-source/Dockerfile_DevOps
-          platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta_devops.outputs.tags }}
-          labels: ${{ steps.meta_devops.outputs.labels }}
-          build-args: |
-            OPENCLAW_DOCKER_APT_PACKAGES=${{ github.event.inputs.apt_packages || '' }}
-          cache-from: type=gha,scope=openclaw-devops
-          cache-to: type=gha,mode=max,scope=openclaw-devops
+          cache-from: type=gha,scope=${{ matrix.image_variant.cache_scope }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image_variant.cache_scope }}
 
       - name: Output image details
         run: |
-          echo "✅ Image built successfully!"
-          echo "📦 Base image tags:"
+          echo "✅ ${{ matrix.image_variant.name }} image built successfully!"
+          echo "📦 Image tags:"
           echo "${{ steps.meta.outputs.tags }}"
-          echo "📦 DevOps image tags:"
-          echo "${{ steps.meta_devops.outputs.tags }}"
           echo "🔖 OpenClaw version: ${{ env.OPENCLAW_VERSION }}"
 
   apk_build:
