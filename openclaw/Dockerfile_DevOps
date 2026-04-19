@@ -1,6 +1,7 @@
 FROM node:24-bookworm
 
 ENV KUBECTL_VERSION=v1.32.3
+ENV HELM_VERSION=v3.17.3
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -27,7 +28,13 @@ RUN set -eux; \
       *) echo "Unsupported architecture: $arch" >&2; exit 1 ;; \
     esac; \
     curl -fsSLo /usr/local/bin/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${kubectl_arch}/kubectl"; \
-    chmod +x /usr/local/bin/kubectl
+    chmod +x /usr/local/bin/kubectl; \
+    helm_arch="${kubectl_arch}"; \
+    curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-${helm_arch}.tar.gz" -o /tmp/helm.tar.gz; \
+    tar -xzf /tmp/helm.tar.gz -C /tmp; \
+    mv "/tmp/linux-${helm_arch}/helm" /usr/local/bin/helm; \
+    chmod +x /usr/local/bin/helm; \
+    rm -rf /tmp/helm.tar.gz "/tmp/linux-${helm_arch}"
 
 # Install AWS CLI v2
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
