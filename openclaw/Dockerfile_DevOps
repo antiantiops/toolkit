@@ -2,6 +2,7 @@ FROM node:24-bookworm
 
 ENV KUBECTL_VERSION=v1.32.3
 ENV HELM_VERSION=v3.17.3
+ENV PLAYWRIGHT_VERSION=1.49.1
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -43,6 +44,11 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
     && rm -rf awscliv2.zip ./aws
 
 RUN corepack enable
+
+# Install Playwright as a Node.js library (no browser binaries - we attach to a
+# remote Chromium via connectOverCDP, we do not launch browsers locally).
+RUN npm install -g playwright@${PLAYWRIGHT_VERSION} \
+  && node -e "console.log('playwright', require('playwright/package.json').version)"
 
 WORKDIR /app
 
