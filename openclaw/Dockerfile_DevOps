@@ -45,14 +45,16 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 
 RUN corepack enable
 
-# Install Playwright as a Node.js library (no browser binaries - we attach to a
-# remote Chromium via connectOverCDP, we do not launch browsers locally).
+# Install Playwright as a Node.js library only – no browser binaries.
+# We attach to a remote Chromium via connectOverCDP and never launch local
+# browsers, so browser binaries and their apt deps (libnss3, libatk*, libgbm1
+# etc.) are intentionally skipped.
 RUN PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install -g playwright@${PLAYWRIGHT_VERSION} \
-  && ln -sf /usr/local/lib/node_modules/playwright /usr/local/lib/node_modules/.pnpm-global/playwright 2>/dev/null || true \
-  && mkdir -p /app/node_modules \
-  && ln -sf /usr/local/lib/node_modules/playwright /app/node_modules/playwright \
-  && ln -sf /usr/local/lib/node_modules/playwright-core /app/node_modules/playwright-core \
   && npx playwright --version
+
+# Let CommonJS require('playwright') resolve from any cwd (agent scripts may
+# run under /root/.openclaw/workspace-*, /tmp, etc.).
+ENV NODE_PATH=/usr/local/lib/node_modules
 
 WORKDIR /app
 
@@ -70,6 +72,14 @@ COPY patches ./patches
 COPY scripts ./scripts
 
 RUN pnpm install --frozen-lockfile
+
+# pnpm install --frozen-lockfile wipes /app/node_modules entries that are not
+# declared in pnpm-lock.yaml, so we must create these symlinks AFTER pnpm
+# installs. This is what makes ESM `import 'playwright'` resolve when
+# running from /app without adding playwright to the project's package.json.
+RUN ln -sf /usr/local/lib/node_modules/playwright      /app/node_modules/playwright \
+ && ln -sf /usr/local/lib/node_modules/playwright-core /app/node_modules/playwright-core \
+ && node -e "const {chromium}=require('playwright'); if(typeof chromium.connectOverCDP!=='function') process.exit(1); console.log('playwright ok', require('playwright/package.json').version)"
 
 COPY . .
 RUN OPENCLAW_A2UI_SKIP_MISSING=1 pnpm build
