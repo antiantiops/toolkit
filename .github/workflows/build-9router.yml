@@ -22,7 +22,7 @@ on:
 
 env:
   IMAGE_NAME: antiantiops/9router
-  DEFAULT_ROUTER_VERSION: "0.4.5"     # <--- EDIT DEFAULT 9ROUTER VERSION HERE https://www.npmjs.com/package/9router
+  DEFAULT_ROUTER_VERSION: "0.4.6"     # <--- EDIT DEFAULT 9ROUTER VERSION HERE https://www.npmjs.com/package/9router
   DEFAULT_OPENCLAW_NPM_PACKAGE: ""      # <--- Optional npm package spec to install before 9router (empty = skip)
 
 jobs:
