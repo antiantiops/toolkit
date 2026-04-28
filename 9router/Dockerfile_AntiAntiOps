@@ -3,7 +3,18 @@ FROM node:22-alpine
 ARG ROUTER_VERSION=latest
 ARG OPENCLAW_NPM_PACKAGE=
 
-RUN if [ -n "$OPENCLAW_NPM_PACKAGE" ]; then npm install -g "$OPENCLAW_NPM_PACKAGE"; fi
+RUN if [ -n "$OPENCLAW_NPM_PACKAGE" ]; then \
+      npm install -g "$OPENCLAW_NPM_PACKAGE" && \
+      if ! command -v openclaw >/dev/null 2>&1; then \
+        PKG_NAME="${OPENCLAW_NPM_PACKAGE%@*}" && \
+        if [ -n "$PKG_NAME" ]; then \
+          OPENCLAW_BIN="$(node -e "const pkg=require(require('path').join(require('child_process').execSync('npm root -g').toString().trim(), process.argv[1], 'package.json')); const bin=pkg.bin; if (typeof bin === 'string') process.stdout.write(bin); else if (bin && typeof bin === 'object') process.stdout.write(Object.values(bin)[0] || '');" "$PKG_NAME")" && \
+          if [ -n "$OPENCLAW_BIN" ] && [ -x "/usr/local/bin/$OPENCLAW_BIN" ]; then \
+            ln -sf "/usr/local/bin/$OPENCLAW_BIN" /usr/local/bin/openclaw; \
+          fi; \
+        fi; \
+      fi; \
+    fi
 
 RUN npm install -g 9router@$ROUTER_VERSION 
 
