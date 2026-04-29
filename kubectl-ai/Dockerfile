@@ -1,5 +1,5 @@
 # --- Builder Stage ---
-FROM golang:1.24-alpine as builder
+FROM golang:1.26-alpine as builder
 
 # Install git (needed to clone the repository)
 RUN apk add --no-cache git
