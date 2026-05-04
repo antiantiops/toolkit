@@ -12,7 +12,7 @@ on:
       openclaw_tag:
         description: 'OpenClaw tag to build'
         required: true
-        default: &openclaw_tag 'v2026.5.2'
+        default: &openclaw_tag 'v2026.5.3'
       apt_packages:
         description: 'Extra apt packages to install (space-separated)'
         required: false
