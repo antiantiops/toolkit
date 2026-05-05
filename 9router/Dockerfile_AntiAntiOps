@@ -3,20 +3,31 @@ FROM node:22-alpine
 ARG ROUTER_VERSION=latest
 ARG OPENCLAW_NPM_PACKAGE=
 
-RUN if [ -n "$OPENCLAW_NPM_PACKAGE" ]; then \
-      npm install -g "$OPENCLAW_NPM_PACKAGE" && \
-      if ! command -v openclaw >/dev/null 2>&1; then \
-        PKG_NAME="${OPENCLAW_NPM_PACKAGE%@*}" && \
-        if [ -n "$PKG_NAME" ]; then \
-          OPENCLAW_BIN="$(node -e "const pkg=require(require('path').join(require('child_process').execSync('npm root -g').toString().trim(), process.argv[1], 'package.json')); const bin=pkg.bin; if (typeof bin === 'string') process.stdout.write(bin); else if (bin && typeof bin === 'object') process.stdout.write(Object.values(bin)[0] || '');" "$PKG_NAME")" && \
-          if [ -n "$OPENCLAW_BIN" ] && [ -x "/usr/local/bin/$OPENCLAW_BIN" ]; then \
-            ln -sf "/usr/local/bin/$OPENCLAW_BIN" /usr/local/bin/openclaw; \
-          fi; \
-        fi; \
-      fi; \
-    fi
-
-RUN npm install -g 9router@$ROUTER_VERSION 
+# Install build toolchain only for the npm install steps. Some openclaw
+# transitive dependencies (e.g. `tree-sitter-bash`) ship a `binding.gyp`
+# and force a native node-gyp rebuild; node-gyp needs python3 + a C/C++
+# compiler. We add them as a virtual package so the apk del at the end
+# of this stage removes the toolchain and keeps the runtime image small.
+RUN apk add --no-cache --virtual .gyp-build-deps \
+      python3 \
+      make \
+      g++ \
+      libc-dev \
+    && if [ -n "$OPENCLAW_NPM_PACKAGE" ]; then \
+         npm install -g "$OPENCLAW_NPM_PACKAGE" && \
+         if ! command -v openclaw >/dev/null 2>&1; then \
+           PKG_NAME="${OPENCLAW_NPM_PACKAGE%@*}" && \
+           if [ -n "$PKG_NAME" ]; then \
+             OPENCLAW_BIN="$(node -e "const pkg=require(require('path').join(require('child_process').execSync('npm root -g').toString().trim(), process.argv[1], 'package.json')); const bin=pkg.bin; if (typeof bin === 'string') process.stdout.write(bin); else if (bin && typeof bin === 'object') process.stdout.write(Object.values(bin)[0] || '');" "$PKG_NAME")" && \
+             if [ -n "$OPENCLAW_BIN" ] && [ -x "/usr/local/bin/$OPENCLAW_BIN" ]; then \
+               ln -sf "/usr/local/bin/$OPENCLAW_BIN" /usr/local/bin/openclaw; \
+             fi; \
+           fi; \
+         fi; \
+       fi \
+    && npm install -g 9router@$ROUTER_VERSION \
+    && npm cache clean --force \
+    && apk del .gyp-build-deps
 
 EXPOSE 20128
 
