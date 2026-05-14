@@ -26,10 +26,17 @@ Run the container and expose 9router on your host:
 docker run -d \
   --name 9router \
   -p 20128:20128 \
-  antiantiops/9router:latest
+  antiantiops/9router:latest \
+  --no-browser --log --skip-update
 ```
 
-Open dashboard:
+Why these flags are recommended for Docker/headless servers:
+
+- `--no-browser` prevents 9router from trying to open a local browser inside the container. The Web UI is still served normally.
+- `--log` prints server logs to `docker logs`.
+- `--skip-update` avoids the interactive update prompt/check in container deployments.
+
+Open dashboard from your browser:
 
 - `http://localhost:20128/dashboard`
 
@@ -47,8 +54,9 @@ mkdir -p "$PWD/.9router-data"
 docker run -d \
   --name 9router \
   -p 20128:20128 \
-  -v "$PWD/.9router-data:/app/data" \
-  antiantiops/9router:latest
+  -v "$PWD/.9router-data:/root/.9router" \
+  antiantiops/9router:latest \
+  --no-browser --log --skip-update
 ```
 
 Check container logs:
@@ -56,6 +64,33 @@ Check container logs:
 ```bash
 docker logs -f 9router
 ```
+
+## Docker Compose
+
+Example compose file for headless/server deployments:
+
+```yaml
+services:
+  9router:
+    image: antiantiops/9router:latest
+    container_name: 9router
+    command: ["--no-browser", "--log", "--skip-update"]
+    ports:
+      - "20128:20128"
+    volumes:
+      - ./.9router-data:/root/.9router
+    restart: unless-stopped
+```
+
+Start it:
+
+```bash
+docker compose up -d
+```
+
+Then open:
+
+- `http://localhost:20128/dashboard`
 
 ## Client configuration (Google + Antigravity)
 
