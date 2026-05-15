@@ -36,15 +36,8 @@ jobs:
             dockerfile: Dockerfile_DevOps
             tag_suffix: -devops-tool
             cache_scope: openclaw-devops
-        platform:
-          - name: amd64
-            runner: ubuntu-latest
-            docker_platform: linux/amd64
-          - name: arm64
-            runner: ubuntu-24.04-arm
-            docker_platform: linux/arm64
-    runs-on: ${{ matrix.platform.runner }}
-    timeout-minutes: 120
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
     permissions:
       contents: read
       packages: write
@@ -76,6 +69,11 @@ jobs:
           cp openclaw/Dockerfile openclaw-source/
           cp openclaw/Dockerfile_DevOps openclaw-source/
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm64
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -92,63 +90,30 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=${{ env.OPENCLAW_VERSION }}${{ matrix.image_variant.tag_suffix }}-${{ matrix.platform.name }}
-            type=raw,value=latest${{ matrix.image_variant.tag_suffix }}-${{ matrix.platform.name }}
+            type=raw,value=${{ env.OPENCLAW_VERSION }}${{ matrix.image_variant.tag_suffix }}
+            type=raw,value=latest${{ matrix.image_variant.tag_suffix }}
 
-      - name: Build and push Docker image (${{ matrix.image_variant.name }} ${{ matrix.platform.name }})
+      - name: Build and push multi-arch Docker image (${{ matrix.image_variant.name }})
         uses: docker/build-push-action@v7
         with:
           context: ./openclaw-source
           file: ./openclaw-source/${{ matrix.image_variant.dockerfile }}
-          platforms: ${{ matrix.platform.docker_platform }}
+          platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             OPENCLAW_DOCKER_APT_PACKAGES=${{ github.event.inputs.apt_packages || '' }}
-          cache-from: type=gha,scope=${{ matrix.image_variant.cache_scope }}-${{ matrix.platform.name }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.image_variant.cache_scope }}-${{ matrix.platform.name }}
+          cache-from: type=gha,scope=${{ matrix.image_variant.cache_scope }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image_variant.cache_scope }}
 
       - name: Output image details
         run: |
-          echo "✅ ${{ matrix.image_variant.name }} ${{ matrix.platform.name }} image built successfully!"
+          echo "✅ ${{ matrix.image_variant.name }} multi-arch image built successfully!"
           echo "📦 Image tags:"
           echo "${{ steps.meta.outputs.tags }}"
           echo "🔖 OpenClaw version: ${{ env.OPENCLAW_VERSION }}"
 
-  docker_manifest:
-    if: github.event_name != 'pull_request'
-    needs: docker_build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-
-      - name: Create multi-arch Docker manifests
-        run: |
-          set -euo pipefail
-          OPENCLAW_VERSION="${{ inputs.openclaw_tag || env.OPENCLAW_TAG }}"
-
-          for suffix in "" "-devops-tool"; do
-            docker buildx imagetools create \
-              -t "${IMAGE_NAME}:${OPENCLAW_VERSION}${suffix}" \
-              "${IMAGE_NAME}:${OPENCLAW_VERSION}${suffix}-amd64" \
-              "${IMAGE_NAME}:${OPENCLAW_VERSION}${suffix}-arm64"
-
-            docker buildx imagetools create \
-              -t "${IMAGE_NAME}:latest${suffix}" \
-              "${IMAGE_NAME}:latest${suffix}-amd64" \
-              "${IMAGE_NAME}:latest${suffix}-arm64"
-
-            docker buildx imagetools inspect "${IMAGE_NAME}:${OPENCLAW_VERSION}${suffix}"
-          done
 
   apk_build:
     runs-on: ubuntu-latest
