@@ -7,7 +7,7 @@ ENV PATH="/root/.bun/bin:${PATH}"
 RUN corepack enable
 
 # Install Gemini CLI globally
-RUN npm install -g @google/gemini-cli
+RUN --mount=type=cache,target=/root/.npm npm install -g @google/gemini-cli
 
 WORKDIR /app
 
@@ -24,7 +24,7 @@ COPY ui/package.json ./ui/package.json
 COPY patches ./patches
 COPY scripts ./scripts
 
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile
 
 COPY . .
 RUN OPENCLAW_A2UI_SKIP_MISSING=1 pnpm build

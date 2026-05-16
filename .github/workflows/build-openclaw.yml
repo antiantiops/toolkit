@@ -75,6 +75,7 @@ jobs:
         run: |
           cp openclaw/Dockerfile openclaw-source/
           cp openclaw/Dockerfile_DevOps openclaw-source/
+          cp openclaw/.dockerignore openclaw-source/
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4

@@ -3,7 +3,6 @@ FROM node:24-bookworm
 ENV KUBECTL_VERSION=v1.32.3
 ENV HELM_VERSION=v3.17.3
 ENV PLAYWRIGHT_VERSION=1.59.1
-ENV CURSOR_AGENT_VERSION=2026.05.09-8f4236f
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -50,16 +49,11 @@ RUN set -eux; \
 
 RUN corepack enable
 
-# Install Cursor CLI via npm instead of the shell installer. This is deterministic,
-# architecture-aware, and avoids the installer waiting/spawning under QEMU.
-RUN npm install -g @cursor-agent/cli@${CURSOR_AGENT_VERSION} \
-  && cursor-agent --version
-
 # Install Playwright as a Node.js library only – no browser binaries.
 # We attach to a remote Chromium via connectOverCDP and never launch local
 # browsers, so browser binaries and their apt deps (libnss3, libatk*, libgbm1
 # etc.) are intentionally skipped.
-RUN PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install -g playwright@${PLAYWRIGHT_VERSION} \
+RUN --mount=type=cache,target=/root/.npm PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install -g playwright@${PLAYWRIGHT_VERSION} \
   && npx playwright --version
 
 # Let CommonJS require('playwright') resolve from any cwd (agent scripts may
@@ -81,7 +75,7 @@ COPY ui/package.json ./ui/package.json
 COPY patches ./patches
 COPY scripts ./scripts
 
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile
 
 # pnpm install --frozen-lockfile wipes /app/node_modules entries that are not
 # declared in pnpm-lock.yaml, so we must create these symlinks AFTER pnpm
