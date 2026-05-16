@@ -237,7 +237,6 @@ Security note: these `dangerously*` flags are intended for trusted internal netw
 - It installs Bun for build scripts
 - Uses pnpm for package management
 - Builds both the core and UI components
-- Includes Google Gemini CLI (`@google/gemini-cli`)
 - `Dockerfile_DevOps` also installs Cursor CLI (`agent`), `kubectl`, and `9router`
 - `Dockerfile_DevOps` includes `ENV 9ROUTER_VERSION=...` (backed by build arg `NINE_ROUTER_VERSION`) to control installed 9router version
 - `Dockerfile_DevOps` starts `9router` and OpenClaw together at container startup

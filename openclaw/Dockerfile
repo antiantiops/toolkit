@@ -18,9 +18,6 @@ ENV PATH="/root/.bun/bin:${PATH}" \
 
 RUN corepack enable
 
-# Install Gemini CLI globally
-RUN --mount=type=cache,target=/root/.npm npm install -g @google/gemini-cli
-
 WORKDIR /app
 
 ARG OPENCLAW_DOCKER_APT_PACKAGES=""
