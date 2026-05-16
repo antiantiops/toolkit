@@ -27,9 +27,10 @@ COPY scripts ./scripts
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile
 
 COPY . .
-RUN OPENCLAW_A2UI_SKIP_MISSING=1 pnpm build
+RUN OPENCLAW_A2UI_SKIP_MISSING=1 pnpm build && echo "root pnpm build completed"
 # Force pnpm for UI build (Bun may fail on ARM/Synology architectures)
-RUN cd ui && pnpm build
+RUN cd ui && pnpm build && echo "ui pnpm build completed"
+RUN echo "Dockerfile build steps completed"
 
 ENV NODE_ENV=production
 

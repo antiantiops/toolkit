@@ -86,9 +86,10 @@ RUN ln -sf /usr/local/lib/node_modules/playwright      /app/node_modules/playwri
  && node -e "const {chromium}=require('playwright'); if(typeof chromium.connectOverCDP!=='function') process.exit(1); console.log('playwright ok', require('playwright/package.json').version)"
 
 COPY . .
-RUN OPENCLAW_A2UI_SKIP_MISSING=1 pnpm build
+RUN OPENCLAW_A2UI_SKIP_MISSING=1 pnpm build && echo "root pnpm build completed"
 # Force pnpm for UI build (Bun may fail on ARM/Synology architectures)
-RUN cd ui && pnpm build
+RUN cd ui && pnpm build && echo "ui pnpm build completed"
+RUN echo "Dockerfile build steps completed"
 
 ENV NODE_ENV=production
 
