@@ -3,6 +3,7 @@ FROM node:24-bookworm
 ENV KUBECTL_VERSION=v1.32.3
 ENV HELM_VERSION=v3.17.3
 ENV PLAYWRIGHT_VERSION=1.59.1
+ENV CURSOR_AGENT_VERSION=2026.05.09-8f4236f
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -15,9 +16,6 @@ RUN apt-get update && \
 
 # Install Bun (required for build scripts)
 RUN curl -fsSL https://bun.sh/install | bash
-
-# Install Cursor CLI (agent)
-RUN curl https://cursor.com/install -fsS | bash
 
 ENV PATH="/root/.local/bin:/root/.bun/bin:${PATH}"
 
@@ -51,6 +49,11 @@ RUN set -eux; \
     rm -rf awscliv2.zip ./aws
 
 RUN corepack enable
+
+# Install Cursor CLI via npm instead of the shell installer. This is deterministic,
+# architecture-aware, and avoids the installer waiting/spawning under QEMU.
+RUN npm install -g @cursor-agent/cli@${CURSOR_AGENT_VERSION} \
+  && cursor-agent --version
 
 # Install Playwright as a Node.js library only – no browser binaries.
 # We attach to a remote Chromium via connectOverCDP and never launch local

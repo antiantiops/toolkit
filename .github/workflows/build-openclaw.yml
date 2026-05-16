@@ -4,9 +4,15 @@ on:
   push:
     branches:
       - master
+    paths:
+      - '.github/workflows/build-openclaw.yml'
+      - 'openclaw/**'
   pull_request:
     branches:
       - master
+    paths:
+      - '.github/workflows/build-openclaw.yml'
+      - 'openclaw/**'
   workflow_dispatch:
     inputs:
       openclaw_tag:
@@ -21,6 +27,7 @@ on:
 env:
   IMAGE_NAME: antiantiops/openclaw
   OPENCLAW_TAG: *openclaw_tag
+  BUILDKIT_PROGRESS: plain
 
 jobs:
   docker_build:
@@ -73,6 +80,7 @@ jobs:
         uses: docker/setup-qemu-action@v4
         with:
           platforms: arm64
+          cache-image: false
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -104,8 +112,10 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             OPENCLAW_DOCKER_APT_PACKAGES=${{ github.event.inputs.apt_packages || '' }}
+          provenance: false
+          sbom: false
           cache-from: type=gha,scope=${{ matrix.image_variant.cache_scope }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.image_variant.cache_scope }}
+          cache-to: type=gha,mode=min,scope=${{ matrix.image_variant.cache_scope }}
 
       - name: Output image details
         run: |
