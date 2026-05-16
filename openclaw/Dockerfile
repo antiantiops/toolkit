@@ -56,14 +56,13 @@ RUN pnpm_config_verify_deps_before_run=false pnpm ui:build && echo "ui pnpm ui:b
 RUN pnpm_config_verify_deps_before_run=false pnpm qa:lab:build && echo "qa lab build completed"
 RUN echo "Dockerfile build steps completed"
 
-RUN chown -R node:node /app && \
-    install -d -m 0700 -o node -g node /home/node/.openclaw && \
-    ln -sf /app/openclaw.mjs /usr/local/bin/openclaw && \
-    chmod 755 /app/openclaw.mjs
+RUN ln -sf /app/openclaw.mjs /usr/local/bin/openclaw && \
+    chmod 755 /app/openclaw.mjs && \
+    install -d -m 0700 /root/.openclaw
 
 ENV NODE_ENV=production
 
-USER node
+# Run as root for full container privileges
 HEALTHCHECK --interval=3m --timeout=10s --start-period=15s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:18789/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 ENTRYPOINT ["tini", "-s", "--"]
