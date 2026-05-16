@@ -77,12 +77,6 @@ jobs:
           cp openclaw/Dockerfile_DevOps openclaw-source/
           cp openclaw/.dockerignore openclaw-source/
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-        with:
-          platforms: arm64
-          cache-image: false
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -102,12 +96,12 @@ jobs:
             type=raw,value=${{ env.OPENCLAW_VERSION }}${{ matrix.image_variant.tag_suffix }}
             type=raw,value=latest${{ matrix.image_variant.tag_suffix }}
 
-      - name: Build and push multi-arch Docker image (${{ matrix.image_variant.name }})
+      - name: Build and push amd64 Docker image (${{ matrix.image_variant.name }})
         uses: docker/build-push-action@v7
         with:
           context: ./openclaw-source
           file: ./openclaw-source/${{ matrix.image_variant.dockerfile }}
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -120,7 +114,7 @@ jobs:
 
       - name: Output image details
         run: |
-          echo "✅ ${{ matrix.image_variant.name }} multi-arch image built successfully!"
+          echo "✅ ${{ matrix.image_variant.name }} amd64 image built successfully!"
           echo "📦 Image tags:"
           echo "${{ steps.meta.outputs.tags }}"
           echo "🔖 OpenClaw version: ${{ env.OPENCLAW_VERSION }}"
