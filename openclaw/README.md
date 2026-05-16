@@ -113,6 +113,124 @@ Then access:
 - Dashboard: `http://localhost:20128/dashboard`
 - OpenAI-compatible endpoint: `http://localhost:20128/v1`
 
+### Run OpenClaw Gateway on an internal HTTP/IP network
+
+When the Gateway is accessed from another machine via plain HTTP and a private IP (for example `http://192.168.101.36:18789`), OpenClaw's Control UI and model-provider SSRF guard need explicit config.
+
+Example `docker-compose.yml`:
+
+```yaml
+services:
+  openclaw-gateway:
+    image: antiantiops/openclaw:v2026.5.12-devops-tool
+    container_name: openclaw-gateway
+    restart: unless-stopped
+    ports:
+      - "18789:18789"
+    volumes:
+      - ./openclaw-data:/root/.openclaw
+    environment:
+      - NODE_ENV=production
+      - OPENCLAW_DISABLE_BONJOUR=1
+    command:
+      - "node"
+      - "/app/openclaw.mjs"
+      - "gateway"
+      - "--bind"
+      - "lan"
+      - "--allow-unconfigured"
+```
+
+Example config file (`./openclaw-data/openclaw.json`):
+
+```json
+{
+  "gateway": {
+    "bind": "lan",
+    "port": 18791,
+    "auth": {
+      "mode": "token",
+      "token": "test-9router-fixed-token-2026"
+    },
+    "controlUi": {
+      "allowedOrigins": [
+        "http://192.168.xx.xx:18791",
+        "http://localhost:18791"
+      ],
+      "dangerouslyAllowHostHeaderOriginFallback": true,
+      "allowInsecureAuth": true,
+      "dangerouslyDisableDeviceAuth": true
+    }
+  },
+  "models": {
+    "providers": {
+      "9router": {
+        "baseUrl": "http://192.168.xx.xx:20128/v1",
+        "apiKey": "CHANGE_ME",
+        "api": "openai-completions",
+        "request": {
+          "allowPrivateNetwork": true
+        }
+      }
+    }
+  }
+}
+```
+
+Or patch the mounted config once the container is running:
+
+```bash
+docker exec openclaw-gateway sh -c 'cat <<JSON | node /app/openclaw.mjs config patch --stdin
+{
+  "gateway": {
+    "auth": {
+      "mode": "token",
+      "token": "CHANGE_ME_TO_A_LONG_RANDOM_TOKEN"
+    },
+    "controlUi": {
+      "allowedOrigins": [
+        "http://192.168.xx.xx:18789",
+        "http://localhost:18789",
+        "http://127.0.0.1:18789"
+      ],
+      "dangerouslyAllowHostHeaderOriginFallback": true,
+      "allowInsecureAuth": true,
+      "dangerouslyDisableDeviceAuth": true
+    }
+  },
+  "models": {
+    "providers": {
+      "9router": {
+        "baseUrl": "http://192.168.xx.xx:20128/v1",
+        "apiKey": "CHANGE_ME",
+        "api": "openai-completions",
+        "request": {
+          "allowPrivateNetwork": true
+        }
+      }
+    }
+  }
+}
+JSON'
+
+docker restart openclaw-gateway
+```
+
+Open the Control UI with the matching token:
+
+```text
+http://192.168.101.36:18789/#token=CHANGE_ME_TO_A_LONG_RANDOM_TOKEN
+```
+
+Key fields:
+
+- `models.providers.<provider>.request.allowPrivateNetwork: true` allows trusted self-hosted model providers such as 9router on private IPs (`192.168.x.x`, `10.x.x.x`, etc.). This is the correct fix for model-provider SSRF blocks; `browser.ssrfPolicy` only applies to browser/web-fetch paths.
+- `gateway.controlUi.allowInsecureAuth: true` enables token-only compatibility for plain HTTP.
+- `gateway.controlUi.dangerouslyDisableDeviceAuth: true` bypasses device identity checks for remote plain-HTTP access.
+- `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback: true` is a break-glass fallback for host-header origin checks.
+
+Security note: these `dangerously*` flags are intended for trusted internal networks only. Prefer HTTPS/Tailscale Serve for production or exposed deployments, and always use a long random token.
+
 ## Notes
 
 - The Dockerfile is based on Node.js 24 (Bookworm)
