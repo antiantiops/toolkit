@@ -13,17 +13,12 @@ on:
         description: "9router version (leave empty for default)"
         required: false
         type: string
-      openclaw_npm_package:
-        description: "OpenClaw npm package spec (e.g. scope/pkg@1.2.3); leave empty to skip install"
-        required: false
-        type: string
   # schedule:
   #   - cron: "17 2 * * *"
 
 env:
   IMAGE_NAME: antiantiops/9router
   DEFAULT_ROUTER_VERSION: "0.4.62"     # <--- EDIT DEFAULT 9ROUTER VERSION HERE https://www.npmjs.com/package/9router
-  DEFAULT_OPENCLAW_NPM_PACKAGE: "openclaw@latest"  # <--- Build 9router image with OpenClaw latest by default
 
 jobs:
   build-and-push:
@@ -58,11 +53,6 @@ jobs:
           fi
           echo "version=$VERSION" >> $GITHUB_ENV
 
-      - name: Determine OpenClaw npm package
-        run: |
-          TARGET_OPENCLAW_PACKAGE="${{ inputs.openclaw_npm_package || env.DEFAULT_OPENCLAW_NPM_PACKAGE }}"
-          echo "openclaw_npm_package=$TARGET_OPENCLAW_PACKAGE" >> $GITHUB_ENV
-
       - name: Extract Docker metadata 
         id: meta
         uses: docker/metadata-action@v5
@@ -80,7 +70,6 @@ jobs:
           file: ./9router/Dockerfile_AntiAntiOps
           build-args: |
             ROUTER_VERSION=${{ env.version }}
-            OPENCLAW_NPM_PACKAGE=${{ env.openclaw_npm_package }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
