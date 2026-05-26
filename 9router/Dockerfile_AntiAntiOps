@@ -26,7 +26,7 @@ RUN if [ -n "$OPENCLAW_NPM_PACKAGE" ]; then \
           fi; \
         fi; \
       fi; \
-      command -v openclaw || true; \
+      command -v openclaw; \
     else \
       echo "Skipping OpenClaw install because OPENCLAW_NPM_PACKAGE is empty"; \
     fi

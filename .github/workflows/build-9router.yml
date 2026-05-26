@@ -23,7 +23,7 @@ on:
 env:
   IMAGE_NAME: antiantiops/9router
   DEFAULT_ROUTER_VERSION: "0.4.62"     # <--- EDIT DEFAULT 9ROUTER VERSION HERE https://www.npmjs.com/package/9router
-  DEFAULT_OPENCLAW_NPM_PACKAGE: ""      # <--- Empty means install `openclaw@latest`
+  DEFAULT_OPENCLAW_NPM_PACKAGE: "openclaw@latest"  # <--- Build 9router image with OpenClaw latest by default
 
 jobs:
   build-and-push:
@@ -61,9 +61,6 @@ jobs:
       - name: Determine OpenClaw npm package
         run: |
           TARGET_OPENCLAW_PACKAGE="${{ inputs.openclaw_npm_package || env.DEFAULT_OPENCLAW_NPM_PACKAGE }}"
-          if [ -z "$TARGET_OPENCLAW_PACKAGE" ]; then
-            TARGET_OPENCLAW_PACKAGE="openclaw@latest"
-          fi
           echo "openclaw_npm_package=$TARGET_OPENCLAW_PACKAGE" >> $GITHUB_ENV
 
       - name: Extract Docker metadata 
