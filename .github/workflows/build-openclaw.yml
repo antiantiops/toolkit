@@ -39,10 +39,12 @@ jobs:
             dockerfile: Dockerfile
             tag_suffix: ''
             cache_scope: openclaw
+            platforms: linux/amd64,linux/arm64
           - name: DevOps
             dockerfile: Dockerfile_DevOps
             tag_suffix: -devops-tool
             cache_scope: openclaw-devops
+            platforms: linux/amd64
     runs-on: ubuntu-latest
     timeout-minutes: 180
     permissions:
@@ -106,7 +108,7 @@ jobs:
         with:
           context: ./openclaw-source
           file: ./openclaw-source/${{ matrix.image_variant.dockerfile }}
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.image_variant.platforms }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -120,7 +122,7 @@ jobs:
       - name: Output image details
         run: |
           echo "✅ ${{ matrix.image_variant.name }} multi-arch image built successfully!"
-          echo "🏗️ Platforms: linux/amd64, linux/arm64"
+          echo "🏗️ Platforms: ${{ matrix.image_variant.platforms }}"
           echo "📦 Image tags:"
           echo "${{ steps.meta.outputs.tags }}"
           echo "🔖 OpenClaw version: ${{ env.OPENCLAW_VERSION }}"
@@ -136,7 +138,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Setup Android
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
       - name: Build APK
         run: |
@@ -168,7 +170,7 @@ jobs:
           echo "APK_PATH=$PWD/$APK" >> $GITHUB_ENV
 
       - name: Create/Release APK
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: ${{ env.APK_PATH }}
           tag_name: openclaw-android-${{ env.OPENCLAW_VERSION }}
