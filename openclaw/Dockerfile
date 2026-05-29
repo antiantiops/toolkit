@@ -48,7 +48,18 @@ RUN OPENCLAW_A2UI_SKIP_MISSING=1 pnpm_config_verify_deps_before_run=false pnpm c
      echo "/* A2UI bundle unavailable in this build */" > extensions/canvas/src/host/a2ui/a2ui.bundle.js && \
      echo "stub" > extensions/canvas/src/host/a2ui/.bundle.hash && \
      rm -rf vendor/a2ui apps/shared/OpenClawKit/Tools/CanvasA2UI)
-RUN NODE_OPTIONS=--max-old-space-size=8192 pnpm_config_verify_deps_before_run=false pnpm build:docker && echo "root pnpm build:docker completed"
+RUN NODE_OPTIONS=--max-old-space-size=8192 pnpm_config_verify_deps_before_run=false node scripts/tsdown-build.mjs && echo "tsdown-build completed"
+RUN pnpm_config_verify_deps_before_run=false node scripts/check-cli-bootstrap-imports.mjs && echo "check-cli-bootstrap-imports completed"
+RUN pnpm_config_verify_deps_before_run=false node scripts/runtime-postbuild.mjs && echo "runtime-postbuild completed"
+RUN pnpm_config_verify_deps_before_run=false node scripts/build-stamp.mjs && echo "build-stamp completed"
+RUN pnpm_config_verify_deps_before_run=false node scripts/runtime-postbuild-stamp.mjs && echo "runtime-postbuild-stamp completed"
+RUN pnpm_config_verify_deps_before_run=false pnpm plugins:assets:build && echo "plugins:assets:build completed"
+RUN pnpm_config_verify_deps_before_run=false pnpm plugins:assets:copy && echo "plugins:assets:copy completed"
+RUN pnpm_config_verify_deps_before_run=false node --experimental-strip-types scripts/copy-hook-metadata.ts && echo "copy-hook-metadata completed"
+RUN pnpm_config_verify_deps_before_run=false node --experimental-strip-types scripts/copy-export-html-templates.ts && echo "copy-export-html-templates completed"
+RUN pnpm_config_verify_deps_before_run=false node --experimental-strip-types scripts/write-build-info.ts && echo "write-build-info completed"
+RUN pnpm_config_verify_deps_before_run=false node --experimental-strip-types scripts/write-cli-startup-metadata.ts && echo "write-cli-startup-metadata completed"
+RUN pnpm_config_verify_deps_before_run=false node --experimental-strip-types scripts/write-cli-compat.ts && echo "write-cli-compat completed"
 RUN pnpm_config_verify_deps_before_run=false pnpm ui:build && echo "ui pnpm ui:build completed"
 RUN pnpm_config_verify_deps_before_run=false pnpm qa:lab:build && echo "qa lab build completed"
 RUN echo "Dockerfile build steps completed"
