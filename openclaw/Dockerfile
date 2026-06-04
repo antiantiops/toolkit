@@ -58,7 +58,8 @@ RUN pnpm_config_verify_deps_before_run=false pnpm plugins:assets:copy && echo "p
 RUN pnpm_config_verify_deps_before_run=false node --experimental-strip-types scripts/copy-hook-metadata.ts && echo "copy-hook-metadata completed"
 RUN pnpm_config_verify_deps_before_run=false node --experimental-strip-types scripts/copy-export-html-templates.ts && echo "copy-export-html-templates completed"
 RUN pnpm_config_verify_deps_before_run=false node --experimental-strip-types scripts/write-build-info.ts && echo "write-build-info completed"
-RUN pnpm_config_verify_deps_before_run=false node --experimental-strip-types scripts/write-cli-startup-metadata.ts && echo "write-cli-startup-metadata completed"
+RUN sed -i 's/const BROWSER_HELP_RENDER_TIMEOUT_MS = 120_000;/const BROWSER_HELP_RENDER_TIMEOUT_MS = 300_000;/' scripts/write-cli-startup-metadata.ts && \
+    pnpm_config_verify_deps_before_run=false node --experimental-strip-types scripts/write-cli-startup-metadata.ts && echo "write-cli-startup-metadata completed"
 RUN pnpm_config_verify_deps_before_run=false node --experimental-strip-types scripts/write-cli-compat.ts && echo "write-cli-compat completed"
 RUN pnpm_config_verify_deps_before_run=false pnpm ui:build && echo "ui pnpm ui:build completed"
 RUN pnpm_config_verify_deps_before_run=false pnpm qa:lab:build && echo "qa lab build completed"
