@@ -26,3 +26,9 @@ RUN npm cache clean --force \
 EXPOSE 20128
 
 ENTRYPOINT ["9router"]
+# Default to headless/server mode so the image keeps running in non-TTY
+# environments (Docker Compose / Watchtower). Without this, the default
+# entrypoint can drop into the interactive "Choose Interface" menu and exit,
+# causing a restart-loop after automated updates (see toolkit issue #40).
+# Override with `command: [...]` for interactive/TUI use.
+CMD ["--no-browser", "--log", "--skip-update"]
