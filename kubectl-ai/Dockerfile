@@ -1,5 +1,5 @@
 # --- Builder Stage ---
-FROM golang:1.24-alpine as builder
+FROM golang:1.26-alpine as builder
 
 # Install git (needed to clone the repository)
 RUN apk add --no-cache git
@@ -11,7 +11,7 @@ WORKDIR /app
 RUN git clone https://github.com/GoogleCloudPlatform/kubectl-ai.git . && \
     git checkout v0.0.31 && \
     go mod edit -replace=google.golang.org/grpc=google.golang.org/grpc@v1.79.3 && \
-    go mod edit -replace=github.com/ollama/ollama=github.com/ollama/ollama@v0.23.0 && \
+    go mod edit -replace=github.com/ollama/ollama=github.com/ollama/ollama@v0.30.10 && \
     go mod tidy && \
     go work use .
 
