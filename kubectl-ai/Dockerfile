@@ -9,7 +9,10 @@ WORKDIR /app
 
 # Clone the repository and checkout the specific version tag
 RUN git clone https://github.com/GoogleCloudPlatform/kubectl-ai.git . && \
-    git checkout v0.0.26
+    git checkout v0.0.31 && \
+    go mod edit -replace=google.golang.org/grpc=google.golang.org/grpc@v1.79.3 && \
+    go mod edit -droprequire=github.com/ollama/ollama && \
+    go mod tidy
 
 # Download Go module dependencies
 RUN go mod download
