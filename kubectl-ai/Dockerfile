@@ -12,7 +12,8 @@ RUN git clone https://github.com/GoogleCloudPlatform/kubectl-ai.git . && \
     git checkout v0.0.31 && \
     go mod edit -replace=google.golang.org/grpc=google.golang.org/grpc@v1.79.3 && \
     go mod edit -replace=github.com/ollama/ollama=github.com/ollama/ollama@v0.23.0 && \
-    go mod tidy
+    go mod tidy && \
+    go work use .
 
 # Download Go module dependencies
 RUN go mod download
