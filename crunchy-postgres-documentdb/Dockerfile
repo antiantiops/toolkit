@@ -53,6 +53,7 @@ RUN cp -a /src/scripts /tmp/documentdb-setup && \
 # RPM puts its shared objects, controls and SQL migration files under the PG16
 # prefix; without these, CREATE EXTENSION documentdb fails at postgis.control.
 # Never copy PostgreSQL binaries, pg_ctl, Patroni or PGO tooling.
+COPY copy-deps.sh /tmp/copy-deps.sh
 RUN mkdir -p /opt/documentdb/usr/pgsql-16/lib \
       /opt/documentdb/usr/pgsql-16/share/extension \
       /opt/documentdb/usr/lib64 /opt/documentdb/usr/lib && \
@@ -64,12 +65,7 @@ RUN mkdir -p /opt/documentdb/usr/pgsql-16/lib \
           /opt/documentdb/usr/pgsql-16/share/extension/ && \
     cp -a /usr/lib64/libbson-1.0.so* /opt/documentdb/usr/lib64/ && \
     cp -a /usr/lib/intelmathlib /opt/documentdb/usr/lib/ && \
-    # Copy exactly the non-PG shared-library paths resolved by both modules.
-    # `install` follows a source symlink, producing a usable file at its SONAME.
-    for lib in $(ldd /usr/pgsql-16/lib/pg_documentdb.so /usr/pgsql-16/lib/postgis-3.so \
-        | awk '"'"'/=> \\/ { print $3 }'"'"' | grep -v '^/usr/pgsql-16/' | sort -u); do \
-      install -D -m 0755 "$lib" "/opt/documentdb$lib"; \
-    done && \
+    bash /tmp/copy-deps.sh && \
     ldd /usr/pgsql-16/lib/pg_documentdb.so && \
     ldd /usr/pgsql-16/lib/postgis-3.so
 
