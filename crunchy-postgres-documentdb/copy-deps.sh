@@ -1,9 +1,17 @@
 #!/bin/bash
 # Collect DocumentDB + PostGIS extension files and ALL runtime shared-library
-# dependencies (recursively) into /staging, preserving original paths.
+# dependencies (recursively) into /staging, preserving paths under /usr.
+# IMPORTANT: Never create /staging/lib64 — Crunchy base has /lib64 as a symlink
+# to /usr/lib64 and buildkit COPY refuses to overwrite symlinks with directories.
 set -euo pipefail
 
 dst=/staging
+
+# Normalize any /lib64/... path to /usr/lib64/...
+normalize_path() {
+  local p="$1"
+  echo "$p" | sed 's|^/lib64/|/usr/lib64/|; s|^/lib/|/usr/lib/|'
+}
 
 # 1) PG extension shared objects
 mkdir -p "$dst/usr/pgsql-16/lib" "$dst/usr/pgsql-16/share/extension"
@@ -23,61 +31,54 @@ if [ -d /usr/pgsql-16/share/contrib/postgis-3.6 ]; then
   cp -a /usr/pgsql-16/share/contrib/postgis-3.6 "$dst/usr/pgsql-16/share/contrib/"
 fi
 
-# 2) libbson + Intel decimal math (DocumentDB build artifacts)
+# 2) libbson + Intel decimal math
 mkdir -p "$dst/usr/lib64" "$dst/usr/lib"
 cp -a /usr/lib64/libbson-1.0.so* "$dst/usr/lib64/"
 cp -a /usr/lib/intelmathlib "$dst/usr/lib/"
 
 # 3) Recursively resolve ALL shared library dependencies.
-#    Walk the full dependency tree so indirect libs (libgeos_c, libproj, etc.)
-#    are included even if not directly linked by the top-level .so.
-collect_deps() {
-  local visited="$1"
-  local queue="$2"
-  while [ -n "$queue" ]; do
-    local current
-    current=$(echo "$queue" | head -1)
-    queue=$(echo "$queue" | tail -n +2)
-    # Skip already visited or PG-prefix libs (copied above)
-    echo "$visited" | grep -qxF "$current" && continue
-    visited="$visited
-$current"
-    [ -f "$current" ] || continue
-    # Copy lib to staging
-    real_lib=$(readlink -f "$current")
-    target_dir="$dst$(dirname "$real_lib")"
-    mkdir -p "$target_dir"
-    cp -an "$real_lib" "$target_dir/" 2>/dev/null || true
-    # Also copy the symlink name if different
-    if [ "$real_lib" != "$current" ]; then
-      real_current=$(readlink -f "$current")
-      sym_dir="$dst$(dirname "$current")"
-      mkdir -p "$sym_dir"
-      cp -an "$current" "$sym_dir/" 2>/dev/null || true
-    fi
-    # Add this lib's dependencies to the queue
-    local new_deps
-    new_deps=$(ldd "$real_lib" 2>/dev/null | awk '/=>/ && $3 ~ /^\// { print $3 }' | grep -v '^/usr/pgsql-16/' || true)
-    if [ -n "$new_deps" ]; then
-      queue="$queue
-$new_deps"
-    fi
+visited=""
+copy_lib() {
+  local lib="$1"
+  echo "$visited" | grep -qxF "$lib" && return 0
+  visited="$visited
+$lib"
+  [ -f "$lib" ] || return 0
+  # Resolve real path then normalize to /usr/lib64
+  local real_lib
+  real_lib=$(readlink -f "$lib")
+  local norm_path
+  norm_path=$(normalize_path "$real_lib")
+  local target_dir="$dst$(dirname "$norm_path")"
+  mkdir -p "$target_dir"
+  cp -an "$real_lib" "$target_dir/$(basename "$norm_path")" 2>/dev/null || true
+  # Recurse into this lib's dependencies
+  local dep
+  ldd "$real_lib" 2>/dev/null | awk '/=>/ && $3 ~ /^\// { print $3 }' | while read -r dep; do
+    case "$dep" in /usr/pgsql-16/*) continue ;; esac
+    echo "$visited" | grep -qxF "$dep" || copy_lib "$dep"
   done
 }
 
-# Seed with direct deps of our extension .so files
-seed_libs=""
+# Seed from extension .so files
 for so in /usr/pgsql-16/lib/pg_documentdb.so \
           /usr/pgsql-16/lib/pg_documentdb_core.so \
           /usr/pgsql-16/lib/postgis-3.so; do
   [ -f "$so" ] || continue
-  deps=$(ldd "$so" 2>/dev/null | awk '/=>/ && $3 ~ /^\// { print $3 }' | grep -v '^/usr/pgsql-16/' || true)
-  seed_libs="$seed_libs
-$deps"
+  ldd "$so" 2>/dev/null | awk '/=>/ && $3 ~ /^\// { print $3 }' | while read -r dep; do
+    case "$dep" in /usr/pgsql-16/*) continue ;; esac
+    copy_lib "$dep"
+  done
 done
 
-collect_deps "" "$(echo "$seed_libs" | sort -u | grep -v '^$')"
+# Safety: ensure /staging/lib64 does NOT exist (would conflict with Crunchy symlink)
+rm -rf "$dst/lib64" "$dst/lib" 2>/dev/null || true
 
 echo "--- staged files ---"
 find "$dst" -type f | sort || true
 echo "total: $(find "$dst" -type f | wc -l) files"
+# Verify no /lib64 directory exists
+if [ -e "$dst/lib64" ]; then
+  echo "ERROR: /staging/lib64 exists — this will break COPY" >&2
+  exit 1
+fi
