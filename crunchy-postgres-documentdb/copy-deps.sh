@@ -19,11 +19,13 @@ cp -a /usr/pgsql-16/lib/pg_documentdb*.so   "$dst/usr/pgsql-16/lib/"
 cp -a /usr/pgsql-16/lib/documentdb*.so      "$dst/usr/pgsql-16/lib/" 2>/dev/null || true
 cp -a /usr/pgsql-16/lib/postgis*.so         "$dst/usr/pgsql-16/lib/"
 cp -a /usr/pgsql-16/lib/address_standardizer*.so "$dst/usr/pgsql-16/lib/" 2>/dev/null || true
+cp -a /usr/pgsql-16/lib/rum.so               "$dst/usr/pgsql-16/lib/" 2>/dev/null || true
 
 # Extension control + SQL files
 cp -a /usr/pgsql-16/share/extension/documentdb* "$dst/usr/pgsql-16/share/extension/"
 cp -a /usr/pgsql-16/share/extension/postgis*    "$dst/usr/pgsql-16/share/extension/"
 cp -a /usr/pgsql-16/share/extension/address_standardizer* "$dst/usr/pgsql-16/share/extension/" 2>/dev/null || true
+cp -a /usr/pgsql-16/share/extension/rum*        "$dst/usr/pgsql-16/share/extension/" 2>/dev/null || true
 
 # PostGIS SQL contrib
 if [ -d /usr/pgsql-16/share/contrib/postgis-3.6 ]; then
