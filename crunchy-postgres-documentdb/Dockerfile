@@ -18,7 +18,7 @@ ENV PG_MAJOR=16 \
 RUN dnf -y install dnf-plugins-core epel-release && \
     dnf config-manager --set-enabled crb && \
     dnf -y swap curl-minimal curl && \
-    dnf -y install git gcc gcc-c++ make cmake which tar findutils \
+    dnf -y install git gcc gcc-c++ make cmake which tar findutils redhat-rpm-config \
       libicu-devel krb5-devel openssl-devel cyrus-sasl-devel snappy-devel \
       zlib-devel libcurl-devel libuuid-devel lz4-devel bzip2-devel \
       llvm-toolset clang-devel llvm-devel perl-IPC-Run && \
@@ -45,7 +45,6 @@ RUN cp -a /src/scripts /tmp/documentdb-setup && \
     MAKE_PROGRAM=cmake /tmp/documentdb-setup/install_setup_libbson.sh && \
     /tmp/documentdb-setup/install_setup_pcre2.sh && \
     /tmp/documentdb-setup/install_setup_intel_decimal_math_lib.sh && \
-    /tmp/documentdb-setup/install_citus_indent.sh && \
     make PG_CONFIG="${PG_CONFIG}" PG_CFLAGS='-std=gnu99 -Wall -Wno-error' install-no-distributed && \
     test -f /usr/pgsql-16/share/extension/documentdb.control && \
     test -f /usr/pgsql-16/lib/pg_documentdb.so
