@@ -58,7 +58,6 @@ RUN mkdir -p /opt/documentdb/usr/pgsql-16/lib \
       /opt/documentdb/usr/lib64 /opt/documentdb/usr/lib && \
     cp -a /usr/pgsql-16/lib/pg_documentdb*.so \
           /usr/pgsql-16/lib/postgis*.so \
-          /usr/pgsql-16/lib/rtpostgis*.so \
           /opt/documentdb/usr/pgsql-16/lib/ && \
     cp -a /usr/pgsql-16/share/extension/documentdb* \
           /usr/pgsql-16/share/extension/postgis* \
