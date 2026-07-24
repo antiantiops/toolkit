@@ -1,0 +1,71 @@
+name: Build Crunchy PostgreSQL DocumentDB POC
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'crunchy-postgres-documentdb/**'
+      - '.github/workflows/build-crunchy-postgres-documentdb.yml'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'crunchy-postgres-documentdb/**'
+      - '.github/workflows/build-crunchy-postgres-documentdb.yml'
+  workflow_dispatch:
+    inputs:
+      documentdb_ref:
+        description: 'Pinned documentdb/documentdb Git tag'
+        required: true
+        default: 'v0.107-0'
+      crunchy_image:
+        description: 'Crunchy PostgreSQL base image'
+        required: true
+        default: 'registry.developers.crunchydata.com/crunchydata/crunchy-postgres:ubi9-16.14-2621'
+
+env:
+  IMAGE_NAME: antiantiops/crunchy-postgres-documentdb
+  DOCUMENTDB_REF: v0.107-0
+  CRUNCHY_IMAGE: registry.developers.crunchydata.com/crunchydata/crunchy-postgres:ubi9-16.14-2621
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=pg16.14-documentdb0.107.0
+            type=raw,value=pg16-documentdb-{{sha}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./crunchy-postgres-documentdb
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            DOCUMENTDB_REF=${{ inputs.documentdb_ref || env.DOCUMENTDB_REF }}
+            CRUNCHY_IMAGE=${{ inputs.crunchy_image || env.CRUNCHY_IMAGE }}
+          cache-from: type=gha,scope=crunchy-postgres-documentdb
+          cache-to: type=gha,mode=max,scope=crunchy-postgres-documentdb
