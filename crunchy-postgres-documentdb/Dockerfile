@@ -49,15 +49,30 @@ RUN cp -a /src/scripts /tmp/documentdb-setup && \
     test -f /usr/pgsql-16/share/extension/documentdb.control && \
     test -f /usr/pgsql-16/lib/pg_documentdb.so
 
-# Stage only DocumentDB files. Never copy PostgreSQL, pg_ctl or PGO tooling.
+# Stage DocumentDB plus its PostgreSQL extension dependencies. PGDG's PostGIS
+# RPM puts its shared objects, controls and SQL migration files under the PG16
+# prefix; without these, CREATE EXTENSION documentdb fails at postgis.control.
+# Never copy PostgreSQL binaries, pg_ctl, Patroni or PGO tooling.
 RUN mkdir -p /opt/documentdb/usr/pgsql-16/lib \
       /opt/documentdb/usr/pgsql-16/share/extension \
       /opt/documentdb/usr/lib64 /opt/documentdb/usr/lib && \
-    cp -a /usr/pgsql-16/lib/pg_documentdb*.so /opt/documentdb/usr/pgsql-16/lib/ && \
-    cp -a /usr/pgsql-16/share/extension/documentdb* /opt/documentdb/usr/pgsql-16/share/extension/ && \
-    cp -a /usr/lib64/libbson-1.0.so* /opt/documentdb/usr/lib64/ && \
+    cp -a /usr/pgsql-16/lib/pg_documentdb*.so \
+          /usr/pgsql-16/lib/postgis*.so \
+          /usr/pgsql-16/lib/rtpostgis*.so \
+          /opt/documentdb/usr/pgsql-16/lib/ && \
+    cp -a /usr/pgsql-16/share/extension/documentdb* \
+          /usr/pgsql-16/share/extension/postgis* \
+          /opt/documentdb/usr/pgsql-16/share/extension/ && \
+    cp -a /usr/lib64/libbson-1.0.so* \
+          /usr/lib64/liblwgeom*.so* \
+          /usr/lib64/libgeos*.so* \
+          /usr/lib64/libproj*.so* \
+          /usr/lib64/libjson-c*.so* \
+          /usr/lib64/libxml2.so* \
+          /opt/documentdb/usr/lib64/ && \
     cp -a /usr/lib/intelmathlib /opt/documentdb/usr/lib/ && \
-    ldd /usr/pgsql-16/lib/pg_documentdb.so
+    ldd /usr/pgsql-16/lib/pg_documentdb.so && \
+    ldd /usr/pgsql-16/lib/postgis-3.so
 
 FROM ${CRUNCHY_IMAGE}
 USER root
