@@ -33,9 +33,11 @@ for so in /usr/pgsql-16/lib/pg_documentdb.so /usr/pgsql-16/lib/postgis-3.so; do
   ldd "$so" 2>/dev/null | awk '/=>/ && $3 ~ /^\// { print $3 }' | sort -u | while read -r lib; do
     case "$lib" in /usr/pgsql-16/*) continue ;; esac
     [ -f "$lib" ] || continue
-    target_dir="$dst$(dirname "$lib")"
+    # Resolve /lib64 -> /usr/lib64 to avoid symlink conflicts with Crunchy base.
+    real_lib=$(readlink -f "$lib")
+    target_dir="$dst$(dirname "$real_lib")"
     mkdir -p "$target_dir"
-    cp -an "$lib" "$target_dir/" 2>/dev/null || true
+    cp -an "$real_lib" "$target_dir/" 2>/dev/null || true
   done
 done
 
