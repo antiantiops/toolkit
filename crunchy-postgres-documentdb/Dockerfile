@@ -52,6 +52,11 @@ FROM ${CRUNCHY_IMAGE}
 USER root
 COPY --from=builder /staging/ /
 RUN ldconfig && \
+    # Add non-standard GEOS/PROJ lib paths to ldconfig
+    for d in /usr/geos*/lib64 /usr/proj*/lib64; do \
+      [ -d "$d" ] && echo "$d" >> /etc/ld.so.conf.d/postgis-deps.conf; \
+    done && \
+    ldconfig && \
     test -f /usr/pgsql-16/share/extension/documentdb.control && \
     test -f /usr/pgsql-16/share/extension/postgis.control && \
     test -f /usr/pgsql-16/lib/pg_documentdb.so && \

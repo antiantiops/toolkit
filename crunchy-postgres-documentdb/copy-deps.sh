@@ -36,7 +36,17 @@ mkdir -p "$dst/usr/lib64" "$dst/usr/lib"
 cp -a /usr/lib64/libbson-1.0.so* "$dst/usr/lib64/"
 cp -a /usr/lib/intelmathlib "$dst/usr/lib/"
 
-# 3) Recursively resolve ALL shared library dependencies.
+# 3) GEOS and PROJ live in non-standard prefixes on PGDG EL9.
+#    PostGIS links libgeos_c and libproj but they are NOT in /usr/lib64.
+for prefix in /usr/geos*/lib64 /usr/proj*/lib64; do
+  [ -d "$prefix" ] || continue
+  target="$dst$prefix"
+  mkdir -p "$target"
+  cp -a "$prefix"/*.so* "$target/" 2>/dev/null || true
+  echo "Copied $prefix -> $target"
+done
+
+# 4) Recursively resolve remaining shared library dependencies via ldd.
 visited=""
 copy_lib() {
   local lib="$1"
