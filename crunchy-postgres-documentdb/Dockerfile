@@ -62,14 +62,14 @@ RUN mkdir -p /opt/documentdb/usr/pgsql-16/lib \
     cp -a /usr/pgsql-16/share/extension/documentdb* \
           /usr/pgsql-16/share/extension/postgis* \
           /opt/documentdb/usr/pgsql-16/share/extension/ && \
-    cp -a /usr/lib64/libbson-1.0.so* \
-          /usr/lib64/liblwgeom*.so* \
-          /usr/lib64/libgeos*.so* \
-          /usr/lib64/libproj*.so* \
-          /usr/lib64/libjson-c*.so* \
-          /usr/lib64/libxml2.so* \
-          /opt/documentdb/usr/lib64/ && \
+    cp -a /usr/lib64/libbson-1.0.so* /opt/documentdb/usr/lib64/ && \
     cp -a /usr/lib/intelmathlib /opt/documentdb/usr/lib/ && \
+    # Copy exactly the non-PG shared-library paths resolved by both modules.
+    # `install` follows a source symlink, producing a usable file at its SONAME.
+    for lib in $(ldd /usr/pgsql-16/lib/pg_documentdb.so /usr/pgsql-16/lib/postgis-3.so \
+        | awk '"'"'/=> \\/ { print $3 }'"'"' | grep -v '^/usr/pgsql-16/' | sort -u); do \
+      install -D -m 0755 "$lib" "/opt/documentdb$lib"; \
+    done && \
     ldd /usr/pgsql-16/lib/pg_documentdb.so && \
     ldd /usr/pgsql-16/lib/postgis-3.so
 
