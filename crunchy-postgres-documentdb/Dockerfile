@@ -67,4 +67,8 @@ RUN test -x /usr/pgsql-16/bin/postgres && \
     test -f /usr/pgsql-16/share/extension/documentdb.control && \
     test -f /usr/pgsql-16/lib/pg_documentdb.so
 
-USER 2
+# Crunchy PostgreSQL containers run as the postgres account (UID 26). PGO's
+# startup init validates ownership of the existing data directory, so preserving
+# this image-level user is required; using UID 2 makes that init fail on an
+# existing PVC.
+USER 26
