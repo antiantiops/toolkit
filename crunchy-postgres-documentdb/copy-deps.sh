@@ -40,5 +40,5 @@ for so in /usr/pgsql-16/lib/pg_documentdb.so /usr/pgsql-16/lib/postgis-3.so; do
 done
 
 echo "--- staged files ---"
-find "$dst" -type f | sort | head -80
+find "$dst" -type f | sort || true
 echo "total: $(find "$dst" -type f | wc -l) files"
