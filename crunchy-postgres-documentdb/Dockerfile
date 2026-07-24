@@ -38,11 +38,14 @@ RUN git clone --depth 1 --branch "${DOCUMENTDB_REF}" https://github.com/document
 # Match DocumentDB upstream's EL9 packaging dependency build. This builds
 # libbson, PCRE2 and Intel decimal math, then only the non-distributed
 # DocumentDB PostgreSQL extension.
-RUN export INSTALL_DEPENDENCIES_ROOT=/src/scripts && \
-    MAKE_PROGRAM=cmake ./scripts/install_setup_libbson.sh && \
-    ./scripts/install_setup_pcre2.sh && \
-    ./scripts/install_setup_intel_decimal_math_lib.sh && \
-    ./scripts/install_citus_indent.sh && \
+# Use absolute script paths: the upstream setup scripts change their working
+# directory internally, so relative ./scripts paths are not reliable here.
+RUN cp -a /src/scripts /tmp/documentdb-setup && \
+    export INSTALL_DEPENDENCIES_ROOT=/tmp/documentdb-setup && \
+    MAKE_PROGRAM=cmake /tmp/documentdb-setup/install_setup_libbson.sh && \
+    /tmp/documentdb-setup/install_setup_pcre2.sh && \
+    /tmp/documentdb-setup/install_setup_intel_decimal_math_lib.sh && \
+    /tmp/documentdb-setup/install_citus_indent.sh && \
     make PG_CONFIG="${PG_CONFIG}" PG_CFLAGS='-std=gnu99 -Wall -Wno-error' install-no-distributed && \
     test -f /usr/pgsql-16/share/extension/documentdb.control && \
     test -f /usr/pgsql-16/lib/pg_documentdb.so
