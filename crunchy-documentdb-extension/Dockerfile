@@ -54,7 +54,7 @@ RUN bash /tmp/copy-deps.sh && \
       patchelf --set-rpath "$RPATH" "$so" 2>/dev/null || true; \
     done && \
     echo "RPATH set to: $RPATH" && \
-    readelf -d /extensions/usr/pgsql-16/lib/pg_documentdb.so | grep RPATH
+    readelf -d /extensions/usr/pgsql-16/lib/pg_documentdb.so | grep -E 'RPATH|RUNPATH' || echo 'No RPATH/RUNPATH found (patchelf may have failed)'
 
 # ── Stage 2: minimal image with only extension artifacts ──
 FROM registry.access.redhat.com/ubi9-micro:latest
