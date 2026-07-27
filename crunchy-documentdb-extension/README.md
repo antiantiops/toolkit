@@ -43,7 +43,6 @@ Deploy on **vanilla Crunchy PostgreSQL 16** managed by [PGO (postgres-operator)]
 - Kubernetes 1.26+
 - CrunchyData PGO v5.5+ or v6.0+
 - Default StorageClass with `ReadWriteOnce` support
-- Access to pull from Docker Hub (`antiantiops/crunchy-documentdb-extension`)
 
 ## Step-by-Step Deployment
 
