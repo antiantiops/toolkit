@@ -41,10 +41,20 @@ RUN cp -a /src/scripts /tmp/documentdb-setup && \
     test -f /usr/pgsql-16/share/extension/documentdb.control && \
     test -f /usr/pgsql-16/lib/pg_documentdb.so
 
+# Install patchelf for RPATH patching
+RUN dnf -y install patchelf && dnf clean all
+
 # Collect extension artifacts + shared lib dependencies into /extensions
 COPY copy-deps.sh /tmp/copy-deps.sh
 RUN bash /tmp/copy-deps.sh && \
-    mv /staging /extensions
+    mv /staging /extensions && \
+    # Patch RPATH so linker finds deps at PGO mount path without LD_LIBRARY_PATH
+    RPATH='/volumes/documentdb-ext/usr/lib64:/volumes/documentdb-ext/usr/lib' && \
+    for so in /extensions/usr/pgsql-16/lib/*.so; do \
+      patchelf --set-rpath "$RPATH" "$so" 2>/dev/null || true; \
+    done && \
+    echo "RPATH set to: $RPATH" && \
+    readelf -d /extensions/usr/pgsql-16/lib/pg_documentdb.so | grep RPATH
 
 # ── Stage 2: minimal image with only extension artifacts ──
 FROM registry.access.redhat.com/ubi9-micro:latest
