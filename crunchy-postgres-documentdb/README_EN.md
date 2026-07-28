@@ -50,7 +50,7 @@ spec:
           cron.database_name: ferretdb
         pg_hba:
           - host all all 0.0.0.0/0 md5
-          - host all all ::0/0 md5
+  - host all all ::/0 md5
 ```
 
 `shared_preload_libraries` must include both `pg_documentdb_core` and `pg_documentdb`. Changing it requires a PostgreSQL restart.

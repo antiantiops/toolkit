@@ -49,16 +49,15 @@ for prefix in /usr/geos*/lib64 /usr/proj*/lib64; do
 done
 
 # 4) Recursively resolve remaining shared library dependencies via ldd.
-visited=""
+declare -A visited=()
 copy_lib() {
   local lib="$1"
-  echo "$visited" | grep -qxF "$lib" && return 0
-  visited="$visited
-$lib"
   [ -f "$lib" ] || return 0
   # Resolve real path then normalize to /usr/lib64
   local real_lib
   real_lib=$(readlink -f "$lib")
+  [[ ${visited["$real_lib"]+_} ]] && return 0
+  visited["$real_lib"]=1
   local norm_path
   norm_path=$(normalize_path "$real_lib")
   local target_dir="$dst$(dirname "$norm_path")"
@@ -66,10 +65,10 @@ $lib"
   cp -an "$real_lib" "$target_dir/$(basename "$norm_path")" 2>/dev/null || true
   # Recurse into this lib's dependencies
   local dep
-  ldd "$real_lib" 2>/dev/null | awk '/=>/ && $3 ~ /^\// { print $3 }' | while read -r dep; do
+  while read -r dep; do
     case "$dep" in /usr/pgsql-16/*) continue ;; esac
-    echo "$visited" | grep -qxF "$dep" || copy_lib "$dep"
-  done
+    copy_lib "$dep"
+  done < <(ldd "$real_lib" 2>/dev/null | awk '/=>/ && $3 ~ /^\// { print $3 }')
 }
 
 # Seed from extension .so files
@@ -77,10 +76,10 @@ for so in /usr/pgsql-16/lib/pg_documentdb.so \
           /usr/pgsql-16/lib/pg_documentdb_core.so \
           /usr/pgsql-16/lib/postgis-3.so; do
   [ -f "$so" ] || continue
-  ldd "$so" 2>/dev/null | awk '/=>/ && $3 ~ /^\// { print $3 }' | while read -r dep; do
+  while read -r dep; do
     case "$dep" in /usr/pgsql-16/*) continue ;; esac
     copy_lib "$dep"
-  done
+  done < <(ldd "$so" 2>/dev/null | awk '/=>/ && $3 ~ /^\// { print $3 }')
 done
 
 # Safety: ensure /staging/lib64 does NOT exist (would conflict with Crunchy symlink)

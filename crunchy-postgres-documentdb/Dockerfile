@@ -40,7 +40,9 @@ RUN cp -a /src/scripts /tmp/documentdb-setup && \
     /tmp/documentdb-setup/install_setup_intel_decimal_math_lib.sh && \
     make PG_CONFIG="${PG_CONFIG}" PG_CFLAGS='-std=gnu99 -Wall -Wno-error' install-no-distributed && \
     test -f /usr/pgsql-16/share/extension/documentdb.control && \
-    test -f /usr/pgsql-16/lib/pg_documentdb.so
+    test -f /usr/pgsql-16/share/extension/documentdb_core.control && \
+    test -f /usr/pgsql-16/lib/pg_documentdb.so && \
+    test -f /usr/pgsql-16/lib/pg_documentdb_core.so
 
 # Collect everything we need into /staging.
 # Copy whole extension dirs — no cherry-picking individual .so files.
@@ -58,8 +60,11 @@ RUN ldconfig && \
     done && \
     ldconfig && \
     test -f /usr/pgsql-16/share/extension/documentdb.control && \
+    test -f /usr/pgsql-16/share/extension/documentdb_core.control && \
     test -f /usr/pgsql-16/share/extension/postgis.control && \
     test -f /usr/pgsql-16/lib/pg_documentdb.so && \
+    test -f /usr/pgsql-16/lib/pg_documentdb_core.so && \
     ldd /usr/pgsql-16/lib/pg_documentdb.so && \
+    ldd /usr/pgsql-16/lib/pg_documentdb_core.so && \
     echo "DocumentDB + PostGIS verified OK"
 USER 26
