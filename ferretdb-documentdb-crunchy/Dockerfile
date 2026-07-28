@@ -10,6 +10,7 @@ RUN apt-get update \
       python3-kubernetes \
  && mkdir -p /usr/lib64 \
  && ln -sf "$(find /usr/lib -name libnss_wrapper.so -type f -print -quit)" /usr/lib64/libnss_wrapper.so \
+ && rm -f /etc/pgbackrest.conf \
  && test -x /usr/bin/patroni \
  && test -x /usr/bin/pgbackrest \
  && test -f /usr/lib64/libnss_wrapper.so \
