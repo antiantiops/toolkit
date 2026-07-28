@@ -5,11 +5,13 @@ RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       libnss-wrapper \
       patroni \
+      pgbackrest \
       postgresql-17-pgaudit \
       python3-kubernetes \
  && mkdir -p /usr/lib64 \
  && ln -sf "$(find /usr/lib -name libnss_wrapper.so -type f -print -quit)" /usr/lib64/libnss_wrapper.so \
  && test -x /usr/bin/patroni \
+ && test -x /usr/bin/pgbackrest \
  && test -f /usr/lib64/libnss_wrapper.so \
  && test -f /usr/lib/postgresql/17/lib/pgaudit.so \
  && rm -rf /var/lib/apt/lists/*
