@@ -1,3 +1,6 @@
 # Scan targets - one URL per line
 # Lines starting with # are ignored
 https://nimtechnology.com
+https://esxi.nimtechnology.com
+https://e-learning.nimtechnology.com
+https://api-gateway.nimtechnology.com
