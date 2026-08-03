@@ -66,47 +66,54 @@ jobs:
         run: |
           mkdir -p scan-history
 
-          # Ensure scan output exists
           if [ ! -f scan-results/current.json ] || [ ! -s scan-results/current.json ]; then
             echo "[]" > scan-results/current.json
           fi
 
-          # Count using grep (no jq/python in nuclei image)
-          TOTAL=$(grep -c '"template-id"' scan-results/current.json 2>/dev/null || echo 0)
-          CRITICAL=$(grep -c '"severity":"critical"' scan-results/current.json 2>/dev/null || echo 0)
-          HIGH=$(grep -c '"severity":"high"' scan-results/current.json 2>/dev/null || echo 0)
-          MEDIUM=$(grep -c '"severity":"medium"' scan-results/current.json 2>/dev/null || echo 0)
+          # Count using grep -o (BusyBox grep, no -P support)
+          TOTAL=$(grep -o '"template-id"' scan-results/current.json | wc -l)
+          CRITICAL=$(grep -o '"severity":"critical"' scan-results/current.json | wc -l)
+          HIGH=$(grep -o '"severity":"high"' scan-results/current.json | wc -l)
+          MEDIUM=$(grep -o '"severity":"medium"' scan-results/current.json | wc -l)
 
           echo "total=$TOTAL" >> $GITHUB_OUTPUT
           echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
           echo "high=$HIGH" >> $GITHUB_OUTPUT
           echo "medium=$MEDIUM" >> $GITHUB_OUTPUT
 
-          # Compare with previous scan
+          # Compare with previous scan using signatures
           NEW_COUNT=$TOTAL
           if [ -f scan-history/previous.json ] && [ -s scan-history/previous.json ]; then
-            # Extract host+template-id signatures
-            grep -oP '"host":"[^"]+","template-id":"[^"]+"' scan-history/previous.json 2>/dev/null | sort -u > /tmp/prev_sigs.txt || true
-            grep -oP '"host":"[^"]+","template-id":"[^"]+"' scan-results/current.json 2>/dev/null | sort -u > /tmp/curr_sigs.txt || true
+            # Extract host|template-id signatures
+            sed 's/},{/}\n{/g' scan-history/previous.json | sed 's/^\[//;s/\]$//' | while IFS= read -r obj; do
+              host=$(echo "$obj" | sed -n 's/.*"host":"\([^"]*\)".*/\1/p')
+              tid=$(echo "$obj" | sed -n 's/.*"template-id":"\([^"]*\)".*/\1/p')
+              [ -n "$tid" ] && echo "$host|$tid"
+            done | sort -u > /tmp/prev_sigs.txt
+
+            sed 's/},{/}\n{/g' scan-results/current.json | sed 's/^\[//;s/\]$//' | while IFS= read -r obj; do
+              host=$(echo "$obj" | sed -n 's/.*"host":"\([^"]*\)".*/\1/p')
+              tid=$(echo "$obj" | sed -n 's/.*"template-id":"\([^"]*\)".*/\1/p')
+              [ -n "$tid" ] && echo "$host|$tid"
+            done | sort -u > /tmp/curr_sigs.txt
+
             NEW_COUNT=$(comm -13 /tmp/prev_sigs.txt /tmp/curr_sigs.txt | wc -l)
           fi
 
           echo "new_count=$NEW_COUNT" >> $GITHUB_OUTPUT
 
-          # Build findings summary (top 10)
-          grep -oP '\{"template-id":"[^"]+".+?\}' scan-results/current.json 2>/dev/null | head -10 | while IFS= read -r line; do
-            SEV=$(echo "$line" | grep -oP '"severity":"[^"]+"' | head -1 | cut -d'"' -f4)
-            NAME=$(echo "$line" | grep -oP '"name":"[^"]+"' | head -1 | cut -d'"' -f4)
-            HOST=$(echo "$line" | grep -oP '"host":"[^"]+"' | head -1 | cut -d'"' -f4)
-            SEV_UP=$(echo "$SEV" | tr '[:lower:]' '[:upper:]')
-            echo "[$SEV_UP] $NAME -> $HOST"
+          # Build findings summary
+          sed 's/},{/}\n{/g' scan-results/current.json | sed 's/^\[//;s/\]$//' | head -10 | while IFS= read -r obj; do
+            sev=$(echo "$obj" | sed -n 's/.*"severity":"\([^"]*\)".*/\1/p')
+            name=$(echo "$obj" | sed -n 's/.*"name":"\([^"]*\)".*/\1/p')
+            host=$(echo "$obj" | sed -n 's/.*"host":"\([^"]*\)".*/\1/p')
+            sev_up=$(echo "$sev" | tr '[:lower:]' '[:upper:]')
+            [ -n "$name" ] && echo "[$sev_up] $name -> $host"
           done > /tmp/findings_summary.txt 2>/dev/null || true
 
-          FINDINGS=$(cat /tmp/findings_summary.txt 2>/dev/null || echo "")
-          # Escape for GITHUB_OUTPUT multiline
           {
             echo 'findings<<FINDINGSEOF'
-            echo "$FINDINGS"
+            cat /tmp/findings_summary.txt 2>/dev/null || true
             echo 'FINDINGSEOF'
           } >> $GITHUB_OUTPUT
 
@@ -124,24 +131,25 @@ jobs:
           MEDIUM="${{ steps.analyze.outputs.medium }}"
           NEW="${{ steps.analyze.outputs.new_count }}"
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          FINDINGS="${{ steps.analyze.outputs.findings }}"
+          FINDINGS=$(cat /tmp/findings_summary.txt 2>/dev/null | head -10 || echo "See report")
 
-          MSG=$(cat <<MSGEOF
-🚨 <b>Vulnerability Scan Report</b>
+          MSG="🚨 <b>Vulnerability Scan Report</b>
 
-📅 $(date -u +'%Y-%m-%d %H:%M UTC')
-🆕 New findings: <b>${NEW}</b>
-📊 Total: ${TOTAL} (🔴${CRITICAL} 🟠${HIGH} 🟡${MEDIUM})
+          📅 $(date -u +'%Y-%m-%d %H:%M UTC')
+          🆕 New: <b>${NEW}</b>
+          📊 Total: ${TOTAL} (🔴${CRITICAL} 🟠${HIGH} 🟡${MEDIUM})
 
-<b>Top Findings:</b>
-<pre>${FINDINGS:-No details}</pre>
+          <b>Findings:</b>
+          <pre>${FINDINGS}</pre>
 
-🔗 <a href="${RUN_URL}">View full report</a>
-MSGEOF
-          )
+          🔗 <a href=\"${RUN_URL}\">Full report</a>"
+
+          # Trim leading whitespace from heredoc
+          MSG=$(echo "$MSG" | sed 's/^          //')
 
           wget -qO- --post-data="chat_id=${TELEGRAM_CHAT_ID}&text=${MSG}&parse_mode=HTML&disable_web_page_preview=true" \
-            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" || echo "::warning::Telegram send failed"
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            || echo "::warning::Telegram send failed"
 
       - name: Send Telegram all-clear
         if: steps.analyze.outputs.new_count == '0' || steps.analyze.outputs.total == '0'
@@ -152,19 +160,19 @@ MSGEOF
           TOTAL="${{ steps.analyze.outputs.total }}"
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-          MSG=$(cat <<MSGEOF
-✅ <b>Daily Vulnerability Scan</b>
+          MSG="✅ <b>Daily Vulnerability Scan</b>
 
-📅 $(date -u +'%Y-%m-%d %H:%M UTC')
-No new vulnerabilities detected.
-Known: ${TOTAL}
+          📅 $(date -u +'%Y-%m-%d %H:%M UTC')
+          No new vulnerabilities detected.
+          Known: ${TOTAL}
 
-🔗 <a href="${RUN_URL}">Details</a>
-MSGEOF
-          )
+          🔗 <a href=\"${RUN_URL}\">Details</a>"
+
+          MSG=$(echo "$MSG" | sed 's/^          //')
 
           wget -qO- --post-data="chat_id=${TELEGRAM_CHAT_ID}&text=${MSG}&parse_mode=HTML&disable_web_page_preview=true" \
-            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" || echo "::warning::Telegram send failed"
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            || echo "::warning::Telegram send failed"
 
       - name: Save scan for next comparison
         if: always()
