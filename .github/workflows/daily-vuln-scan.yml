@@ -14,9 +14,14 @@ on:
 jobs:
   scan:
     runs-on: ubuntu-latest
+    container:
+      image: projectdiscovery/nuclei:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Verify Nuclei
+        run: nuclei -version
 
       - name: Restore previous scan cache
         id: cache-restore
@@ -27,24 +32,15 @@ jobs:
           restore-keys: |
             vuln-scan-
 
-      - name: Install Nuclei
-        run: |
-          NUCLEI_VERSION=$(curl -sS https://api.github.com/repos/projectdiscovery/nuclei/releases/latest | jq -r '.tag_name' | sed 's/^v//')
-          curl -sSL "https://github.com/projectdiscovery/nuclei/releases/latest/download/nuclei_${NUCLEI_VERSION}_linux_amd64.zip" -o nuclei.zip
-          unzip -o nuclei.zip nuclei
-          chmod +x nuclei
-          sudo mv nuclei /usr/local/bin/
-          nuclei -version
-
       - name: Update Nuclei templates
-        run: nuclei -ut -ud /tmp/nuclei-templates
+        run: nuclei -ut
 
       - name: Run vulnerability scan
         run: |
           SEVERITY="${{ github.event.inputs.severity || 'critical,high,medium' }}"
 
           if [ ! -f targets.txt ]; then
-            echo "::error::targets.txt not found in repository root"
+            echo "::error::targets.txt not found"
             exit 1
           fi
 
@@ -57,7 +53,6 @@ jobs:
           nuclei \
             -l /tmp/active_targets.txt \
             -severity "$SEVERITY" \
-            -ud /tmp/nuclei-templates \
             -je scan-results/current.json \
             -silent \
             -timeout 15 \
@@ -72,10 +67,10 @@ jobs:
           mkdir -p scan-history
 
           if [ -f scan-results/current.json ] && [ -s scan-results/current.json ]; then
-            TOTAL=$(jq 'length' scan-results/current.json)
-            CRITICAL=$(jq '[.[] | select(.info.severity=="critical")] | length' scan-results/current.json)
-            HIGH=$(jq '[.[] | select(.info.severity=="high")] | length' scan-results/current.json)
-            MEDIUM=$(jq '[.[] | select(.info.severity=="medium")] | length' scan-results/current.json)
+            TOTAL=$(cat scan-results/current.json | python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null || echo 0)
+            CRITICAL=$(cat scan-results/current.json | python3 -c "import sys,json; print(len([x for x in json.load(sys.stdin) if x.get('info',{}).get('severity')=='critical']))" 2>/dev/null || echo 0)
+            HIGH=$(cat scan-results/current.json | python3 -c "import sys,json; print(len([x for x in json.load(sys.stdin) if x.get('info',{}).get('severity')=='high']))" 2>/dev/null || echo 0)
+            MEDIUM=$(cat scan-results/current.json | python3 -c "import sys,json; print(len([x for x in json.load(sys.stdin) if x.get('info',{}).get('severity')=='medium']))" 2>/dev/null || echo 0)
           else
             TOTAL=0; CRITICAL=0; HIGH=0; MEDIUM=0
             echo "[]" > scan-results/current.json
@@ -89,9 +84,22 @@ jobs:
           # Compare with previous
           NEW_COUNT=$TOTAL
           if [ -f scan-history/previous.json ] && [ -s scan-history/previous.json ]; then
-            jq -r '.[] | [.host, .["template-id"]] | @csv' scan-history/previous.json 2>/dev/null | sort -u > /tmp/prev.txt || touch /tmp/prev.txt
-            jq -r '.[] | [.host, .["template-id"]] | @csv' scan-results/current.json 2>/dev/null | sort -u > /tmp/curr.txt || touch /tmp/curr.txt
-            NEW_COUNT=$(comm -13 /tmp/prev.txt /tmp/curr.txt | wc -l)
+            NEW_COUNT=$(python3 -c "
+          import json
+          prev = set()
+          curr = set()
+          try:
+              with open('scan-history/previous.json') as f:
+                  for item in json.load(f):
+                      prev.add((item.get('host',''), item.get('template-id','')))
+          except: pass
+          try:
+              with open('scan-results/current.json') as f:
+                  for item in json.load(f):
+                      curr.add((item.get('host',''), item.get('template-id','')))
+          except: pass
+          print(len(curr - prev))
+          " 2>/dev/null || echo "$TOTAL")
           fi
 
           echo "new_count=$NEW_COUNT" >> $GITHUB_OUTPUT
@@ -101,11 +109,18 @@ jobs:
         id: findings
         if: steps.analyze.outputs.total != '0'
         run: |
-          SUMMARY=$(jq -r '.[] | "• [\(.info.severity | ascii_upcase)] \(.info.name) → \(.host)"' scan-results/current.json | head -10)
-          # Write to file to avoid escaping issues
-          echo "$SUMMARY" > /tmp/findings_summary.txt
+          python3 -c "
+          import json
+          with open('scan-results/current.json') as f:
+              data = json.load(f)
+          for item in data[:10]:
+              sev = item.get('info',{}).get('severity','?').upper()
+              name = item.get('info',{}).get('name','unknown')
+              host = item.get('host','?')
+              print(f'[\u200b{sev}] {name} -> {host}')
+          " > /tmp/findings_summary.txt 2>/dev/null || echo "See report" > /tmp/findings_summary.txt
 
-      - name: Send Telegram alert (new vulns found)
+      - name: Send Telegram alert
         if: steps.analyze.outputs.new_count != '0' && steps.analyze.outputs.total != '0'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -117,26 +132,32 @@ jobs:
           MEDIUM="${{ steps.analyze.outputs.medium }}"
           NEW="${{ steps.analyze.outputs.new_count }}"
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          FINDINGS=$(cat /tmp/findings_summary.txt 2>/dev/null | head -10 || echo "See report")
 
-          MSG="🚨 <b>Vulnerability Scan Report</b>
+          python3 -c "
+          import urllib.request, urllib.parse, sys, os
+          msg = '''🚨 <b>Vulnerability Scan Report</b>
 
-          📅 $(date -u +'%Y-%m-%d %H:%M UTC')
-          🆕 New findings: <b>${NEW}</b>
+          📅 New findings: <b>${NEW}</b>
           📊 Total: ${TOTAL} (🔴${CRITICAL} 🟠${HIGH} 🟡${MEDIUM})
 
           <b>Top Findings:</b>
-          <pre>$(cat /tmp/findings_summary.txt 2>/dev/null || echo 'See report')</pre>
+          <pre>${FINDINGS}</pre>
 
-          🔗 <a href=\"${RUN_URL}\">View full report</a>"
+          🔗 <a href=\"${RUN_URL}\">View full report</a>'''
 
-          # Trim leading whitespace from heredoc
-          MSG=$(echo "$MSG" | sed 's/^          //')
-
-          curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d "chat_id=${TELEGRAM_CHAT_ID}" \
-            --data-urlencode "text=${MSG}" \
-            -d "parse_mode=HTML" \
-            -d "disable_web_page_preview=true"
+          msg = '\n'.join(line.lstrip() for line in msg.strip().splitlines())
+          token = os.environ['TELEGRAM_BOT_TOKEN']
+          chat_id = os.environ['TELEGRAM_CHAT_ID']
+          data = urllib.parse.urlencode({
+              'chat_id': chat_id,
+              'text': msg,
+              'parse_mode': 'HTML',
+              'disable_web_page_preview': 'true'
+          }).encode()
+          req = urllib.request.Request(f'https://api.telegram.org/bot{token}/sendMessage', data)
+          urllib.request.urlopen(req)
+          "
 
       - name: Send Telegram all-clear
         if: steps.analyze.outputs.new_count == '0' || steps.analyze.outputs.total == '0'
@@ -147,23 +168,36 @@ jobs:
           TOTAL="${{ steps.analyze.outputs.total }}"
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-          MSG="✅ <b>Daily Vulnerability Scan</b>
-
-          📅 $(date -u +'%Y-%m-%d %H:%M UTC')
+          python3 -c "
+          import urllib.request, urllib.parse, os
+          msg = '''✅ <b>Daily Vulnerability Scan</b>
           No new vulnerabilities detected.
           Known: ${TOTAL}
+          🔗 <a href=\"${RUN_URL}\">Details</a>'''
 
-          🔗 <a href=\"${RUN_URL}\">Details</a>"
-
-          MSG=$(echo "$MSG" | sed 's/^          //')
-
-          curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d "chat_id=${TELEGRAM_CHAT_ID}" \
-            --data-urlencode "text=${MSG}" \
-            -d "parse_mode=HTML" \
-            -d "disable_web_page_preview=true"
+          msg = '\n'.join(line.lstrip() for line in msg.strip().splitlines())
+          token = os.environ['TELEGRAM_BOT_TOKEN']
+          chat_id = os.environ['TELEGRAM_CHAT_ID']
+          data = urllib.parse.urlencode({
+              'chat_id': chat_id,
+              'text': msg,
+              'parse_mode': 'HTML',
+              'disable_web_page_preview': 'true'
+          }).encode()
+          req = urllib.request.Request(f'https://api.telegram.org/bot{token}/sendMessage', data)
+          urllib.request.urlopen(req)
+          "
 
       - name: Save scan for next comparison
+        if: always()
+        run: |
+          mkdir -p scan-history
+          if [ -f scan-results/current.json ]; then
+            cp scan-results/current.json scan-history/previous.json
+          fi
+
+      - name: Save scan cache
+        if: always()
         uses: actions/cache/save@v4
         with:
           path: scan-history/
