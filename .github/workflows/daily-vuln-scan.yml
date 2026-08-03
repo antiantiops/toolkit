@@ -66,59 +66,51 @@ jobs:
         run: |
           mkdir -p scan-history
 
-          if [ -f scan-results/current.json ] && [ -s scan-results/current.json ]; then
-            TOTAL=$(cat scan-results/current.json | python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null || echo 0)
-            CRITICAL=$(cat scan-results/current.json | python3 -c "import sys,json; print(len([x for x in json.load(sys.stdin) if x.get('info',{}).get('severity')=='critical']))" 2>/dev/null || echo 0)
-            HIGH=$(cat scan-results/current.json | python3 -c "import sys,json; print(len([x for x in json.load(sys.stdin) if x.get('info',{}).get('severity')=='high']))" 2>/dev/null || echo 0)
-            MEDIUM=$(cat scan-results/current.json | python3 -c "import sys,json; print(len([x for x in json.load(sys.stdin) if x.get('info',{}).get('severity')=='medium']))" 2>/dev/null || echo 0)
-          else
-            TOTAL=0; CRITICAL=0; HIGH=0; MEDIUM=0
+          # Ensure scan output exists
+          if [ ! -f scan-results/current.json ] || [ ! -s scan-results/current.json ]; then
             echo "[]" > scan-results/current.json
           fi
+
+          # Count using grep (no jq/python in nuclei image)
+          TOTAL=$(grep -c '"template-id"' scan-results/current.json 2>/dev/null || echo 0)
+          CRITICAL=$(grep -c '"severity":"critical"' scan-results/current.json 2>/dev/null || echo 0)
+          HIGH=$(grep -c '"severity":"high"' scan-results/current.json 2>/dev/null || echo 0)
+          MEDIUM=$(grep -c '"severity":"medium"' scan-results/current.json 2>/dev/null || echo 0)
 
           echo "total=$TOTAL" >> $GITHUB_OUTPUT
           echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
           echo "high=$HIGH" >> $GITHUB_OUTPUT
           echo "medium=$MEDIUM" >> $GITHUB_OUTPUT
 
-          # Compare with previous
+          # Compare with previous scan
           NEW_COUNT=$TOTAL
           if [ -f scan-history/previous.json ] && [ -s scan-history/previous.json ]; then
-            NEW_COUNT=$(python3 -c "
-          import json
-          prev = set()
-          curr = set()
-          try:
-              with open('scan-history/previous.json') as f:
-                  for item in json.load(f):
-                      prev.add((item.get('host',''), item.get('template-id','')))
-          except: pass
-          try:
-              with open('scan-results/current.json') as f:
-                  for item in json.load(f):
-                      curr.add((item.get('host',''), item.get('template-id','')))
-          except: pass
-          print(len(curr - prev))
-          " 2>/dev/null || echo "$TOTAL")
+            # Extract host+template-id signatures
+            grep -oP '"host":"[^"]+","template-id":"[^"]+"' scan-history/previous.json 2>/dev/null | sort -u > /tmp/prev_sigs.txt || true
+            grep -oP '"host":"[^"]+","template-id":"[^"]+"' scan-results/current.json 2>/dev/null | sort -u > /tmp/curr_sigs.txt || true
+            NEW_COUNT=$(comm -13 /tmp/prev_sigs.txt /tmp/curr_sigs.txt | wc -l)
           fi
 
           echo "new_count=$NEW_COUNT" >> $GITHUB_OUTPUT
-          echo "Found: $TOTAL total ($CRITICAL critical, $HIGH high, $MEDIUM medium), $NEW_COUNT new"
 
-      - name: Build findings summary
-        id: findings
-        if: steps.analyze.outputs.total != '0'
-        run: |
-          python3 -c "
-          import json
-          with open('scan-results/current.json') as f:
-              data = json.load(f)
-          for item in data[:10]:
-              sev = item.get('info',{}).get('severity','?').upper()
-              name = item.get('info',{}).get('name','unknown')
-              host = item.get('host','?')
-              print(f'[\u200b{sev}] {name} -> {host}')
-          " > /tmp/findings_summary.txt 2>/dev/null || echo "See report" > /tmp/findings_summary.txt
+          # Build findings summary (top 10)
+          grep -oP '\{"template-id":"[^"]+".+?\}' scan-results/current.json 2>/dev/null | head -10 | while IFS= read -r line; do
+            SEV=$(echo "$line" | grep -oP '"severity":"[^"]+"' | head -1 | cut -d'"' -f4)
+            NAME=$(echo "$line" | grep -oP '"name":"[^"]+"' | head -1 | cut -d'"' -f4)
+            HOST=$(echo "$line" | grep -oP '"host":"[^"]+"' | head -1 | cut -d'"' -f4)
+            SEV_UP=$(echo "$SEV" | tr '[:lower:]' '[:upper:]')
+            echo "[$SEV_UP] $NAME -> $HOST"
+          done > /tmp/findings_summary.txt 2>/dev/null || true
+
+          FINDINGS=$(cat /tmp/findings_summary.txt 2>/dev/null || echo "")
+          # Escape for GITHUB_OUTPUT multiline
+          {
+            echo 'findings<<FINDINGSEOF'
+            echo "$FINDINGS"
+            echo 'FINDINGSEOF'
+          } >> $GITHUB_OUTPUT
+
+          echo "Found: $TOTAL total ($CRITICAL critical, $HIGH high, $MEDIUM medium), $NEW_COUNT new"
 
       - name: Send Telegram alert
         if: steps.analyze.outputs.new_count != '0' && steps.analyze.outputs.total != '0'
@@ -132,32 +124,24 @@ jobs:
           MEDIUM="${{ steps.analyze.outputs.medium }}"
           NEW="${{ steps.analyze.outputs.new_count }}"
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          FINDINGS=$(cat /tmp/findings_summary.txt 2>/dev/null | head -10 || echo "See report")
+          FINDINGS="${{ steps.analyze.outputs.findings }}"
 
-          python3 -c "
-          import urllib.request, urllib.parse, sys, os
-          msg = '''🚨 <b>Vulnerability Scan Report</b>
+          MSG=$(cat <<MSGEOF
+🚨 <b>Vulnerability Scan Report</b>
 
-          📅 New findings: <b>${NEW}</b>
-          📊 Total: ${TOTAL} (🔴${CRITICAL} 🟠${HIGH} 🟡${MEDIUM})
+📅 $(date -u +'%Y-%m-%d %H:%M UTC')
+🆕 New findings: <b>${NEW}</b>
+📊 Total: ${TOTAL} (🔴${CRITICAL} 🟠${HIGH} 🟡${MEDIUM})
 
-          <b>Top Findings:</b>
-          <pre>${FINDINGS}</pre>
+<b>Top Findings:</b>
+<pre>${FINDINGS:-No details}</pre>
 
-          🔗 <a href=\"${RUN_URL}\">View full report</a>'''
+🔗 <a href="${RUN_URL}">View full report</a>
+MSGEOF
+          )
 
-          msg = '\n'.join(line.lstrip() for line in msg.strip().splitlines())
-          token = os.environ['TELEGRAM_BOT_TOKEN']
-          chat_id = os.environ['TELEGRAM_CHAT_ID']
-          data = urllib.parse.urlencode({
-              'chat_id': chat_id,
-              'text': msg,
-              'parse_mode': 'HTML',
-              'disable_web_page_preview': 'true'
-          }).encode()
-          req = urllib.request.Request(f'https://api.telegram.org/bot{token}/sendMessage', data)
-          urllib.request.urlopen(req)
-          "
+          wget -qO- --post-data="chat_id=${TELEGRAM_CHAT_ID}&text=${MSG}&parse_mode=HTML&disable_web_page_preview=true" \
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" || echo "::warning::Telegram send failed"
 
       - name: Send Telegram all-clear
         if: steps.analyze.outputs.new_count == '0' || steps.analyze.outputs.total == '0'
@@ -168,25 +152,19 @@ jobs:
           TOTAL="${{ steps.analyze.outputs.total }}"
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-          python3 -c "
-          import urllib.request, urllib.parse, os
-          msg = '''✅ <b>Daily Vulnerability Scan</b>
-          No new vulnerabilities detected.
-          Known: ${TOTAL}
-          🔗 <a href=\"${RUN_URL}\">Details</a>'''
+          MSG=$(cat <<MSGEOF
+✅ <b>Daily Vulnerability Scan</b>
 
-          msg = '\n'.join(line.lstrip() for line in msg.strip().splitlines())
-          token = os.environ['TELEGRAM_BOT_TOKEN']
-          chat_id = os.environ['TELEGRAM_CHAT_ID']
-          data = urllib.parse.urlencode({
-              'chat_id': chat_id,
-              'text': msg,
-              'parse_mode': 'HTML',
-              'disable_web_page_preview': 'true'
-          }).encode()
-          req = urllib.request.Request(f'https://api.telegram.org/bot{token}/sendMessage', data)
-          urllib.request.urlopen(req)
-          "
+📅 $(date -u +'%Y-%m-%d %H:%M UTC')
+No new vulnerabilities detected.
+Known: ${TOTAL}
+
+🔗 <a href="${RUN_URL}">Details</a>
+MSGEOF
+          )
+
+          wget -qO- --post-data="chat_id=${TELEGRAM_CHAT_ID}&text=${MSG}&parse_mode=HTML&disable_web_page_preview=true" \
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" || echo "::warning::Telegram send failed"
 
       - name: Save scan for next comparison
         if: always()
