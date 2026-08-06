@@ -45,88 +45,30 @@ const topicSpreads={
   'Quyết định khó':['Điều bạn thật sự muốn','Cái giá cần nhận','Thông tin đang thiếu','Việc cần làm trước','La bàn cho lựa chọn'],
   'Bản thân':['Năng lượng hiện tại','Điều đang cản trở','Điều cần nhận ra','Hướng hành động','Thông điệp cuối']
 };
-const $=s=>document.querySelector(s);
-let selected=[],topic='Bản thân',positions=topicSpreads[topic],ritualDeck=[];
-
+const $=s=>document.querySelector(s),HOLD_MS=1200;
+let selected=[],topic='Bản thân',positions=topicSpreads[topic],phase='question',holdTimer=null,flipped=[];
 function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
-function setRitual(message,{shuffle=false,cut=false,draw=false}={}){
-  $('#ritual-status').textContent=message;
-  $('#shuffle-deck').disabled=!shuffle;
-  $('#cut-deck').disabled=!cut;
-  $('#draw-pile').disabled=!draw;
-}
+function status(message){$('#ritual-status').textContent=message}
 function renderSlots(){
-  const newest=selected.length-1;
   $('#slots').innerHTML=positions.map((position,i)=>{
-    const card=selected[i];
-    return `<div class="slot ${card?'filled':''} ${i===newest?'slot-new':''}">${card
-      ?`<div class="slot-card"><img src="${card.img}" alt="${card.name}" class="${card.reversed?'reversed':''}"><span class="slot-name">${card.name}</span><small>${position}${card.reversed?' · Ngược':''}</small></div>`
-      :`<span>${i+1}<br>${position}</span>`}</div>`;
+    const card=selected[i],isFlipped=flipped[i];
+    if(!card)return `<div class="slot"><span>${i+1}<br>${position}</span></div>`;
+    return `<div class="slot filled"><button class="slot-card ${isFlipped?'is-flipped':'is-face-down'}" type="button" data-card-index="${i}" ${isFlipped?'disabled aria-pressed="true"':'aria-pressed="false"'} aria-label="Lá ${i+1}: ${position}${isFlipped?`, ${card.name}, ${card.reversed?'Ngược':'Xuôi'}`:'. Chạm để lật.'}"><img src="${isFlipped?card.img:BACK}" alt="${isFlipped?card.name:''}" class="${isFlipped&&card.reversed?'reversed':''}"><span class="slot-name">${isFlipped?card.name:`Lá ${i+1}`}</span><small>${position}${isFlipped&&card.reversed?' · Ngược':''}</small></button></div>`;
   }).join('');
-  $('#count').textContent=`${selected.length}/5`;
+  $('#count').textContent=`${flipped.filter(Boolean).length}/5`;
+  document.querySelectorAll('.slot-card:not(:disabled)').forEach(el=>el.onclick=()=>flipCard(+el.dataset.cardIndex));
 }
-function resetRitual(){
-  selected=[];ritualDeck=[];renderSlots();
-  $('#draw-pile img').src=BACK;$('#draw-pile img').alt='Lá bài úp';$('#draw-pile img').className='';
-  setRitual('Giữ câu hỏi trong đầu. Xào bài khi bạn đã sẵn sàng.',{shuffle:true});
-}
-function openDeck(){
-  if(!$('#question').value.trim()) return $('#question').focus();
-  positions=topicSpreads[topic];
-  $('#result').classList.add('hidden');
-  $('#question-panel').classList.add('fade-out');
-  setTimeout(()=>{
-    $('#question-panel').classList.add('hidden');$('#question-panel').classList.remove('fade-out');
-    $('#spread').classList.remove('hidden');$('#spread').classList.add('fade-in');resetRitual();
-    setTimeout(()=>$('#spread').classList.remove('fade-in'),900);
-  },500);
-}
-function shuffleDeck(){
-  ritualDeck=shuffle(deck.map((card,deckIdx)=>({...card,deckIdx})));
-  $('#draw-pile').classList.add('shuffling');setTimeout(()=>$('#draw-pile').classList.remove('shuffling'),600);
-  setRitual('Bộ bài đã được xào. Cắt bài để đánh dấu khoảnh khắc này.',{shuffle:true,cut:true});
-}
-function cutDeck(){
-  const at=1+Math.floor(Math.random()*77);
-  ritualDeck=[...ritualDeck.slice(at),...ritualDeck.slice(0,at)];
-  setRitual('Bộ bài đã cắt. Chạm vào lá bài để rút lá đầu tiên.',{draw:true});
-}
-function drawCard(){
-  if(selected.length>=5||!ritualDeck.length) return;
-  const card={...ritualDeck.pop(),reversed:Math.random()<.32};
-  selected.push(card);
-  const img=$('#draw-pile img');img.src=card.img;img.alt=card.name;img.className=card.reversed?'reversed':'';
-  $('#draw-pile').classList.add('drawing');setTimeout(()=>{$('#draw-pile').classList.remove('drawing');img.src=BACK;img.alt='Lá bài úp';img.className='';},650);
-  renderSlots();
-  if(selected.length===5){setRitual('Năm lá đã hiện. Đang kết nối câu chuyện của bạn…');setTimeout(showResult,700)}
-  else setRitual(`Lá ${selected.length} đã hiện. Rút lá tiếp theo khi bạn sẵn sàng.`,{draw:true});
-}
+function resetRitual(){clearTimeout(holdTimer);holdTimer=null;selected=[];flipped=[];phase='breathe';renderSlots();$('#spread-deck').hidden=false;$('#spread-deck').disabled=false;$('#spread-deck').classList.remove('is-holding');$('#hold-progress').textContent='';status('Hít thở thật sâu. Giữ câu hỏi trong lòng, rồi nhấn giữ nút để trải bài.');}
+function openDeck(){if(!$('#question').value.trim())return $('#question').focus();positions=topicSpreads[topic];$('#result').classList.add('hidden');$('#question-panel').classList.add('fade-out');setTimeout(()=>{$('#question-panel').classList.add('hidden');$('#question-panel').classList.remove('fade-out');$('#spread').classList.remove('hidden');$('#spread').classList.add('fade-in');resetRitual();setTimeout(()=>$('#spread').classList.remove('fade-in'),900)},500)}
+function startHold(e){if(phase!=='breathe'||(e.pointerType==='mouse'&&e.button!==0))return;e.preventDefault();phase='holding';e.currentTarget.setPointerCapture?.(e.pointerId);e.currentTarget.classList.add('is-holding');$('#hold-progress').textContent='Đang trải bài…';holdTimer=setTimeout(completeSpread,HOLD_MS)}
+function cancelHold(){if(phase!=='holding')return;clearTimeout(holdTimer);holdTimer=null;phase='breathe';$('#spread-deck').classList.remove('is-holding');$('#hold-progress').textContent='';status('Nhấn giữ trọn một nhịp để trải bài.')}
+function completeSpread(){if(phase!=='holding')return;holdTimer=null;phase='flipping';selected=shuffle(deck.map((card,deckIdx)=>({...card,deckIdx}))).slice(0,5).map(card=>({...card,reversed:Math.random()<.32}));flipped=[];$('#spread-deck').hidden=true;$('#hold-progress').textContent='';status('Năm lá đã được trải. Chạm từng lá để lật.');renderSlots()}
+function flipCard(index){if(phase!=='flipping'||flipped[index])return;flipped[index]=true;renderSlots();const n=flipped.filter(Boolean).length;if(n===5){phase='result';status('Năm lá đã hiện. Đang kết nối câu chuyện của bạn…');setTimeout(showResult,700)}else status(`Bạn đã lật ${n}/5 lá. Tiếp tục khi sẵn sàng.`)}
 function cardRows(){return selected.map((c,i)=>`<article class="reading-card"><img src="${c.img}" alt="${c.name}" class="reading-img ${c.reversed?'reversed':''}"><div class="reading-text"><strong>${positions[i]} — ${c.name} ${c.reversed?'(Ngược)':'(Xuôi)'}</strong><p>${c.meaning}${c.reversed?' Khi ở chiều ngược, lá bài nhắc bạn chậm lại và nhìn phần chưa cân bằng.':''}</p></div></article>`).join('')}
-function showResult(){
-  $('#result-topic').textContent=topic;$('#result-question').textContent=`“${$('#question').value.trim()}”`;
-  $('#reading').innerHTML=`<p class="reading-kicker">BẢN ĐỒ 5 LÁ</p>${cardRows()}<div class="ai-section"><p class="ai-loading">✦ Đang ghép các dấu hiệu thành một bản đồ cho bạn…</p></div>`;
-  $('#result').classList.remove('hidden');$('#result').scrollIntoView({behavior:'smooth',block:'start'});fetchAIReading($('#question').value.trim());
-}
+function showResult(){$('#result-topic').textContent=topic;$('#result-question').textContent=`“${$('#question').value.trim()}”`;$('#reading').innerHTML=`<p class="reading-kicker">BẢN ĐỒ 5 LÁ</p>${cardRows()}<div class="ai-section"><p class="ai-loading">✦ Đang ghép các dấu hiệu thành một bản đồ cho bạn…</p></div>`;$('#result').classList.remove('hidden');$('#result').scrollIntoView({behavior:'smooth',block:'start'});fetchAIReading($('#question').value.trim())}
 const AI_URL='/api/tarot';
 function liveMarkup(){return `<div class="ai-result"><strong>✦ Lời nhắn cho bạn</strong><p id="ai-live-text" class="ai-text"></p><div id="ai-sections" class="hidden"><section class="reading-section"><h3>Năm lá nói gì</h3><p data-ai-part="0"></p></section><section class="reading-section"><h3>Bức tranh chung</h3><p data-ai-part="1"></p></section><section class="reading-section action"><h3>Bước nhỏ trong 72 giờ</h3><p data-ai-part="2"></p></section></div></div>`}
-function finishText(text,aiEl){
-  const parts=text.trim().split(/\n\s*\n/).filter(Boolean);
-  if(parts.length<3){aiEl.querySelector('#ai-live-text').textContent=text||'Trải bài giúp bạn nhìn rõ hơn trước bước đi tiếp.';return}
-  aiEl.querySelector('#ai-live-text').remove();const sections=aiEl.querySelector('#ai-sections');sections.classList.remove('hidden');
-  sections.querySelectorAll('[data-ai-part]').forEach((el,i)=>el.textContent=parts[i]||'');
-}
-async function fetchAIReading(question){
-  const aiEl=$('.ai-section');
-  try{
-    const csrf=await fetch('/api/csrf').then(r=>r.json());
-    const res=await fetch(AI_URL,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf.token||''},body:JSON.stringify({question,cards:selected.map((c,i)=>({position:positions[i],name:c.name,orientation:c.reversed?'Ngược':'Xuôi',keywords:c.keywords}))})});
-    if(!res.ok) throw new Error(`HTTP ${res.status}`);
-    const reader=res.body.getReader(),decoder=new TextDecoder();let text='',buf='';aiEl.innerHTML=liveMarkup();const live=aiEl.querySelector('#ai-live-text');
-    while(true){const {done,value}=await reader.read();if(done) break;buf+=decoder.decode(value,{stream:true});const lines=buf.split('\n');buf=lines.pop();for(const line of lines){const t=line.trim();if(!t.startsWith('data: ')||t==='data: [DONE]')continue;try{const d=JSON.parse(t.slice(6)).choices?.[0]?.delta?.content;if(d){text+=d;live.textContent=text}}catch{}}}
-    finishText(text,aiEl);
-  }catch(err){console.error('AI error:',err);aiEl.innerHTML='<p class="reading-outro"><strong>Lời nhắn cho bạn:</strong> Trải bài không khóa chặt tương lai. Nó giúp bạn nhìn rõ hơn trước bước đi tiếp.</p>'}
-}
+function finishText(text,aiEl){const parts=text.trim().split(/\n\s*\n/).filter(Boolean);if(parts.length<3){aiEl.querySelector('#ai-live-text').textContent=text||'Trải bài giúp bạn nhìn rõ hơn trước bước đi tiếp.';return}aiEl.querySelector('#ai-live-text').remove();const sections=aiEl.querySelector('#ai-sections');sections.classList.remove('hidden');sections.querySelectorAll('[data-ai-part]').forEach((el,i)=>el.textContent=parts[i]||'')}
+async function fetchAIReading(question){const aiEl=$('.ai-section');try{const csrf=await fetch('/api/csrf').then(r=>r.json());const res=await fetch(AI_URL,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf.token||''},body:JSON.stringify({question,cards:selected.map((c,i)=>({position:positions[i],name:c.name,orientation:c.reversed?'Ngược':'Xuôi',keywords:c.keywords}))})});if(!res.ok)throw new Error(`HTTP ${res.status}`);const reader=res.body.getReader(),decoder=new TextDecoder();let text='',buf='';aiEl.innerHTML=liveMarkup();const live=aiEl.querySelector('#ai-live-text');while(true){const {done,value}=await reader.read();if(done)break;buf+=decoder.decode(value,{stream:true});const lines=buf.split('\n');buf=lines.pop();for(const line of lines){const t=line.trim();if(!t.startsWith('data: ')||t==='data: [DONE]')continue;try{const d=JSON.parse(t.slice(6)).choices?.[0]?.delta?.content;if(d){text+=d;live.textContent=text}}catch{}}}finishText(text,aiEl)}catch(err){console.error('AI error:',err);aiEl.innerHTML='<p class="reading-outro"><strong>Lời nhắn cho bạn:</strong> Trải bài không khóa chặt tương lai. Nó giúp bạn nhìn rõ hơn trước bước đi tiếp.</p>'}}
 $('.topic-options').onclick=e=>{const button=e.target.closest('.topic-option');if(!button)return;topic=button.dataset.topic;document.querySelectorAll('.topic-option').forEach(el=>{const active=el===button;el.classList.toggle('is-selected',active);el.setAttribute('aria-pressed',active)})};
-$('#start').onclick=openDeck;$('#shuffle-deck').onclick=shuffleDeck;$('#cut-deck').onclick=cutDeck;$('#draw-pile').onclick=drawCard;
-$('#question').onkeydown=e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')openDeck()};
-$('#again').onclick=()=>{$('#spread').classList.add('hidden');$('#result').classList.add('hidden');$('#question-panel').classList.remove('hidden');$('#question').value='';window.scrollTo({top:0,behavior:'smooth'})};
+$('#start').onclick=openDeck;const spreadButton=$('#spread-deck');spreadButton.addEventListener('pointerdown',startHold);['pointerup','pointercancel','lostpointercapture'].forEach(type=>spreadButton.addEventListener(type,cancelHold));window.addEventListener('blur',cancelHold);$('#question').onkeydown=e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')openDeck()};$('#again').onclick=()=>{clearTimeout(holdTimer);$('#spread').classList.add('hidden');$('#result').classList.add('hidden');$('#question-panel').classList.remove('hidden');$('#question').value='';phase='question';window.scrollTo({top:0,behavior:'smooth'})};
