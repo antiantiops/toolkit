@@ -134,13 +134,13 @@ function proxyAI(req,res){
     }));
     if(cleanCards.some(card=>!card.position||!card.name)){res.writeHead(400);res.end('Invalid cards');return}
     const cardList=cleanCards.map((card,i)=>`[${i+1}/5] ${card.position}: ${card.name} (${card.orientation}) — ${card.keywords}`).join('\n');
-    const userPrompt=`Câu hỏi: "${question}"\n\nDỮ LIỆU ĐÃ ĐỦ ĐÚNG 5 LÁ. Toàn bộ năm lá nằm dưới đây; không có dữ liệu bị ẩn, bị cắt hay cần gửi thêm:\n${cardList}\n\nViết đúng 3 đoạn tiếng Việt, 350-500 từ. Đoạn đầu bắt buộc giải nghĩa đủ năm lá theo đúng thứ tự 1/5 đến 5/5. Đoạn hai kết nối năm lá và trả lời câu hỏi. Đoạn ba bắt đầu bằng một hành động cụ thể người dùng có thể làm trong 72 giờ tới, rồi kết thúc bằng một câu truyền cảm hứng. Không markdown, không heading, không bullet points. Không nói thiếu lá, không hỏi thêm thông tin, không tự thêm lá hoặc vị trí.`;
+    const userPrompt=`Câu hỏi của người hỏi: "${question}"\n\nDỮ LIỆU ĐÃ ĐỦ ĐÚNG 5 LÁ. Toàn bộ năm lá nằm dưới đây; không có dữ liệu bị ẩn, bị cắt hay cần gửi thêm:\n${cardList}\n\nHãy nói như một bậc thầy Tarot tâm linh giàu trực giác: ấm áp, sâu sắc, trực tiếp nhưng không phán xét. Luôn gắn lá bài với đúng câu hỏi của người hỏi, không giải nghĩa chung chung. Viết ĐÚNG 7 đoạn văn tiếng Việt, mỗi đoạn cách nhau một dòng trống, không markdown, không heading, không bullet points.\nĐoạn 1 đến 5: lần lượt giải nghĩa lá [1/5] đến [5/5], nêu rõ lá đó đang nói gì với câu hỏi này và ý nghĩa xuôi/ngược của nó.\nĐoạn 6: lời khuyên cụ thể, khả thi cho người hỏi dựa trên cả năm lá.\nĐoạn 7: xu hướng tương lai gần nếu người hỏi đón nhận lời khuyên; nói như một khả năng đang mở ra, không khẳng định định mệnh hay chắc chắn tuyệt đối.\nMỗi đoạn 55-90 từ. Không nói thiếu lá, không hỏi thêm thông tin, không tự thêm lá hoặc vị trí.`;
 
     // Model, system policy, and output limit are server-owned.
     const upstream=JSON.stringify({
       model:ALLOWED_MODEL,
       messages:[
-        {role:'system',content:'Bạn là người đọc Tarot giàu trực giác. Luôn nhận đủ chính xác 5 lá trong dữ liệu người dùng. Không được nói thiếu lá, không được nhắc CCR/retrieve/context bị ẩn, không được yêu cầu gửi tiếp, không được tự tạo lá bài hoặc vị trí mới. Phải đọc cả năm dòng [1/5] đến [5/5] trước khi trả lời. Dùng tiếng Việt, xưng bạn.'},
+        {role:'system',content:'Bạn là bậc thầy tâm linh Tarot giàu trực giác. Luôn nhận đủ chính xác 5 lá trong dữ liệu người dùng. Không được nói thiếu lá, không được nhắc CCR/retrieve/context bị ẩn, không được yêu cầu gửi tiếp, không được tự tạo lá bài hoặc vị trí mới. Phải đọc cả năm dòng [1/5] đến [5/5] trước khi trả lời. Không tuyên bố biết chắc tương lai; diễn đạt tương lai là xu hướng và khả năng. Dùng tiếng Việt, xưng bạn.'},
         {role:'user',content:userPrompt}
       ],
       stream:true,
