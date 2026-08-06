@@ -39,177 +39,94 @@ const deck=[
 ];
 
 const BACK='assets/cards/CardBacks.png';
-const positions=['Năng lượng hiện tại','Điều đang cản trở','Điều cần nhận ra','Hướng hành động','Thông điệp cuối'];
+const topicSpreads={
+  'Tình cảm':['Điều bạn cần nhìn rõ','Điều đang ngăn cách','Nhu cầu chưa nói','Bước nên làm','Thông điệp cho trái tim'],
+  'Công việc':['Vị trí hiện tại','Trở ngại chính','Nguồn lực của bạn','Bước đi thực tế','Hướng mở ra'],
+  'Quyết định khó':['Điều bạn thật sự muốn','Cái giá cần nhận','Thông tin đang thiếu','Việc cần làm trước','La bàn cho lựa chọn'],
+  'Bản thân':['Năng lượng hiện tại','Điều đang cản trở','Điều cần nhận ra','Hướng hành động','Thông điệp cuối']
+};
 const $=s=>document.querySelector(s);
-let selected=[];
+let selected=[],topic='Bản thân',positions=topicSpreads[topic],ritualDeck=[];
 
-/* ── shuffle deck order ── */
 function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
-
-/* ── open deck after question — mystic transition ── */
-function openDeck(){
-  if(!$('#question').value.trim())return $('#question').focus();
-  selected=[];
-  const panel=$('#question-panel');
-  const spread=$('#spread');
-  $('#result').classList.add('hidden');
-  /* fade-out question panel */
-  panel.classList.add('fade-out');
-  setTimeout(()=>{
-    panel.classList.add('hidden');
-    panel.classList.remove('fade-out');
-    /* fade-in spread */
-    spread.classList.remove('hidden');
-    spread.classList.add('fade-in');
-    renderSlots();
-    renderDeck();
-    setTimeout(()=>spread.classList.remove('fade-in'),900);
-  },700);
+function setRitual(message,{shuffle=false,cut=false,draw=false}={}){
+  $('#ritual-status').textContent=message;
+  $('#shuffle-deck').disabled=!shuffle;
+  $('#cut-deck').disabled=!cut;
+  $('#draw-pile').disabled=!draw;
 }
-
-/* ── five target slots on top — only animate newest ── */
 function renderSlots(){
-  const newIdx=selected.length-1;
-  $('#slots').innerHTML=positions.map((p,i)=>{
+  const newest=selected.length-1;
+  $('#slots').innerHTML=positions.map((position,i)=>{
     const card=selected[i];
-    const isNew=card&&i===newIdx;
-    return `<div class="slot ${card?'filled':''} ${isNew?'slot-new':''}">
-      ${card
-        ?`<div class="slot-card"><img src="${card.img}" alt="${card.name}"><span class="slot-name">${card.name}</span><small>${p}</small></div>`
-        :`<span>${i+1}<br>${p}</span>`
-      }
-    </div>`;
+    return `<div class="slot ${card?'filled':''} ${i===newest?'slot-new':''}">${card
+      ?`<div class="slot-card"><img src="${card.img}" alt="${card.name}" class="${card.reversed?'reversed':''}"><span class="slot-name">${card.name}</span><small>${position}${card.reversed?' · Ngược':''}</small></div>`
+      :`<span>${i+1}<br>${position}</span>`}</div>`;
   }).join('');
   $('#count').textContent=`${selected.length}/5`;
 }
-
-/* ── 78 face-down cards ── */
-let shuffledDeck=[];
-function renderDeck(){
-  if(selected.length===0) shuffledDeck=shuffle(deck.map((c,i)=>({...c,deckIdx:i})));
-  $('#deck').innerHTML=shuffledDeck.map(card=>{
-    const chosen=selected.some(x=>x.deckIdx===card.deckIdx);
-    const disabled=chosen||selected.length>=5;
-    return `<button class="deck-card ${chosen?'chosen':''}" data-idx="${card.deckIdx}" type="button" ${disabled?'disabled':''} aria-label="Chọn lá bài">
-      <img src="${chosen?card.img:BACK}" alt="${chosen?card.name:'Lá bài úp'}" class="deck-card-img ${chosen?'flipped':''}">
-    </button>`;
-  }).join('');
-  document.querySelectorAll('.deck-card:not(:disabled)').forEach(b=>{
-    b.onclick=()=>choose(+b.dataset.idx,b);
-  });
+function resetRitual(){
+  selected=[];ritualDeck=[];renderSlots();
+  $('#draw-pile img').src=BACK;$('#draw-pile img').alt='Lá bài úp';$('#draw-pile img').className='';
+  setRitual('Giữ câu hỏi trong đầu. Xào bài khi bạn đã sẵn sàng.',{shuffle:true});
 }
-
-/* ── select a card: flip then move to slot ── */
-function choose(idx,btn){
-  const card={...deck[idx],deckIdx:idx,reversed:Math.random()<0.32};
-  selected.push(card);
-
-  /* flip animation on the deck card */
-  const img=btn.querySelector('.deck-card-img');
-  img.src=card.img;
-  img.alt=card.name;
-  img.classList.add('flipped');
-  btn.disabled=true;
-  btn.classList.add('chosen');
-
-  /* disable remaining cards if 5 selected */
-  if(selected.length>=5){
-    document.querySelectorAll('.deck-card:not(:disabled)').forEach(b=>b.disabled=true);
-  }
-
-  /* update only slots (no full deck re-render → old cards stay still) */
+function openDeck(){
+  if(!$('#question').value.trim()) return $('#question').focus();
+  positions=topicSpreads[topic];
+  $('#result').classList.add('hidden');
+  $('#question-panel').classList.add('fade-out');
   setTimeout(()=>{
-    renderSlots();
-    if(selected.length===5) setTimeout(showResult,700);
-  },400);
+    $('#question-panel').classList.add('hidden');$('#question-panel').classList.remove('fade-out');
+    $('#spread').classList.remove('hidden');$('#spread').classList.add('fade-in');resetRitual();
+    setTimeout(()=>$('#spread').classList.remove('fade-in'),900);
+  },500);
 }
-
-/* ── AI config — server-side proxy, no key exposed ── */
-const AI_URL='/api/tarot';
-
-/* ── show result + call AI for interpretation ── */
+function shuffleDeck(){
+  ritualDeck=shuffle(deck.map((card,deckIdx)=>({...card,deckIdx})));
+  $('#draw-pile').classList.add('shuffling');setTimeout(()=>$('#draw-pile').classList.remove('shuffling'),600);
+  setRitual('Bộ bài đã được xào. Cắt bài để đánh dấu khoảnh khắc này.',{shuffle:true,cut:true});
+}
+function cutDeck(){
+  const at=1+Math.floor(Math.random()*77);
+  ritualDeck=[...ritualDeck.slice(at),...ritualDeck.slice(0,at)];
+  setRitual('Bộ bài đã cắt. Chạm vào lá bài để rút lá đầu tiên.',{draw:true});
+}
+function drawCard(){
+  if(selected.length>=5||!ritualDeck.length) return;
+  const card={...ritualDeck.pop(),reversed:Math.random()<.32};
+  selected.push(card);
+  const img=$('#draw-pile img');img.src=card.img;img.alt=card.name;img.className=card.reversed?'reversed':'';
+  $('#draw-pile').classList.add('drawing');setTimeout(()=>{$('#draw-pile').classList.remove('drawing');img.src=BACK;img.alt='Lá bài úp';img.className='';},650);
+  renderSlots();
+  if(selected.length===5){setRitual('Năm lá đã hiện. Đang kết nối câu chuyện của bạn…');setTimeout(showResult,700)}
+  else setRitual(`Lá ${selected.length} đã hiện. Rút lá tiếp theo khi bạn sẵn sàng.`,{draw:true});
+}
+function cardRows(){return selected.map((c,i)=>`<article class="reading-card"><img src="${c.img}" alt="${c.name}" class="reading-img ${c.reversed?'reversed':''}"><div class="reading-text"><strong>${positions[i]} — ${c.name} ${c.reversed?'(Ngược)':'(Xuôi)'}</strong><p>${c.meaning}${c.reversed?' Khi ở chiều ngược, lá bài nhắc bạn chậm lại và nhìn phần chưa cân bằng.':''}</p></div></article>`).join('')}
 function showResult(){
-  const q=$('#question').value.trim();
-  $('#result-question').textContent=`"${q}"`;
-
-  /* render card list first */
-  const cardsHtml=selected.map((c,i)=>
-    `<div class="reading-card">
-      <img src="${c.img}" alt="${c.name}" class="reading-img">
-      <div class="reading-text">
-        <strong>${positions[i]} — ${c.name} ${c.reversed?'(Ngược)':'(Xuôi)'}</strong>
-        <p>${c.meaning}${c.reversed?' Khi ở chiều ngược, lá bài nhắc bạn chậm lại và nhìn phần chưa cân bằng.':''}</p>
-      </div>
-    </div>`
-  ).join('');
-
-  $('#reading').innerHTML=cardsHtml+'<div class="ai-section"><p class="ai-loading">✦ Đang kết nối năng lượng vũ trụ để luận giải...</p></div>';
-  $('#result').classList.remove('hidden');
-  $('#result').scrollIntoView({behavior:'smooth',block:'start'});
-
-  /* call AI */
-  fetchAIReading(q);
+  $('#result-topic').textContent=topic;$('#result-question').textContent=`“${$('#question').value.trim()}”`;
+  $('#reading').innerHTML=`<p class="reading-kicker">BẢN ĐỒ 5 LÁ</p>${cardRows()}<div class="ai-section"><p class="ai-loading">✦ Đang ghép các dấu hiệu thành một bản đồ cho bạn…</p></div>`;
+  $('#result').classList.remove('hidden');$('#result').scrollIntoView({behavior:'smooth',block:'start'});fetchAIReading($('#question').value.trim());
 }
-
+const AI_URL='/api/tarot';
+function liveMarkup(){return `<div class="ai-result"><strong>✦ Lời nhắn cho bạn</strong><p id="ai-live-text" class="ai-text"></p><div id="ai-sections" class="hidden"><section class="reading-section"><h3>Năm lá nói gì</h3><p data-ai-part="0"></p></section><section class="reading-section"><h3>Bức tranh chung</h3><p data-ai-part="1"></p></section><section class="reading-section action"><h3>Bước nhỏ trong 72 giờ</h3><p data-ai-part="2"></p></section></div></div>`}
+function finishText(text,aiEl){
+  const parts=text.trim().split(/\n\s*\n/).filter(Boolean);
+  if(parts.length<3){aiEl.querySelector('#ai-live-text').textContent=text||'Trải bài giúp bạn nhìn rõ hơn trước bước đi tiếp.';return}
+  aiEl.querySelector('#ai-live-text').remove();const sections=aiEl.querySelector('#ai-sections');sections.classList.remove('hidden');
+  sections.querySelectorAll('[data-ai-part]').forEach((el,i)=>el.textContent=parts[i]||'');
+}
 async function fetchAIReading(question){
   const aiEl=$('.ai-section');
-
   try{
-    // get fresh CSRF token before each reading
-    const csrfRes=await fetch('/api/csrf');
-    const csrfData=await csrfRes.json();
-    const csrfToken=csrfData.token||'';
-
-    const res=await fetch(AI_URL,{
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'X-CSRF-Token':csrfToken
-      },
-      body:JSON.stringify({
-        question,
-        cards:selected.map((c,i)=>({
-          position:positions[i], name:c.name, orientation:c.reversed?'Ngược':'Xuôi', keywords:c.keywords
-        }))
-      })
-    });
-
+    const csrf=await fetch('/api/csrf').then(r=>r.json());
+    const res=await fetch(AI_URL,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf.token||''},body:JSON.stringify({question,cards:selected.map((c,i)=>({position:positions[i],name:c.name,orientation:c.reversed?'Ngược':'Xuôi',keywords:c.keywords}))})});
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
-
-    /* streaming SSE */
-    const reader=res.body.getReader();
-    const decoder=new TextDecoder();
-    let text='';
-    aiEl.innerHTML='<div class="ai-result"><strong>✦ Lời nhắn cho bạn</strong><p class="ai-text"></p></div>';
-    const textEl=aiEl.querySelector('.ai-text');
-
-    while(true){
-      const{done,value}=await reader.read();
-      if(done) break;
-      const chunk=decoder.decode(value,{stream:true});
-      for(const line of chunk.split('\n')){
-        if(!line.startsWith('data: ')||line==='data: [DONE]') continue;
-        try{
-          const j=JSON.parse(line.slice(6));
-          const delta=j.choices?.[0]?.delta?.content;
-          if(delta){text+=delta;textEl.textContent=text;}
-        }catch(e){/* skip parse errors */}
-      }
-    }
-    /* final: convert newlines to <br> for display */
-    textEl.innerHTML=text.replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>');
-  }catch(err){
-    console.error('AI error:',err);
-    aiEl.innerHTML='<p class="reading-outro"><strong>Lời nhắn cho bạn:</strong> Trải bài không khóa chặt tương lai. Nó giúp bạn nhìn rõ hơn trước bước đi tiếp.</p>';
-  }
+    const reader=res.body.getReader(),decoder=new TextDecoder();let text='',buf='';aiEl.innerHTML=liveMarkup();const live=aiEl.querySelector('#ai-live-text');
+    while(true){const {done,value}=await reader.read();if(done) break;buf+=decoder.decode(value,{stream:true});const lines=buf.split('\n');buf=lines.pop();for(const line of lines){const t=line.trim();if(!t.startsWith('data: ')||t==='data: [DONE]')continue;try{const d=JSON.parse(t.slice(6)).choices?.[0]?.delta?.content;if(d){text+=d;live.textContent=text}}catch{}}}
+    finishText(text,aiEl);
+  }catch(err){console.error('AI error:',err);aiEl.innerHTML='<p class="reading-outro"><strong>Lời nhắn cho bạn:</strong> Trải bài không khóa chặt tương lai. Nó giúp bạn nhìn rõ hơn trước bước đi tiếp.</p>'}
 }
-
-/* ── reset ── */
-$('#start').onclick=openDeck;
+$('.topic-options').onclick=e=>{const button=e.target.closest('.topic-option');if(!button)return;topic=button.dataset.topic;document.querySelectorAll('.topic-option').forEach(el=>{const active=el===button;el.classList.toggle('is-selected',active);el.setAttribute('aria-pressed',active)})};
+$('#start').onclick=openDeck;$('#shuffle-deck').onclick=shuffleDeck;$('#cut-deck').onclick=cutDeck;$('#draw-pile').onclick=drawCard;
 $('#question').onkeydown=e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')openDeck()};
-$('#again').onclick=()=>{
-  selected=[];shuffledDeck=[];
-  $('#spread').classList.add('hidden');$('#result').classList.add('hidden');
-  $('#question-panel').classList.remove('hidden');$('#question').value='';
-  window.scrollTo({top:0,behavior:'smooth'});
-};
+$('#again').onclick=()=>{$('#spread').classList.add('hidden');$('#result').classList.add('hidden');$('#question-panel').classList.remove('hidden');$('#question').value='';window.scrollTo({top:0,behavior:'smooth'})};

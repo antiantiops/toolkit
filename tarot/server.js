@@ -134,7 +134,7 @@ function proxyAI(req,res){
     }));
     if(cleanCards.some(card=>!card.position||!card.name)){res.writeHead(400);res.end('Invalid cards');return}
     const cardList=cleanCards.map((card,i)=>`[${i+1}/5] ${card.position}: ${card.name} (${card.orientation}) — ${card.keywords}`).join('\n');
-    const userPrompt=`Câu hỏi: "${question}"\n\nDỮ LIỆU ĐÃ ĐỦ ĐÚNG 5 LÁ. Toàn bộ năm lá nằm dưới đây; không có dữ liệu bị ẩn, bị cắt hay cần gửi thêm:\n${cardList}\n\nViết đúng 3 đoạn tiếng Việt, 350-500 từ. Đoạn đầu bắt buộc giải nghĩa đủ năm lá theo đúng thứ tự 1/5 đến 5/5. Đoạn hai kết nối năm lá và trả lời câu hỏi. Đoạn ba đưa lời khuyên thực tế, kết thúc bằng một câu truyền cảm hứng. Không markdown, không heading, không bullet points. Không nói thiếu lá, không hỏi thêm thông tin, không tự thêm lá hoặc vị trí.`;
+    const userPrompt=`Câu hỏi: "${question}"\n\nDỮ LIỆU ĐÃ ĐỦ ĐÚNG 5 LÁ. Toàn bộ năm lá nằm dưới đây; không có dữ liệu bị ẩn, bị cắt hay cần gửi thêm:\n${cardList}\n\nViết đúng 3 đoạn tiếng Việt, 350-500 từ. Đoạn đầu bắt buộc giải nghĩa đủ năm lá theo đúng thứ tự 1/5 đến 5/5. Đoạn hai kết nối năm lá và trả lời câu hỏi. Đoạn ba bắt đầu bằng một hành động cụ thể người dùng có thể làm trong 72 giờ tới, rồi kết thúc bằng một câu truyền cảm hứng. Không markdown, không heading, không bullet points. Không nói thiếu lá, không hỏi thêm thông tin, không tự thêm lá hoặc vị trí.`;
 
     // Model, system policy, and output limit are server-owned.
     const upstream=JSON.stringify({
