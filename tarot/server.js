@@ -75,6 +75,7 @@ setInterval(()=>{
 const ipTimestamps=new Map();
 const ipDailyCount=new Map(); // ip -> {date,count}
 const readingGrants=new Map(); // ip -> expiry; one full-reading request after card insights
+const cardInsightGrants=new Map(); // ip -> {expiresAt,remaining}; one five-card reveal sequence
 function rateOk(ip){
   const now=Date.now();
   const last=ipTimestamps.get(ip)||0;
@@ -233,21 +234,24 @@ function cardInsights(req,res){
   if(req.method!=='POST'){res.writeHead(405);res.end('POST only');return}
   if(!consumeCsrf(req.headers['x-csrf-token'])){res.writeHead(403);res.end('Invalid session');return}
   const ip=req.headers['x-forwarded-for']||req.socket.remoteAddress;
-  const r=rateOk(ip);
+  const grant=cardInsightGrants.get(ip);
+  const granted=grant&&grant.expiresAt>Date.now()&&grant.remaining>0;
+  if(granted) grant.remaining--;
+  const r=granted?{ok:true}:rateOk(ip);
   if(!r.ok){res.writeHead(429);res.end('Please wait');return}
   let body='';
   req.on('data',chunk=>{body+=chunk;if(body.length>MAX_BODY){req.destroy();res.writeHead(413);res.end()}});
   req.on('end',()=>{
     let parsed;try{parsed=JSON.parse(body)}catch{res.writeHead(400);res.end('Bad JSON');return}
     const question=typeof parsed.question==='string'?parsed.question.trim().slice(0,300):'';
-    const cards=Array.isArray(parsed.cards)?parsed.cards:[];
-    if(!question||cards.length!==5){res.writeHead(400);res.end('Need question and exactly five cards');return}
-    const clean=cards.map(card=>({position:typeof card?.position==='string'?card.position.slice(0,80):'',name:typeof card?.name==='string'?card.name.slice(0,100):'',orientation:card?.orientation==='Ngược'?'Ngược':'Xuôi',keywords:typeof card?.keywords==='string'?card.keywords.slice(0,160):''}));
-    if(clean.some(card=>!card.position||!card.name)){res.writeHead(400);res.end('Invalid cards');return}
+    const card=parsed.card;
+    if(!question||!card){res.writeHead(400);res.end('Need question and card');return}
+    const clean={position:typeof card.position==='string'?card.position.slice(0,80):'',name:typeof card.name==='string'?card.name.slice(0,100):'',orientation:card.orientation==='Ngược'?'Ngược':'Xuôi',keywords:typeof card.keywords==='string'?card.keywords.slice(0,160):''};
+    if(!clean.position||!clean.name){res.writeHead(400);res.end('Invalid card');return}
+    if(!granted) cardInsightGrants.set(ip,{expiresAt:Date.now()+TOKEN_TTL_MS,remaining:4});
     readingGrants.set(ip,Date.now()+TOKEN_TTL_MS);
-    const list=clean.map((c,i)=>`[${i+1}] ${c.position}: ${c.name} (${c.orientation}) — ${c.keywords}`).join('\n');
-    const prompt=`Câu hỏi: "${question}"\n\nNăm lá và vị trí:\n${list}\n\nViết ĐÚNG 5 đoạn, mỗi đoạn cách nhau một dòng trống; đoạn [1] đến [5] ứng với lá cùng số. Mỗi đoạn 45-65 từ, không markdown hay heading. Mỗi đoạn phải: gọi đúng tên lá và chiều; giải thích lá này nói gì RIÊNG về vị trí của nó trong câu hỏi; kết bằng một câu bắt đầu "Lá bài cho thấy bạn..." nêu nhu cầu, sự thật hoặc việc cần nhìn rõ. Không giải nghĩa kiểu từ điển, không nhắc lá không liên quan, không lời tiên tri, không câu rỗng về vũ trụ/năng lượng.`;
-    const upstream=JSON.stringify({model:ALLOWED_MODEL,messages:[{role:'system',content:'Bạn là người đọc Tarot thực tế. Mỗi luận giải phải neo vào đúng lá, chiều lá, vị trí và câu hỏi. Viết ngắn, rõ, ấm; giúp người hỏi hiểu bản thân thay vì phán số mệnh. Dùng tiếng Việt, xưng bạn.'},{role:'user',content:prompt}],stream:true,max_tokens:700});
+    const prompt=`Câu hỏi: "${question}"\n\nLá đang được lật:\n${clean.position}: ${clean.name} (${clean.orientation}) — ${clean.keywords}\n\nViết một đoạn 45-65 từ bằng tiếng Việt, không markdown hay heading. Gọi đúng tên và chiều lá; giải thích lá này nói gì RIÊNG về vị trí của nó trong câu hỏi. Kết bằng một câu bắt đầu "Lá bài cho thấy bạn..." nêu nhu cầu, sự thật hoặc việc cần nhìn rõ. Không giải nghĩa kiểu từ điển, không lời tiên tri, không câu rỗng về vũ trụ/năng lượng.`;
+    const upstream=JSON.stringify({model:ALLOWED_MODEL,messages:[{role:'system',content:'Bạn là người đọc Tarot thực tế. Mỗi luận giải phải neo vào đúng lá, chiều lá, vị trí và câu hỏi. Viết ngắn, rõ, ấm; giúp người hỏi hiểu bản thân thay vì phán số mệnh. Dùng tiếng Việt, xưng bạn.'},{role:'user',content:prompt}],stream:true,max_tokens:180});
     if(!AI_KEY){res.writeHead(503);res.end('AI service unavailable');return}
     const url=new URL(AI_UPSTREAM);
     const upstreamReq=http.request({hostname:url.hostname,port:url.port,path:url.pathname,method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+AI_KEY,'Content-Length':Buffer.byteLength(upstream),'X-OmniRoute-Compression':'off'}},upstreamRes=>{res.writeHead(upstreamRes.statusCode||502,{'Content-Type':'text/event-stream','Cache-Control':'no-cache','Connection':'keep-alive'});upstreamRes.pipe(res)});
