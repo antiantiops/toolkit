@@ -260,6 +260,27 @@ function cardInsights(req,res){
   });
 }
 
+/* ── Follow-up on current spread ── */
+function followUp(req,res){
+  if(req.method!=='POST'){res.writeHead(405);res.end('POST only');return}
+  if(!consumeCsrf(req.headers['x-csrf-token'])){res.writeHead(403);res.end('Invalid session');return}
+  const ip=req.headers['x-forwarded-for']||req.socket.remoteAddress;
+  const r=rateOk(ip);if(!r.ok){res.writeHead(429);res.end('Please wait');return}
+  let body='';req.on('data',chunk=>{body+=chunk;if(body.length>MAX_BODY){req.destroy();res.writeHead(413);res.end()}});
+  req.on('end',()=>{let parsed;try{parsed=JSON.parse(body)}catch{res.writeHead(400);res.end('Bad JSON');return}
+    const question=typeof parsed.question==='string'?parsed.question.trim().slice(0,300):'';
+    const followup=typeof parsed.followup==='string'?parsed.followup.trim().slice(0,300):'';
+    const cards=Array.isArray(parsed.cards)?parsed.cards:[];
+    if(!question||!followup||cards.length!==5){res.writeHead(400);res.end('Need question, followup, and cards');return}
+    const list=cards.map((c,i)=>`[${i+1}] ${String(c?.position||'').slice(0,80)}: ${String(c?.name||'').slice(0,100)} (${c?.orientation==='Ngược'?'Ngược':'Xuôi'})`).join('\n');
+    const prompt=`Câu hỏi ban đầu: "${question}"\nCâu hỏi làm rõ: "${followup}"\n\nTrải bài hiện tại:\n${list}\n\nTrả lời câu hỏi làm rõ bằng 2-3 đoạn, tổng 180-260 từ. Neo vào các lá liên quan, nói rõ điều cần nhìn, hành động hoặc ranh giới cần đặt. Không rút lá mới, không lời tiên tri, không nói chung chung.`;
+    const upstream=JSON.stringify({model:ALLOWED_MODEL,messages:[{role:'system',content:'Bạn là người đọc Tarot thực tế. Chỉ dùng 5 lá đã cho để trả lời câu hỏi làm rõ. Giọng thẳng, ấm, cụ thể. Dùng tiếng Việt, xưng bạn.'},{role:'user',content:prompt}],stream:true,max_tokens:450});
+    if(!AI_KEY){res.writeHead(503);res.end('AI unavailable');return}
+    const url=new URL(AI_UPSTREAM);const proxy=http.request({hostname:url.hostname,port:url.port,path:url.pathname,method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+AI_KEY,'Content-Length':Buffer.byteLength(upstream),'X-OmniRoute-Compression':'off'}},upstreamRes=>{res.writeHead(upstreamRes.statusCode||502,{'Content-Type':'text/event-stream','Cache-Control':'no-cache','Connection':'keep-alive'});upstreamRes.pipe(res)});
+    proxy.on('error',()=>{if(!res.headersSent){res.writeHead(502);res.end('AI unavailable')}});proxy.write(upstream);proxy.end();
+  });
+}
+
 /* ── AI card story endpoint ── */
 function cardStory(req,res){
   if(req.method!=='POST'){res.writeHead(405);res.end('POST only');return}
@@ -343,6 +364,7 @@ function cardStory(req,res){
 const server=http.createServer((req,res)=>{
   if(req.url==='/api/tarot') return proxyAI(req,res);
   if(req.url==='/api/card-insights') return cardInsights(req,res);
+  if(req.url==='/api/follow-up') return followUp(req,res);
   if(req.url==='/api/card-story') return cardStory(req,res);
   if(req.url==='/api/csrf'&&req.method==='GET'){
     const tok=generateCsrf();
