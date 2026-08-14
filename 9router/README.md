@@ -1,65 +1,49 @@
 # 9router Docker Image
 
-This folder documents how to use the published Docker image for:
+Published image for [decolua/9router](https://github.com/decolua/9router):
 
-- https://github.com/decolua/9router
-
-Published image:
-
-- `antiantiops/9router:latest`
-
-Default service port:
-
-- `20128` (container listens on `0.0.0.0:20128`)
-
-## Pull the image
-
-```bash
-docker pull antiantiops/9router:latest
+```text
+antiantiops/9router:<version>
+antiantiops/9router:latest
 ```
 
-## Quick start
+Service port: `20128`.
 
-Run the container and expose 9router on your host:
+## Run
+
+The upstream image already has its startup command:
+
+```dockerfile
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["node", "custom-server.js"]
+```
+
+Do not append legacy CLI flags such as `--no-browser`, `--log`, or
+`--skip-update`. The entrypoint executes `su-exec node "$@"`; flags would be
+interpreted as a Node executable and the container exits with:
+
+```text
+su-exec: --no-browser: No such file or directory
+```
+
+Run a pinned version:
 
 ```bash
 docker run -d \
   --name 9router \
   -p 20128:20128 \
-  antiantiops/9router:latest \
-  --no-browser --log --skip-update
+  -v "$PWD/.9router-data:/app/data" \
+  --restart unless-stopped \
+  antiantiops/9router:0.5.55
 ```
 
-Why these flags are recommended for Docker/headless servers:
+Open dashboard:
 
-- `--no-browser` prevents 9router from trying to open a local browser inside the container. The Web UI is still served normally.
-- `--log` prints server logs to `docker logs`.
-- `--skip-update` avoids the interactive update prompt/check in container deployments.
-
-Open dashboard from your browser:
-
-- `http://localhost:20128/dashboard`
-
-Stop/remove container:
-
-```bash
-docker rm -f 9router
+```text
+http://localhost:20128/dashboard
 ```
 
-If you want persistent local data:
-
-```bash
-mkdir -p "$PWD/.9router-data"
-
-docker run -d \
-  --name 9router \
-  -p 20128:20128 \
-  -v "$PWD/.9router-data:/root/.9router" \
-  antiantiops/9router:latest \
-  --no-browser --log --skip-update
-```
-
-Check container logs:
+Logs:
 
 ```bash
 docker logs -f 9router
@@ -67,101 +51,49 @@ docker logs -f 9router
 
 ## Docker Compose
 
-Example compose file for headless/server deployments:
-
 ```yaml
 services:
   9router:
-    image: antiantiops/9router:latest
+    image: antiantiops/9router:0.5.55
     container_name: 9router
-    command: ["--no-browser", "--log", "--skip-update"]
     ports:
       - "20128:20128"
     volumes:
-      - ./.9router-data:/root/.9router
+      - ./.9router-data:/app/data
     restart: unless-stopped
 ```
 
-Start it:
+Start or update:
 
 ```bash
+docker compose pull
 docker compose up -d
+docker compose ps
 ```
 
-Then open:
+No `command:` override. Use image default command.
 
-- `http://localhost:20128/dashboard`
-
-## Client configuration (Google + Antigravity)
-
-1. Start container with `-p 20128:20128` (above).
-2. Open dashboard: `http://localhost:20128/dashboard`
-3. Connect providers:
-   - `Providers -> Connect Gemini CLI -> Google OAuth`
-   - `Providers -> Connect Antigravity -> OAuth`
-4. Copy your 9router API key from the dashboard.
-5. Configure your client/tool to use 9router as OpenAI-compatible endpoint:
+## Client config
 
 ```text
 Base URL: http://localhost:20128/v1
-API Key: <your-9router-api-key>
-Model: gc/... (Gemini) or ag/... (Antigravity)
+API Key: <9router-api-key>
+Model: gc/... or ag/...
 ```
 
-Example environment for OpenAI-compatible clients:
+If client runs in another container, use host IP/DNS instead of `localhost`.
 
-```bash
-export OPENAI_BASE_URL="http://localhost:20128/v1"
-export OPENAI_API_KEY="<your-9router-api-key>"
-```
+## Build provenance
 
-Notes:
+Workflow: `.github/workflows/build-9router.yml`.
 
-- If your client runs in another container, use host IP/DNS instead of `localhost`.
-- Upstream currently marks `Gemini CLI` as deprecated/restricted by Google policy changes (Mar 2026). If Google OAuth fails, use another provider in 9router.
+1. `9router Release Watch (n8n)` reads semantic tags from
+   `decolua/9router`.
+2. It pins version, upstream tag, and upstream commit SHA in build workflow.
+3. GitHub Actions checks out that exact SHA, verifies `cli/package.json`
+   version, builds upstream `Dockerfile`, then pushes multi-arch image
+   (`linux/amd64`, `linux/arm64`).
+4. Image labels retain upstream source, tag, and commit SHA.
 
-## Build locally
-
-The image is built from upstream source (`decolua/9router`) using its `Dockerfile`.
-
-```bash
-rm -rf /tmp/9router-src
-git clone --depth 1 https://github.com/decolua/9router /tmp/9router-src
-docker build -t 9router:local /tmp/9router-src
-```
-
-Test local image:
-
-```bash
-docker run --rm -it 9router:local --help
-```
-
-## GitHub Actions workflow
-
-Workflow file:
-
-- `.github/workflows/build-9router.yml`
-
-What it does:
-
-1. Clones `decolua/9router` (default ref: `master`)
-2. Builds multi-arch image (`linux/amd64`, `linux/arm64`)
-3. Pushes tags to Docker Hub:
-   - `latest`
-   - short commit SHA (for example: `a1b2c3d`)
-
-### Triggers
-
-- Push to `master`
-- Pull request to `master`
-- Manual trigger (`workflow_dispatch`) with optional `source_ref`
-
-### Required repository secrets
-
-- `DOCKER_HUB_USERNAME`
-- `DOCKER_HUB_ACCESS_TOKEN`
-
-## Notes
-
-- On pull requests, this workflow currently still attempts Docker Hub login/push. If secrets are unavailable for PR runs, the job may fail.
-- Prefer SHA tags for reproducible deployments; use `latest` for convenience.
+This prevents a moving `master` branch or a retagged release from silently
+changing an already-selected build.
