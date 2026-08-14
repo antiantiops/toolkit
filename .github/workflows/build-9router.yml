@@ -2,23 +2,22 @@ name: Build and Push 9router Image
 
 on:
   push:
-    branches:
-      - master
+    branches: [master]
   pull_request:
-    branches:
-      - master
+    branches: [master]
   workflow_dispatch:
     inputs:
       router_version:
         description: "9router version (leave empty for default)"
         required: false
         type: string
-  # schedule:
-  #   - cron: "17 2 * * *"
 
 env:
   IMAGE_NAME: antiantiops/9router
-  DEFAULT_ROUTER_VERSION: "0.5.55"     # <--- EDIT DEFAULT 9ROUTER VERSION HERE https://www.npmjs.com/package/9router
+  # Updated by 9router Release Watch from decolua/9router GitHub tags.
+  DEFAULT_ROUTER_VERSION: "0.5.55"
+  DEFAULT_ROUTER_TAG: "v0.5.55"
+  DEFAULT_ROUTER_COMMIT: "699edac3273e13d4744bc46f6082618f08560702"
 
 jobs:
   build-and-push:
@@ -29,6 +28,35 @@ jobs:
     steps:
       - name: Checkout toolkit repository
         uses: actions/checkout@v4
+
+      - name: Select immutable upstream source
+        id: router
+        shell: bash
+        run: |
+          VERSION='${{ inputs.router_version || env.DEFAULT_ROUTER_VERSION }}'
+          if [[ "$VERSION" != "${{ env.DEFAULT_ROUTER_VERSION }}" ]]; then
+            echo "Manual versions are not supported until a matching tag/SHA is supplied." >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=${{ env.DEFAULT_ROUTER_TAG }}" >> "$GITHUB_OUTPUT"
+          echo "commit=${{ env.DEFAULT_ROUTER_COMMIT }}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout upstream source at pinned commit
+        uses: actions/checkout@v4
+        with:
+          repository: decolua/9router
+          ref: ${{ steps.router.outputs.commit }}
+          path: upstream
+          fetch-depth: 1
+
+      - name: Verify upstream tag and package version
+        working-directory: upstream
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = '${{ steps.router.outputs.commit }}'
+          test "$(node -p "require('./cli/package.json').version")" = '${{ steps.router.outputs.version }}'
+          echo "Building decolua/9router ${{ steps.router.outputs.tag }} at $(git rev-parse HEAD)"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -42,34 +70,25 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-      - name: Determine 9router version
-        id: router_version
-        run: |
-          TARGET_VERSION="${{ inputs.router_version || env.DEFAULT_ROUTER_VERSION }}"
-          if [ "$TARGET_VERSION" = "latest" ]; then
-            VERSION=$(npm show 9router version)
-          else
-            VERSION="$TARGET_VERSION"
-          fi
-          echo "version=$VERSION" >> $GITHUB_ENV
-
-      - name: Extract Docker metadata 
+      - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=${{ env.version }}-{{sha}}
-            type=raw,value=${{ env.version }}
+            type=raw,value=${{ steps.router.outputs.version }}-{{sha}}
+            type=raw,value=${{ steps.router.outputs.version }}
             type=raw,value=latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/decolua/9router
+            org.opencontainers.image.revision=${{ steps.router.outputs.commit }}
+            org.opencontainers.image.version=${{ steps.router.outputs.tag }}
 
-      - name: Build and push image
+      - name: Build and push upstream image
         uses: docker/build-push-action@v6
         with:
-          context: ./9router
-          file: ./9router/Dockerfile_AntiAntiOps
-          build-args: |
-            ROUTER_VERSION=${{ env.version }}
+          context: ./upstream
+          file: ./upstream/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
