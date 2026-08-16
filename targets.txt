@@ -4,3 +4,5 @@ https://nimtechnology.com
 https://esxi.nimtechnology.com
 https://e-learning.nimtechnology.com
 https://api-gateway.nimtechnology.com
+
+https://tarot.nimtechnology.com
