@@ -22,6 +22,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     procps \
     && rm -rf /var/lib/apt/lists/*
 
+RUN ARCH=$(dpkg --print-architecture) \
+    && curl -sSL -o /usr/local/bin/argocd "https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-${ARCH}" \
+    && chmod +x /usr/local/bin/argocd
+
 RUN useradd -m -s /bin/bash "${DEV_USER}" \
     && echo "${DEV_USER} ALL=(ALL) NOPASSWD:ALL" \
       > /etc/sudoers.d/${DEV_USER} \
