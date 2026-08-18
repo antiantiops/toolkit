@@ -2,8 +2,8 @@ name: Daily Vulnerability Scan
 
 on:
   schedule:
-    # Run daily at 2:00 AM UTC (9:00 AM Vietnam)
-    - cron: '0 2 * * *'
+    # Run daily at 20:00 UTC (3:00 AM Vietnam)
+    - cron: '0 20 * * *'
   workflow_dispatch:
     inputs:
       severity:
@@ -12,7 +12,7 @@ on:
         default: 'critical,high,medium'
 
 jobs:
-  scan:
+  nuclei-scan:
     runs-on: ubuntu-latest
     container:
       image: projectdiscovery/nuclei:latest
@@ -133,7 +133,7 @@ jobs:
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           FINDINGS=$(cat /tmp/findings_summary.txt 2>/dev/null | head -10 || echo "See report")
 
-          MSG="🚨 <b>Vulnerability Scan Report</b>
+          MSG="🚨 <b>Vulnerability Scan Report (Nuclei)</b>
 
           📅 $(date -u +'%Y-%m-%d %H:%M UTC')
           🆕 New: <b>${NEW}</b>
@@ -160,7 +160,7 @@ jobs:
           TOTAL="${{ steps.analyze.outputs.total }}"
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-          MSG="✅ <b>Daily Vulnerability Scan</b>
+          MSG="✅ <b>Daily Vulnerability Scan (Nuclei)</b>
 
           📅 $(date -u +'%Y-%m-%d %H:%M UTC')
           No new vulnerabilities detected.
@@ -193,6 +193,118 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: scan-results-${{ github.run_number }}
+          name: nuclei-scan-results-${{ github.run_number }}
           path: scan-results/
+          retention-days: 30
+
+  zap-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare scan workspace
+        run: |
+          mkdir -p zap-reports
+          chmod 777 zap-reports
+          if [ ! -f targets.txt ]; then
+            echo "::error::targets.txt not found"
+            exit 1
+          fi
+          grep -vE '^\s*#|^\s*$' targets.txt > /tmp/active_targets.txt || true
+
+      - name: Run OWASP ZAP Baseline Scan
+        run: |
+          while IFS= read -r target; do
+            [ -z "$target" ] && continue
+            domain=$(echo "$target" | sed -e 's|^[^/]*//||' -e 's|[/:]|_|g')
+            echo "::group::Scanning $target with OWASP ZAP"
+            docker run --rm -v $(pwd)/zap-reports:/zap/wrk:rw \
+              ghcr.io/zaproxy/zaproxy:stable \
+              zap-baseline.py -t "$target" -J "zap-${domain}.json" -r "zap-${domain}.html" -m 5 -I || true
+            echo "::endgroup::"
+          done < /tmp/active_targets.txt
+
+      - name: Analyze ZAP results
+        id: analyze
+        run: |
+          python3 -c '
+          import json, glob, os
+
+          total_high = 0
+          total_med = 0
+          total_low = 0
+          findings = []
+
+          for f in sorted(glob.glob("zap-reports/*.json")):
+              try:
+                  with open(f) as jf:
+                      data = json.load(jf)
+                  site_data = data.get("site", [])
+                  if isinstance(site_data, dict):
+                      site_data = [site_data]
+                  for s in site_data:
+                      host = s.get("@name", "")
+                      for alert in s.get("alerts", []):
+                          risk = str(alert.get("riskcode", "0"))
+                          name = alert.get("alert", "")
+                          if risk == "3":
+                              total_high += 1
+                              findings.append(f"[HIGH] {name} -> {host}")
+                          elif risk == "2":
+                              total_med += 1
+                              findings.append(f"[MEDIUM] {name} -> {host}")
+                          elif risk == "1":
+                              total_low += 1
+              except Exception as e:
+                  print(f"Error reading {f}: {e}")
+
+          total = total_high + total_med
+          summary = "\n".join(findings[:10]) if findings else "No High/Medium vulnerabilities detected."
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as gh_out:
+              gh_out.write(f"total={total}\n")
+              gh_out.write(f"high={total_high}\n")
+              gh_out.write(f"medium={total_med}\n")
+              gh_out.write(f"low={total_low}\n")
+              gh_out.write("findings<<EOF\n" + summary + "\nEOF\n")
+
+          print(f"ZAP Scan summary: total={total} (high={total_high}, medium={total_med}, low={total_low})")
+          '
+
+      - name: Send Telegram alert on ZAP findings
+        if: steps.analyze.outputs.total != '0'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          TOTAL="${{ steps.analyze.outputs.total }}"
+          HIGH="${{ steps.analyze.outputs.high }}"
+          MEDIUM="${{ steps.analyze.outputs.medium }}"
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          FINDINGS="${{ steps.analyze.outputs.findings }}"
+
+          MSG="🚨 <b>OWASP ZAP Vulnerability Alert</b>
+
+          📅 $(date -u +'%Y-%m-%d %H:%M UTC')
+          📊 Findings: <b>${TOTAL}</b> (🟠 High: ${HIGH} | 🟡 Medium: ${MEDIUM})
+
+          <b>Top Findings:</b>
+          <pre>${FINDINGS}</pre>
+
+          🔗 <a href=\"${RUN_URL}\">Full ZAP Report</a>"
+
+          MSG=$(echo "$MSG" | sed 's/^          //')
+
+          wget -qO- --post-data="chat_id=${TELEGRAM_CHAT_ID}&text=${MSG}&parse_mode=HTML&disable_web_page_preview=true" \
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            || echo "::warning::Telegram send failed"
+
+      - name: Upload ZAP artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-scan-results-${{ github.run_number }}
+          path: zap-reports/
           retention-days: 30
