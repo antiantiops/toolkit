@@ -308,3 +308,154 @@ jobs:
           name: zap-scan-results-${{ github.run_number }}
           path: zap-reports/
           retention-days: 30
+
+  strix-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Strix
+        run: |
+          curl -sSL https://strix.ai/install | bash
+          echo "$HOME/.strix/bin" >> $GITHUB_PATH
+
+      - name: Run Strix AI Penetration Test
+        env:
+          STRIX_LLM: "openai/crawl-free"
+          LLM_API_KEY: ${{ secrets.X9ROUTER_API_KEY }}
+          LLM_API_BASE: ${{ secrets.X9ROUTER_URL }}
+          OPENAI_API_KEY: ${{ secrets.X9ROUTER_API_KEY }}
+          OPENAI_BASE_URL: ${{ secrets.X9ROUTER_URL }}
+        run: |
+          if [ ! -f targets.txt ]; then
+            echo "::error::targets.txt not found"
+            exit 1
+          fi
+
+          mkdir -p strix_runs
+          set +e
+          strix -n --target-list ./targets.txt --scan-mode quick
+          EXIT_CODE=$?
+          set -e
+
+          if [ $EXIT_CODE -ne 0 ] && [ $EXIT_CODE -ne 2 ]; then
+            echo "::error::Strix scan failed with exit code $EXIT_CODE"
+            exit $EXIT_CODE
+          fi
+
+      - name: Analyze Strix results
+        id: analyze
+        run: |
+          python3 -c '
+          import json, glob, os, sys
+
+          total_crit = 0
+          total_high = 0
+          total_med = 0
+          total_low = 0
+          findings = []
+
+          report_files = sorted(glob.glob("strix_runs/*/vulnerabilities.json"))
+          for f in report_files:
+              try:
+                  with open(f, "r", encoding="utf-8") as jf:
+                      data = json.load(jf)
+                  for vuln in data:
+                      sev = str(vuln.get("severity", "")).lower()
+                      title = vuln.get("title", "Untitled")
+                      target = vuln.get("target", "")
+                      if sev == "critical":
+                          total_crit += 1
+                          findings.append(f"[CRITICAL] {title} -> {target}")
+                      elif sev == "high":
+                          total_high += 1
+                          findings.append(f"[HIGH] {title} -> {target}")
+                      elif sev == "medium":
+                          total_med += 1
+                          findings.append(f"[MEDIUM] {title} -> {target}")
+                      elif sev == "low":
+                          total_low += 1
+                          findings.append(f"[LOW] {title} -> {target}")
+              except Exception as e:
+                  print(f"::error::Failed parsing {f}: {e}", file=sys.stderr)
+                  sys.exit(1)
+
+          total = total_crit + total_high + total_med + total_low
+          summary = "\n".join(findings[:10]) if findings else "No vulnerabilities detected."
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as gh_out:
+              gh_out.write(f"total={total}\n")
+              gh_out.write(f"critical={total_crit}\n")
+              gh_out.write(f"high={total_high}\n")
+              gh_out.write(f"medium={total_med}\n")
+              gh_out.write(f"low={total_low}\n")
+              gh_out.write("findings<<EOF\n" + summary + "\nEOF\n")
+
+          print(f"Strix Scan summary: total={total} (crit={total_crit}, high={total_high}, med={total_med}, low={total_low})")
+          '
+
+      - name: Send Telegram alert on Strix findings
+        if: steps.analyze.outputs.total != '0'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TOTAL: ${{ steps.analyze.outputs.total }}
+          CRITICAL: ${{ steps.analyze.outputs.critical }}
+          HIGH: ${{ steps.analyze.outputs.high }}
+          MEDIUM: ${{ steps.analyze.outputs.medium }}
+          LOW: ${{ steps.analyze.outputs.low }}
+          FINDINGS: ${{ steps.analyze.outputs.findings }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 -c '
+          import html, json, os, urllib.request
+
+          token = os.environ.get("TELEGRAM_BOT_TOKEN")
+          chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+          total = os.environ.get("TOTAL", "0")
+          critical = os.environ.get("CRITICAL", "0")
+          high = os.environ.get("HIGH", "0")
+          medium = os.environ.get("MEDIUM", "0")
+          low = os.environ.get("LOW", "0")
+          findings = html.escape(os.environ.get("FINDINGS", ""))
+          run_url = html.escape(os.environ.get("RUN_URL", ""))
+
+          msg = (
+              f"🚨 <b>Strix AI Pentest Alert</b>\n\n"
+              f"📊 Findings: <b>{total}</b> (🔴 Crit: {critical} | 🟠 High: {high} | 🟡 Med: {medium} | 🔵 Low: {low})\n\n"
+              f"<b>Top Findings:</b>\n"
+              f"<pre>{findings}</pre>\n\n"
+              f"🔗 <a href=\"{run_url}\">Full Strix Report</a>"
+          )
+
+          data = json.dumps({
+              "chat_id": chat_id,
+              "text": msg,
+              "parse_mode": "HTML",
+              "disable_web_page_preview": True
+          }).encode("utf-8")
+
+          req = urllib.request.Request(
+              f"https://api.telegram.org/bot{token}/sendMessage",
+              data=data,
+              headers={"Content-Type": "application/json"}
+          )
+
+          try:
+              with urllib.request.urlopen(req, timeout=15) as resp:
+                  pass
+          except Exception as e:
+              print(f"::warning::Telegram send failed: {e}")
+          '
+
+      - name: Upload Strix artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: strix-scan-results-${{ github.run_number }}
+          path: strix_runs/
+          retention-days: 30
