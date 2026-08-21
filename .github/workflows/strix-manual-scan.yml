@@ -72,10 +72,13 @@ jobs:
           url="https://github.com/usestrix/strix/releases/download/v${STRIX_VERSION}/${archive}"
           curl -fsSLo "$archive" "$url"
           echo "${STRIX_SHA256}  ${archive}" | sha256sum --check --status
-          mkdir -p "$HOME/.strix/bin"
-          tar -xzf "$archive" -C "$HOME/.strix/bin"
+          install_dir="$HOME/.strix/bin"
+          mkdir -p "$install_dir"
+          tar -xzf "$archive" -C "$install_dir"
+          mv "$install_dir/strix-${STRIX_VERSION}-linux-x86_64" "$install_dir/strix"
+          chmod 0755 "$install_dir/strix"
           rm "$archive"
-          echo "$HOME/.strix/bin" >> "$GITHUB_PATH"
+          echo "$install_dir" >> "$GITHUB_PATH"
 
       - name: Run Strix AI Penetration Test
         shell: bash
