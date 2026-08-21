@@ -139,6 +139,46 @@ jobs:
           print(f"Strix findings: {sum(counts.values())} ({counts})")
           PY
 
+      - name: Send Telegram Strix result
+        if: always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TARGET: ${{ steps.target.outputs.target }}
+          SCAN_MODE: ${{ inputs.scan_mode }}
+          TOTAL: ${{ steps.analyze.outputs.total }}
+          CRITICAL: ${{ steps.analyze.outputs.critical }}
+          HIGH: ${{ steps.analyze.outputs.high }}
+          MEDIUM: ${{ steps.analyze.outputs.medium }}
+          LOW: ${{ steps.analyze.outputs.low }}
+          JOB_STATUS: ${{ job.status }}
+          FINDINGS: ${{ steps.analyze.outputs.findings }}
+        run: |
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if [ "$JOB_STATUS" = success ] && [ "$TOTAL" = 0 ]; then
+            TITLE="✅ <b>Strix scan clean</b>"
+            DETAILS="No vulnerabilities found."
+          elif [ "$JOB_STATUS" = success ]; then
+            TITLE="🚨 <b>Strix findings need fix</b>"
+            DETAILS="Give AI agent these findings:
+<pre>${FINDINGS}</pre>"
+          else
+            TITLE="⚠️ <b>Strix scan incomplete</b>"
+            DETAILS="Job failed or timed out. Do not treat zero findings as clean. Check logs."
+          fi
+
+          MSG="${TITLE}
+
+          Target: <code>${TARGET}</code>
+          Mode: <code>${SCAN_MODE}</code>
+          Findings: <b>${TOTAL}</b> (critical: ${CRITICAL}, high: ${HIGH}, medium: ${MEDIUM}, low: ${LOW})
+          ${DETAILS}
+
+          🔗 <a href="${RUN_URL}">GitHub run</a>"
+          MSG=$(echo "$MSG" | sed 's/^          //')
+
+          wget -qO- --post-data="chat_id=${TELEGRAM_CHAT_ID}&text=${MSG}&parse_mode=HTML&disable_web_page_preview=true"             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage"             || echo "::warning::Telegram send failed"
+
       - name: Write job summary
         if: always()
         env:
