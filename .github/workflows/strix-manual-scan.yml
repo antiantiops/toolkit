@@ -4,9 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: "Authorized HTTPS target, e.g. https://nimtechnology.com"
+        description: "HTTPS target to scan, e.g. https://example.com"
         required: true
         type: string
+      authorized_target:
+        description: "I own this target or have written authorization to scan it"
+        required: true
+        type: boolean
+        default: false
       scan_mode:
         description: "Strix scan mode"
         required: true
@@ -28,6 +33,7 @@ jobs:
         id: target
         env:
           TARGET: ${{ inputs.target }}
+          AUTHORIZED_TARGET: ${{ inputs.authorized_target }}
         run: |
           python3 - <<'PY'
           import os
@@ -36,20 +42,17 @@ jobs:
 
           target = os.environ["TARGET"]
           parsed = urlsplit(target)
-          hostname = (parsed.hostname or "").rstrip(".").lower()
-          valid_hostname = (
-              hostname == "nimtechnology.com"
-              or hostname.endswith(".nimtechnology.com")
-          )
+          hostname = (parsed.hostname or "").rstrip(".")
 
           if (
-              parsed.scheme != "https"
-              or not valid_hostname
+              os.environ.get("AUTHORIZED_TARGET") != "true"
+              or parsed.scheme != "https"
+              or not hostname
               or parsed.username is not None
               or parsed.password is not None
               or any(character in target for character in "\r\n\0")
           ):
-              print(f"::error::Target is not allowlisted: {target}", file=sys.stderr)
+              print("::error::Target must be HTTPS and authorization confirmation must be true", file=sys.stderr)
               raise SystemExit(1)
 
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
