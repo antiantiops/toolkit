@@ -151,33 +151,54 @@ jobs:
           HIGH: ${{ steps.analyze.outputs.high }}
           MEDIUM: ${{ steps.analyze.outputs.medium }}
           LOW: ${{ steps.analyze.outputs.low }}
+          INFO: ${{ steps.analyze.outputs.info }}
           JOB_STATUS: ${{ job.status }}
           FINDINGS: ${{ steps.analyze.outputs.findings }}
         run: |
-          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          if [ "$JOB_STATUS" = success ] && [ "$TOTAL" = 0 ]; then
-            TITLE="✅ <b>Strix scan clean</b>"
-            DETAILS="No vulnerabilities found."
-          elif [ "$JOB_STATUS" = success ]; then
-            TITLE="🚨 <b>Strix findings need fix</b>"
-            DETAILS="Give AI agent these findings:
-<pre>${FINDINGS}</pre>"
-          else
-            TITLE="⚠️ <b>Strix scan incomplete</b>"
-            DETAILS="Job failed or timed out. Do not treat zero findings as clean. Check logs."
-          fi
+          export RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          python3 - <<'PY' > /tmp/telegram-payload.json
+          import html
+          import json
+          import os
 
-          MSG="${TITLE}
+          findings = html.escape(os.environ.get("FINDINGS", "")[:2800])
+          status = os.environ.get("JOB_STATUS", "")
+          total = os.environ.get("TOTAL", "0")
+          if status == "success" and total == "0":
+              title = "✅ <b>Strix scan clean</b>"
+              details = "No vulnerabilities found."
+          elif status == "success":
+              title = "🚨 <b>Strix findings need fix</b>"
+              details = f"Give AI agent these findings:\n<pre>{findings or 'See GitHub run.'}</pre>"
+          else:
+              title = "⚠️ <b>Strix scan incomplete</b>"
+              details = "Job failed or timed out. Do not treat zero findings as clean. Check logs."
 
-          Target: <code>${TARGET}</code>
-          Mode: <code>${SCAN_MODE}</code>
-          Findings: <b>${TOTAL}</b> (critical: ${CRITICAL}, high: ${HIGH}, medium: ${MEDIUM}, low: ${LOW})
-          ${DETAILS}
-
-          🔗 <a href="${RUN_URL}">GitHub run</a>"
-          MSG=$(echo "$MSG" | sed 's/^          //')
-
-          wget -qO- --post-data="chat_id=${TELEGRAM_CHAT_ID}&text=${MSG}&parse_mode=HTML&disable_web_page_preview=true"             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage"             || echo "::warning::Telegram send failed"
+          text = "\n\n".join((
+              title,
+              "\n".join((
+                  f"Target: <code>{html.escape(os.environ.get('TARGET', 'unknown'))}</code>",
+                  f"Mode: <code>{html.escape(os.environ.get('SCAN_MODE', 'unknown'))}</code>",
+                  "Findings: <b>{}</b> (critical: {}, high: {}, medium: {}, low: {}, info: {})".format(
+                      total, os.environ.get("CRITICAL", "0"), os.environ.get("HIGH", "0"),
+                      os.environ.get("MEDIUM", "0"), os.environ.get("LOW", "0"), os.environ.get("INFO", "0"),
+                  ),
+                  details,
+              )),
+              f'🔗 <a href="{html.escape(os.environ["RUN_URL"], quote=True)}">GitHub run</a>',
+          ))
+          print(json.dumps({
+              "chat_id": os.environ["TELEGRAM_CHAT_ID"],
+              "text": text[:4096],
+              "parse_mode": "HTML",
+              "link_preview_options": {"is_disabled": True},
+          }))
+          PY
+          curl --fail --silent --show-error --max-time 30 --retry 0 \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/telegram-payload.json \
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            || echo "::warning::Telegram send failed"
 
       - name: Write job summary
         if: always()
