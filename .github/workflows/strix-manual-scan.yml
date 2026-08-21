@@ -85,7 +85,7 @@ jobs:
         env:
           TARGET: ${{ steps.target.outputs.target }}
           SCAN_MODE: ${{ inputs.scan_mode }}
-          STRIX_LLM: openai/crawl-free
+          STRIX_LLM: openai/crawl-antigravity
           LLM_API_KEY: ${{ secrets.X9ROUTER_API_KEY }}
           LLM_API_BASE: ${{ secrets.X9ROUTER_URL }}
           OPENAI_API_KEY: ${{ secrets.X9ROUTER_API_KEY }}
