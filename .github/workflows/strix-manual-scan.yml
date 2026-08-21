@@ -1,0 +1,170 @@
+name: Manual Strix Security Scan
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Authorized HTTPS target, e.g. https://nimtechnology.com"
+        required: true
+        type: string
+      scan_mode:
+        description: "Strix scan mode"
+        required: true
+        default: quick
+        type: choice
+        options:
+          - quick
+          - standard
+
+permissions:
+  contents: read
+
+jobs:
+  strix-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Validate target
+        id: target
+        env:
+          TARGET: ${{ inputs.target }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import sys
+          from urllib.parse import urlsplit
+
+          target = os.environ["TARGET"]
+          parsed = urlsplit(target)
+          hostname = (parsed.hostname or "").rstrip(".").lower()
+          valid_hostname = (
+              hostname == "nimtechnology.com"
+              or hostname.endswith(".nimtechnology.com")
+          )
+
+          if (
+              parsed.scheme != "https"
+              or not valid_hostname
+              or parsed.username is not None
+              or parsed.password is not None
+              or any(character in target for character in "\r\n\0")
+          ):
+              print(f"::error::Target is not allowlisted: {target}", file=sys.stderr)
+              raise SystemExit(1)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"target={target}\n")
+          PY
+          echo "Scanning authorized target: $TARGET"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Strix
+        env:
+          STRIX_VERSION: 1.5.3
+          STRIX_SHA256: a9cd802e6c9f6dc5635790a9ce0ef30135f97b6868d045b413af14448f950835
+        run: |
+          set -euo pipefail
+          archive="strix-${STRIX_VERSION}-linux-x86_64.tar.gz"
+          url="https://github.com/usestrix/strix/releases/download/v${STRIX_VERSION}/${archive}"
+          curl -fsSLo "$archive" "$url"
+          echo "${STRIX_SHA256}  ${archive}" | sha256sum --check --status
+          install_dir="$HOME/.strix/bin"
+          mkdir -p "$install_dir"
+          tar -xzf "$archive" -C "$install_dir"
+          mv "$install_dir/strix-${STRIX_VERSION}-linux-x86_64" "$install_dir/strix"
+          chmod 0755 "$install_dir/strix"
+          rm "$archive"
+          echo "$install_dir" >> "$GITHUB_PATH"
+
+      - name: Run Strix AI Penetration Test
+        shell: bash
+        env:
+          TARGET: ${{ steps.target.outputs.target }}
+          SCAN_MODE: ${{ inputs.scan_mode }}
+          STRIX_LLM: openai/crawl-free
+          LLM_API_KEY: ${{ secrets.X9ROUTER_API_KEY }}
+          LLM_API_BASE: ${{ secrets.X9ROUTER_URL }}
+          OPENAI_API_KEY: ${{ secrets.X9ROUTER_API_KEY }}
+          OPENAI_BASE_URL: ${{ secrets.X9ROUTER_URL }}
+        run: |
+          set -o pipefail
+          mkdir -p strix_runs
+          started=$(date +%s)
+          echo "::group::Strix live scan: $TARGET ($SCAN_MODE)"
+          set +e
+          timeout --foreground 25m stdbuf -oL -eL \
+            strix -n --target "$TARGET" --scan-mode "$SCAN_MODE" 2>&1 | tee strix_runs/console.log
+          rc=${PIPESTATUS[0]}
+          set -e
+          echo "::endgroup::"
+          echo "Strix finished after $(( $(date +%s) - started )) seconds with exit code $rc"
+          if [ "$rc" -eq 124 ]; then
+            echo "::error::Strix timed out after 25 minutes"
+            exit 1
+          fi
+          if [ "$rc" -ne 0 ] && [ "$rc" -ne 2 ]; then
+            echo "::error::Strix scan failed with exit code $rc"
+            exit "$rc"
+          fi
+
+      - name: Analyze Strix results
+        id: analyze
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import glob
+          import json
+          import os
+
+          counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
+          findings = []
+          for path in sorted(glob.glob("strix_runs/*/vulnerabilities.json")):
+              with open(path, encoding="utf-8") as handle:
+                  for finding in json.load(handle):
+                      severity = str(finding.get("severity", "")).lower()
+                      if severity in counts:
+                          counts[severity] += 1
+                          findings.append(
+                              f"[{severity.upper()}] {finding.get('title', 'Untitled')} -> {finding.get('target', '')}"
+                          )
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"total={sum(counts.values())}\n")
+              for severity, count in counts.items():
+                  output.write(f"{severity}={count}\n")
+              output.write("findings<<EOF\n" + "\n".join(findings[:10]) + "\nEOF\n")
+          print(f"Strix findings: {sum(counts.values())} ({counts})")
+          PY
+
+      - name: Write job summary
+        if: always()
+        env:
+          TARGET: ${{ steps.target.outputs.target }}
+          SCAN_MODE: ${{ inputs.scan_mode }}
+          TOTAL: ${{ steps.analyze.outputs.total }}
+          CRITICAL: ${{ steps.analyze.outputs.critical }}
+          HIGH: ${{ steps.analyze.outputs.high }}
+          MEDIUM: ${{ steps.analyze.outputs.medium }}
+          LOW: ${{ steps.analyze.outputs.low }}
+          INFO: ${{ steps.analyze.outputs.info }}
+        run: |
+          {
+            echo "## Strix manual scan"
+            echo
+            echo "- Target: \`$TARGET\`"
+            echo "- Mode: \`$SCAN_MODE\`"
+            echo "- Findings: $TOTAL (critical: $CRITICAL, high: $HIGH, medium: $MEDIUM, low: $LOW, info: $INFO)"
+            echo "- Live output: job step **Run Strix AI Penetration Test**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Strix artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: strix-scan-results-${{ github.run_number }}
+          path: strix_runs/
+          if-no-files-found: warn
+          retention-days: 30
