@@ -22,7 +22,7 @@ permissions:
 jobs:
   strix-scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 70
     steps:
       - name: Validate target
         id: target
@@ -96,14 +96,14 @@ jobs:
           started=$(date +%s)
           echo "::group::Strix live scan: $TARGET ($SCAN_MODE)"
           set +e
-          timeout --foreground 25m stdbuf -oL -eL \
+          timeout --foreground 60m stdbuf -oL -eL \
             strix -n --target "$TARGET" --scan-mode "$SCAN_MODE" 2>&1 | tee strix_runs/console.log
           rc=${PIPESTATUS[0]}
           set -e
           echo "::endgroup::"
           echo "Strix finished after $(( $(date +%s) - started )) seconds with exit code $rc"
           if [ "$rc" -eq 124 ]; then
-            echo "::error::Strix timed out after 25 minutes"
+            echo "::error::Strix timed out after 60 minutes"
             exit 1
           fi
           if [ "$rc" -ne 0 ] && [ "$rc" -ne 2 ]; then
