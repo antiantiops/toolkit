@@ -26,19 +26,35 @@ jobs:
     steps:
       - name: Validate target
         id: target
-        shell: bash
         env:
           TARGET: ${{ inputs.target }}
         run: |
-          set -euo pipefail
-          case "$TARGET" in
-            https://nimtechnology.com|https://nimtechnology.com/*|https://*.nimtechnology.com|https://*.nimtechnology.com/*) ;;
-            *)
-              echo "::error::Target is not allowlisted: $TARGET"
-              exit 1
-              ;;
-          esac
-          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+          python3 - <<'PY'
+          import os
+          import sys
+          from urllib.parse import urlsplit
+
+          target = os.environ["TARGET"]
+          parsed = urlsplit(target)
+          hostname = (parsed.hostname or "").rstrip(".").lower()
+          valid_hostname = (
+              hostname == "nimtechnology.com"
+              or hostname.endswith(".nimtechnology.com")
+          )
+
+          if (
+              parsed.scheme != "https"
+              or not valid_hostname
+              or parsed.username is not None
+              or parsed.password is not None
+              or any(character in target for character in "\r\n\0")
+          ):
+              print(f"::error::Target is not allowlisted: {target}", file=sys.stderr)
+              raise SystemExit(1)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"target={target}\n")
+          PY
           echo "Scanning authorized target: $TARGET"
 
       - name: Checkout repository
@@ -47,8 +63,18 @@ jobs:
           persist-credentials: false
 
       - name: Install Strix
+        env:
+          STRIX_VERSION: 1.5.3
+          STRIX_SHA256: a9cd802e6c9f6dc5635790a9ce0ef30135f97b6868d045b413af14448f950835
         run: |
-          curl -fsSL https://strix.ai/install | bash
+          set -euo pipefail
+          archive="strix-${STRIX_VERSION}-linux-x86_64.tar.gz"
+          url="https://github.com/usestrix/strix/releases/download/v${STRIX_VERSION}/${archive}"
+          curl -fsSLo "$archive" "$url"
+          echo "${STRIX_SHA256}  ${archive}" | sha256sum --check --status
+          mkdir -p "$HOME/.strix/bin"
+          tar -xzf "$archive" -C "$HOME/.strix/bin"
+          rm "$archive"
           echo "$HOME/.strix/bin" >> "$GITHUB_PATH"
 
       - name: Run Strix AI Penetration Test
@@ -91,7 +117,7 @@ jobs:
           import json
           import os
 
-          counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+          counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
           findings = []
           for path in sorted(glob.glob("strix_runs/*/vulnerabilities.json")):
               with open(path, encoding="utf-8") as handle:
@@ -120,13 +146,14 @@ jobs:
           HIGH: ${{ steps.analyze.outputs.high }}
           MEDIUM: ${{ steps.analyze.outputs.medium }}
           LOW: ${{ steps.analyze.outputs.low }}
+          INFO: ${{ steps.analyze.outputs.info }}
         run: |
           {
             echo "## Strix manual scan"
             echo
             echo "- Target: \`$TARGET\`"
             echo "- Mode: \`$SCAN_MODE\`"
-            echo "- Findings: $TOTAL (critical: $CRITICAL, high: $HIGH, medium: $MEDIUM, low: $LOW)"
+            echo "- Findings: $TOTAL (critical: $CRITICAL, high: $HIGH, medium: $MEDIUM, low: $LOW, info: $INFO)"
             echo "- Live output: job step **Run Strix AI Penetration Test**"
           } >> "$GITHUB_STEP_SUMMARY"
 
