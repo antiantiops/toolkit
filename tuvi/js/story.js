@@ -50,6 +50,7 @@ function renderStep() {
 
   storyEl.innerHTML = `
     <div class="story-card${prefersReducedMotion() ? '' : ' animate-in'}">
+      <button class="story-dismiss" aria-label="Đóng hướng dẫn" title="Đóng">×</button>
       <div class="story-progress">
         <div class="story-progress-bar" style="width: ${progress}%"></div>
         <span class="story-progress-text">${currentStep + 1} / ${STORY_STEPS.length}</span>
@@ -70,8 +71,10 @@ function renderStep() {
   if (onHighlight) onHighlight(step.palaces);
 
   // Nav handlers
+  const dismissBtn = storyEl.querySelector('.story-dismiss');
   const prevBtn = storyEl.querySelector('.story-btn-prev');
   const nextBtn = storyEl.querySelector('.story-btn-next');
+  if (dismissBtn) dismissBtn.addEventListener('click', endStory);
   const closeBtn = storyEl.querySelector('.story-btn-close');
 
   if (prevBtn) prevBtn.addEventListener('click', () => { currentStep--; renderStep(); });

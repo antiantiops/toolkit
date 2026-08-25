@@ -892,29 +892,31 @@ body::after {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  /* Dim, don't blur: underlying chart remains legible and orientation stays intact. */
+  background: color-mix(in srgb, var(--bg-primary) 82%, transparent);
   z-index: 100;
-  backdrop-filter: blur(4px);
 }
 #story-overlay.active { display: block; }
 
 #story-container {
   position: fixed;
-  bottom: var(--space-lg);
+  bottom: max(var(--space-lg), env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   z-index: 101;
   width: min(600px, calc(100vw - var(--space-xl) * 2));
+  max-height: calc(100dvh - var(--space-xl) * 2);
   pointer-events: none;
 }
 
 .story-card {
-  background: var(--bg-glass);
-  border: 1px solid var(--border-light);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-active);
   border-radius: var(--radius-lg);
   padding: var(--space-xl);
-  box-shadow: var(--shadow-lg);
-  backdrop-filter: blur(12px);
+  max-height: calc(100dvh - var(--space-xl) * 2);
+  overflow-y: auto;
+  box-shadow: 0 18px 60px rgba(0,0,0,.45);
   pointer-events: auto;
   outline: none;
 }
@@ -926,6 +928,22 @@ body::after {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+.story-dismiss {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 50%;
+}
+.story-dismiss:hover, .story-dismiss:focus-visible { color: var(--accent-gold); background: var(--accent-gold-soft); }
 
 .story-progress {
   display: flex;
@@ -1020,8 +1038,17 @@ body::after {
     bottom: var(--space-sm);
     width: calc(100vw - var(--space-md) * 2);
   }
-  .story-card { padding: var(--space-md); }
+  #story-container {
+    bottom: max(var(--space-sm), env(safe-area-inset-bottom));
+    max-height: calc(100dvh - var(--space-md));
+  }
+  .story-card {
+    padding: var(--space-lg) var(--space-md) var(--space-md);
+    max-height: calc(100dvh - var(--space-md));
+    border-radius: var(--radius-lg) var(--radius-lg) var(--radius-md) var(--radius-md);
+  }
   .story-title { font-size: 1rem; }
+  .story-content { font-size: .85rem; line-height: 1.65; }
 
   .btn-story .btn-story-label { display: none; }
 }
