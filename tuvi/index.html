@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Tử Vi Đẩu Số — Bản đồ xu hướng cuộc đời">
+  <title>Tử Vi Đẩu Số — Bản Đồ Vận Mệnh</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◎</text></svg>">
+</head>
+<body>
+  <!-- Loading screen -->
+  <div id="app-loader">
+    <div class="loader-content">
+      <div class="loader-symbol">◎</div>
+      <div class="loader-text">Đang mở lá số…</div>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="brand-logo">◎</div>
+        <span class="brand-name">Tử Vi Đẩu Số</span>
+      </div>
+      <div class="header-actions">
+        <span id="mode-indicator" class="mode-indicator">Tổng quan</span>
+        <button id="btn-story" class="btn-icon btn-story" aria-label="Đọc lá số theo hướng dẫn" title="Hướng dẫn đọc lá số">
+          ☰ <span class="btn-story-label">Hướng dẫn</span>
+        </button>
+        <button id="btn-theme" class="btn-icon" aria-label="Chuyển giao diện sáng/tối" title="Đổi giao diện">◐</button>
+        <button id="btn-export" class="btn-icon btn-export" aria-label="Tải lá số" title="Tải lá số">↓</button>
+      </div>
+    </header>
+
+    <!-- Hero / User Info -->
+    <section id="user-info" aria-label="Thông tin cá nhân"></section>
+
+    <!-- Topic Bar -->
+    <nav id="topic-bar" class="topic-bar" aria-label="Chọn chủ đề xem"></nav>
+
+    <!-- Year Bar -->
+    <div id="year-bar" class="year-bar" aria-label="Chọn năm xem"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Chart -->
+      <div class="chart-wrapper">
+        <div id="chart-container" aria-label="Lá số 12 cung"></div>
+      </div>
+
+      <!-- Detail Panel -->
+      <div class="detail-panel-wrapper">
+        <div id="detail-panel" class="detail-panel" aria-live="polite"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Story Mode Overlay -->
+  <div id="story-overlay"></div>
+  <div id="story-container"></div>
+
+  <!-- App JS (ES modules) -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
