@@ -145,16 +145,40 @@ body {
   transition: background var(--transition-slow), color var(--transition-slow);
 }
 
-/* Subtle background texture */
+/* Ancient celestial-chart atmosphere: paper grain + restrained polar compass.
+   No galaxy glow; intent is Chinese astronomical manuscript, not game UI. */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
-  opacity: 0.03;
+  opacity: 0.035;
   background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.65' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
   pointer-events: none;
   z-index: 0;
 }
+
+body::after {
+  content: '';
+  position: fixed;
+  width: min(86vw, 920px);
+  aspect-ratio: 1;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--border-light);
+  border-radius: 50%;
+  opacity: 0.26;
+  background:
+    linear-gradient(90deg, transparent calc(50% - .5px), var(--border-light) 50%, transparent calc(50% + .5px)),
+    linear-gradient(0deg, transparent calc(50% - .5px), var(--border-light) 50%, transparent calc(50% + .5px)),
+    repeating-radial-gradient(circle at center, transparent 0 12.2%, var(--border-light) 12.35% 12.5%, transparent 12.65% 25%),
+    radial-gradient(circle at center, var(--accent-gold) 0 2px, transparent 2.5px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+[data-theme="light"] body::after { opacity: 0.18; }
+.app-container, .page-input, .page-chart { position: relative; z-index: 1; }
 
 /* ── Loading screen (moved to Input Form Page section) ── */
 .loader-content { text-align: center; }
