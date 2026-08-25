@@ -3,6 +3,7 @@
 // ============================================================
 
 import { USER_INFO, TOPICS, TOPIC_PALACES, YEAR_DATA, PALACES, CHI_LABELS } from './data.js';
+import { calculateChart } from './calculator.js';
 import { initTheme, toggleTheme, exportChart } from './utils.js';
 import { initChart, selectPalace, clearSelection, highlightPalaces, clearHighlights, showYearOverlay, clearYearOverlay } from './chart.js';
 import { initPanel, showPalace, setTopic, setYear } from './panel.js';
@@ -61,15 +62,13 @@ function setupInputPage() {
 
     state.userInput = { name, gender, day, month, year, hour, calendar };
 
-    // Update USER_INFO with input data
-    USER_INFO.name = name;
-    USER_INFO.gender = gender;
-    USER_INFO.birthDate = `${String(day).padStart(2,'0')}/${String(month).padStart(2,'0')}/${year}`;
-    USER_INFO.lunarYear = lunarYearName(year);
-    USER_INFO.birthHour = HOUR_LABELS[hour];
-    USER_INFO.amDuong = gender === 'Nam' ? 'Dương Nam' : 'Âm Nữ';
-
-    showChartPage();
+    try {
+      calculateChart(state.userInput);
+      showChartPage();
+    } catch (error) {
+      // ponytail: Lunar leap-month input needs an explicit form field before enabling it.
+      window.alert(error.message || 'Không thể lập lá số với dữ liệu này.');
+    }
   });
 }
 
@@ -118,8 +117,8 @@ function renderUserInfo() {
       <div class="hero-summary">
         <div class="summary-item"><span class="summary-label">Mệnh</span><span class="summary-value">${USER_INFO.menh}</span></div>
         <div class="summary-item"><span class="summary-label">Cục</span><span class="summary-value">${USER_INFO.cuc}</span></div>
-        <div class="summary-item"><span class="summary-label">Chủ Mệnh</span><span class="summary-value">${USER_INFO.chuMenh}</span></div>
-        <div class="summary-item"><span class="summary-label">Chủ Thân</span><span class="summary-value">${USER_INFO.chuThan}</span></div>
+        <div class="summary-item"><span class="summary-label">Thân</span><span class="summary-value">${USER_INFO.chuMenh}</span></div>
+        <div class="summary-item"><span class="summary-label">Lịch tính</span><span class="summary-value">Việt Nam UTC+7</span></div>
       </div>
       <p class="hero-insight">${USER_INFO.summary}</p>
     </div>
@@ -235,6 +234,9 @@ function setupYears() {
 
 // ── Story Mode ──
 function setupStory() {
+  // Narrative copy was written for demo data. Keep it unavailable until each claim has source-backed rules.
+  const disabledStoryBtn = document.getElementById('btn-story');
+  if (disabledStoryBtn) disabledStoryBtn.hidden = true;
   const storyContainer = document.getElementById('story-container');
   const storyOverlay = document.getElementById('story-overlay');
   const storyBtn = document.getElementById('btn-story');

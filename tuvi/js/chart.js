@@ -18,13 +18,10 @@ let svg = null;
 let selectedPalace = null;
 let onSelectCallback = null;
 
-// Build palace position lookup
-function buildPositionMap() {
-  const map = {};
-  PALACES.forEach(p => { map[p.id] = p.position; });
-  return map;
+// PALACES is replaced after each calculation, so lookup must stay live.
+function getPositionMap() {
+  return Object.fromEntries(PALACES.map(p => [p.id, p.position]));
 }
-const posMap = buildPositionMap();
 
 function gridXY(pos) {
   const g = GRID_POSITIONS[pos];
@@ -239,7 +236,7 @@ export function clearHighlights() {
 }
 
 function palaceCenter(palaceId) {
-  const pos = posMap[palaceId];
+  const pos = getPositionMap()[palaceId];
   const { x, y } = gridXY(pos);
   return { x: x + CELL_W / 2, y: y + CELL_H / 2 };
 }
@@ -284,7 +281,7 @@ export function showYearOverlay(highlights) {
   if (!highlights || highlights.length === 0) return;
 
   highlights.forEach(palaceId => {
-    const pos = posMap[palaceId];
+    const pos = getPositionMap()[palaceId];
     if (pos === undefined) return;
     const { x, y } = gridXY(pos);
     const marker = createSVGEl('rect', {
