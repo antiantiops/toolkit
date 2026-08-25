@@ -9,11 +9,98 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◎</text></svg>">
 </head>
 <body>
-  <!-- Loading screen -->
-  <div id="app-loader">
+  <!-- Page 1: Input Form -->
+  <div id="page-input" class="page-input">
+    <div class="input-container">
+      <div class="input-brand">
+        <div class="brand-logo">◎</div>
+        <h1 class="input-title">Tử Vi Đẩu Số</h1>
+        <p class="input-subtitle">Khám phá bản đồ xu hướng cuộc đời bạn</p>
+      </div>
+
+      <form id="tuvi-form" class="tuvi-form" novalidate>
+        <div class="form-group">
+          <label for="input-name" class="form-label">Họ và tên</label>
+          <input type="text" id="input-name" class="form-input" placeholder="Nguyễn Văn A" required autocomplete="name">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="input-gender" class="form-label">Giới tính</label>
+            <select id="input-gender" class="form-input form-select" required>
+              <option value="" disabled selected>Chọn</option>
+              <option value="Nam">Nam</option>
+              <option value="Nữ">Nữ</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="input-calendar" class="form-label">Loại lịch</label>
+            <select id="input-calendar" class="form-input form-select">
+              <option value="solar" selected>Dương lịch</option>
+              <option value="lunar">Âm lịch</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row form-row-3">
+          <div class="form-group">
+            <label for="input-day" class="form-label">Ngày</label>
+            <input type="number" id="input-day" class="form-input" min="1" max="31" placeholder="15" required>
+          </div>
+          <div class="form-group">
+            <label for="input-month" class="form-label">Tháng</label>
+            <input type="number" id="input-month" class="form-input" min="1" max="12" placeholder="3" required>
+          </div>
+          <div class="form-group">
+            <label for="input-year" class="form-label">Năm sinh</label>
+            <input type="number" id="input-year" class="form-input" min="1920" max="2030" placeholder="1990" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="input-hour" class="form-label">Giờ sinh</label>
+          <select id="input-hour" class="form-input form-select" required>
+            <option value="" disabled selected>Chọn giờ sinh</option>
+            <option value="0">Giờ Tý (23:00 - 01:00)</option>
+            <option value="1">Giờ Sửu (01:00 - 03:00)</option>
+            <option value="2">Giờ Dần (03:00 - 05:00)</option>
+            <option value="3">Giờ Mão (05:00 - 07:00)</option>
+            <option value="4">Giờ Thìn (07:00 - 09:00)</option>
+            <option value="5">Giờ Tỵ (09:00 - 11:00)</option>
+            <option value="6">Giờ Ngọ (11:00 - 13:00)</option>
+            <option value="7">Giờ Mùi (13:00 - 15:00)</option>
+            <option value="8">Giờ Thân (15:00 - 17:00)</option>
+            <option value="9">Giờ Dậu (17:00 - 19:00)</option>
+            <option value="10">Giờ Tuất (19:00 - 21:00)</option>
+            <option value="11">Giờ Hợi (21:00 - 23:00)</option>
+          </select>
+        </div>
+
+        <div class="form-note">
+          <p>Giờ sinh rất quan trọng trong Tử Vi. Nếu không rõ chính xác, hãy chọn giờ gần nhất hoặc hỏi cha mẹ.</p>
+        </div>
+
+        <button type="submit" class="form-submit">
+          <span class="submit-text">Lập lá số</span>
+          <span class="submit-icon">→</span>
+        </button>
+      </form>
+
+      <div class="input-footer">
+        <button id="btn-theme-input" class="btn-icon" aria-label="Đổi giao diện" title="Đổi giao diện">◐</button>
+        <p class="input-disclaimer">Thông tin chỉ dùng để tính toán lá số, không được lưu trữ.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page 2: Chart (hidden initially) -->
+  <div id="page-chart" class="page-chart" style="display:none">
+
+  <!-- Loading overlay -->
+  <div id="app-loader" class="app-loader" style="display:none">
     <div class="loader-content">
       <div class="loader-symbol">◎</div>
-      <div class="loader-text">Đang mở lá số…</div>
+      <div class="loader-text">Đang lập lá số…</div>
     </div>
   </div>
 
@@ -60,6 +147,8 @@
   <!-- Story Mode Overlay -->
   <div id="story-overlay"></div>
   <div id="story-container"></div>
+
+  </div><!-- /page-chart -->
 
   <!-- App JS (ES modules) -->
   <script type="module" src="js/app.js"></script>

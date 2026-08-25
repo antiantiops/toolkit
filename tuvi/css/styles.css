@@ -156,18 +156,7 @@ body::before {
   z-index: 0;
 }
 
-/* ── Loading screen ── */
-#app-loader {
-  position: fixed;
-  inset: 0;
-  background: var(--bg-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  transition: opacity var(--transition-slow);
-}
-#app-loader.fade-out { opacity: 0; pointer-events: none; }
+/* ── Loading screen (moved to Input Form Page section) ── */
 .loader-content { text-align: center; }
 .loader-symbol {
   font-size: 2rem;
@@ -1023,6 +1012,161 @@ body::before {
   .year-marker { animation: none; opacity: 0.7; }
   .loader-symbol { animation: none; opacity: 0.7; }
 }
+
+/* ── Input Form Page ── */
+.page-input {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.input-container {
+  width: min(480px, calc(100vw - var(--space-xl) * 2));
+  padding: var(--space-2xl);
+}
+
+.input-brand {
+  text-align: center;
+  margin-bottom: var(--space-2xl);
+}
+.input-brand .brand-logo {
+  width: 48px;
+  height: 48px;
+  font-size: 1.4rem;
+  margin: 0 auto var(--space-md);
+}
+.input-title {
+  font-family: var(--font-serif);
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-xs);
+  letter-spacing: 0.04em;
+}
+.input-subtitle {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Form */
+.tuvi-form {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-md);
+}
+
+.form-group {
+  margin-bottom: var(--space-md);
+}
+.form-label {
+  display: block;
+  font-size: 0.775rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-xs);
+  letter-spacing: 0.03em;
+}
+.form-input {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.form-input::placeholder { color: var(--text-muted); }
+.form-input:focus {
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 0 3px var(--accent-gold-soft);
+}
+.form-select {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%23a09b90' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+.form-row-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.form-note {
+  margin-bottom: var(--space-lg);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--accent-gold-soft);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--accent-gold-muted);
+}
+.form-note p {
+  font-size: 0.775rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.form-submit {
+  width: 100%;
+  padding: var(--space-md);
+  border: 1px solid var(--accent-gold);
+  border-radius: var(--radius-md);
+  background: var(--accent-gold-muted);
+  color: var(--accent-gold);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  transition: all var(--transition-fast);
+  letter-spacing: 0.03em;
+}
+.form-submit:hover {
+  background: var(--accent-gold);
+  color: var(--text-inverse);
+}
+
+.input-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+}
+.input-disclaimer {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* App loader overlay */
+.app-loader {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition: opacity var(--transition-slow);
+}
+.app-loader.fade-out { opacity: 0; pointer-events: none; }
 
 /* ── Print ── */
 @media print {

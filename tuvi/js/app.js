@@ -2,7 +2,7 @@
 // app.js — Main app logic, state management
 // ============================================================
 
-import { USER_INFO, TOPICS, TOPIC_PALACES, YEAR_DATA, PALACES } from './data.js';
+import { USER_INFO, TOPICS, TOPIC_PALACES, YEAR_DATA, PALACES, CHI_LABELS } from './data.js';
 import { initTheme, toggleTheme, exportChart } from './utils.js';
 import { initChart, selectPalace, clearSelection, highlightPalaces, clearHighlights, showYearOverlay, clearYearOverlay } from './chart.js';
 import { initPanel, showPalace, setTopic, setYear } from './panel.js';
@@ -14,12 +14,86 @@ let state = {
   selectedPalace: null,
   selectedTopic: 'tong-the',
   selectedYear: 2026,
-  mode: 'overview' // overview | focus | topic | story
+  mode: 'overview', // overview | focus | topic | story
+  userInput: null
 };
+
+const THIEN_CAN = ['Giáp','Ất','Bính','Đinh','Mậu','Kỷ','Canh','Tân','Nhâm','Quý'];
+const DIA_CHI = ['Tý','Sửu','Dần','Mão','Thìn','Tỵ','Ngọ','Mùi','Thân','Dậu','Tuất','Hợi'];
+const HOUR_LABELS = [
+  'Giờ Tý (23:00 - 01:00)','Giờ Sửu (01:00 - 03:00)','Giờ Dần (03:00 - 05:00)',
+  'Giờ Mão (05:00 - 07:00)','Giờ Thìn (07:00 - 09:00)','Giờ Tỵ (09:00 - 11:00)',
+  'Giờ Ngọ (11:00 - 13:00)','Giờ Mùi (13:00 - 15:00)','Giờ Thân (15:00 - 17:00)',
+  'Giờ Dậu (17:00 - 19:00)','Giờ Tuất (19:00 - 21:00)','Giờ Hợi (21:00 - 23:00)'
+];
+
+function lunarYearName(year) {
+  return THIEN_CAN[(year - 4) % 10] + ' ' + DIA_CHI[(year - 4) % 12];
+}
 
 // ── Init ──
 document.addEventListener('DOMContentLoaded', () => {
   state.theme = initTheme();
+  setupInputPage();
+});
+
+// ── Input Page ──
+function setupInputPage() {
+  const form = document.getElementById('tuvi-form');
+  const themeBtn = document.getElementById('btn-theme-input');
+
+  if (themeBtn) {
+    themeBtn.addEventListener('click', () => { state.theme = toggleTheme(); });
+  }
+
+  if (!form) return;
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('input-name').value.trim();
+    const gender = document.getElementById('input-gender').value;
+    const day = parseInt(document.getElementById('input-day').value);
+    const month = parseInt(document.getElementById('input-month').value);
+    const year = parseInt(document.getElementById('input-year').value);
+    const hour = parseInt(document.getElementById('input-hour').value);
+    const calendar = document.getElementById('input-calendar').value;
+
+    if (!name || !gender || !day || !month || !year || isNaN(hour)) return;
+
+    state.userInput = { name, gender, day, month, year, hour, calendar };
+
+    // Update USER_INFO with input data
+    USER_INFO.name = name;
+    USER_INFO.gender = gender;
+    USER_INFO.birthDate = `${String(day).padStart(2,'0')}/${String(month).padStart(2,'0')}/${year}`;
+    USER_INFO.lunarYear = lunarYearName(year);
+    USER_INFO.birthHour = HOUR_LABELS[hour];
+    USER_INFO.amDuong = gender === 'Nam' ? 'Dương Nam' : 'Âm Nữ';
+
+    showChartPage();
+  });
+}
+
+function showChartPage() {
+  const pageInput = document.getElementById('page-input');
+  const pageChart = document.getElementById('page-chart');
+  const loader = document.getElementById('app-loader');
+
+  // Hide input, show loader
+  pageInput.style.display = 'none';
+  if (loader) loader.style.display = 'flex';
+
+  // Simulate calculation time for feel
+  setTimeout(() => {
+    pageChart.style.display = 'block';
+    if (loader) {
+      loader.classList.add('fade-out');
+      setTimeout(() => { loader.style.display = 'none'; loader.classList.remove('fade-out'); }, 500);
+    }
+    initChartPage();
+  }, 1200);
+}
+
+function initChartPage() {
   renderUserInfo();
   setupChart();
   setupPanel();
@@ -28,15 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
   setupStory();
   setupHeader();
   setupKeyboard();
-  hideLoading();
-});
-
-function hideLoading() {
-  const loader = document.getElementById('app-loader');
-  if (loader) {
-    loader.classList.add('fade-out');
-    setTimeout(() => loader.remove(), 500);
-  }
 }
 
 // ── User Info ──
