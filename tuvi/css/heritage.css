@@ -1,0 +1,99 @@
+/* Historical visual backdrop — Chinese celestial science, Daoist cosmology, Hán–Việt manuscript tradition. */
+.heritage-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--accent-gold);
+}
+
+.celestial-disc {
+  position: absolute;
+  width: min(76vw, 900px);
+  aspect-ratio: 1;
+  top: 50%;
+  right: -15vw;
+  transform: translateY(-50%);
+  border: 1px solid var(--border-light);
+  border-radius: 50%;
+  opacity: .58;
+  background:
+    repeating-radial-gradient(circle at center, transparent 0 12.1%, var(--border-light) 12.2% 12.32%, transparent 12.42% 24.95%),
+    linear-gradient(90deg, transparent calc(50% - .5px), var(--border-light) 50%, transparent calc(50% + .5px)),
+    linear-gradient(0deg, transparent calc(50% - .5px), var(--border-light) 50%, transparent calc(50% + .5px));
+}
+.celestial-disc::before,
+.celestial-disc::after {
+  content: '';
+  position: absolute;
+  inset: 14%;
+  border: 1px dashed var(--border-light);
+  border-radius: 50%;
+}
+.celestial-disc::after { inset: 30%; border-style: solid; }
+.pole-star {
+  position: absolute;
+  width: 7px; height: 7px;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  background: var(--accent-gold);
+  border-radius: 50%;
+  box-shadow: 0 0 0 5px var(--accent-gold-soft), 0 0 16px var(--accent-gold-muted);
+}
+.celestial-label {
+  position: absolute;
+  font-family: var(--font-serif);
+  font-size: clamp(12px, 1.4vw, 18px);
+  color: var(--accent-gold);
+  opacity: .7;
+}
+.label-tuvi { top: 46%; left: 53%; font-size: 1.45em; }
+.label-zi { top: 7%; left: 49%; }.label-chou { top: 12%; left: 70%; }
+.label-yin { top: 28%; left: 86%; }.label-mao { top: 49%; left: 91%; }
+.label-chen { top: 70%; left: 86%; }.label-si { top: 84%; left: 70%; }
+.label-wu { top: 90%; left: 49%; }.label-wei { top: 84%; left: 28%; }
+.label-shen { top: 70%; left: 12%; }.label-you { top: 49%; left: 6%; }
+.label-xu { top: 28%; left: 12%; }.label-hai { top: 12%; left: 28%; }
+
+/* Small Bagua mark: eight rays only, deliberately abstract. */
+.bagua-mark {
+  position: absolute;
+  top: 10%; left: 8%;
+  width: 120px; height: 120px;
+  border: 1px solid var(--border-light);
+  border-radius: 50%;
+  opacity: .3;
+}
+.bagua-mark::before { content:''; position:absolute; inset:34%; border:1px solid var(--border-light); border-radius:50%; }
+.bagua-mark i { position:absolute; left:50%; top:50%; width:40%; height:1px; background:var(--accent-gold); transform-origin:left center; opacity:.65; }
+.bagua-mark i:nth-child(1){transform:rotate(0deg)}.bagua-mark i:nth-child(2){transform:rotate(45deg)}
+.bagua-mark i:nth-child(3){transform:rotate(90deg)}.bagua-mark i:nth-child(4){transform:rotate(135deg)}
+.bagua-mark i:nth-child(5){transform:rotate(180deg)}.bagua-mark i:nth-child(6){transform:rotate(225deg)}
+.bagua-mark i:nth-child(7){transform:rotate(270deg)}.bagua-mark i:nth-child(8){transform:rotate(315deg)}
+
+.five-phases { position:absolute; left:11%; bottom:12%; width:190px; height:135px; opacity:.4; }
+.five-phases span { position:absolute; width:28px; height:28px; display:grid; place-items:center; border:1px solid currentColor; border-radius:50%; font-family:var(--font-serif); font-size:12px; }
+.five-phases .wood { color:#5a9e8f; left:0; top:48px; }.five-phases .fire { color:#b85c5c; left:57px; top:0; }
+.five-phases .earth { color:var(--accent-gold); left:105px; top:48px; }.five-phases .metal { color:#a7a297; left:57px; top:95px; }
+.five-phases .water { color:#718abf; left:145px; top:97px; }
+
+.manuscript-mark { position:absolute; font-family:var(--font-serif); color:var(--text-muted); letter-spacing:.22em; font-size:11px; opacity:.32; }
+.mark-top { top:30px; left:48px; }.mark-side { right:30px; bottom:58px; writing-mode:vertical-rl; }
+.seal-mark { position:absolute; left:calc(11% + 112px); bottom:10%; border:1px solid var(--accent-red); color:var(--accent-red); font-family:var(--font-serif); font-size:11px; line-height:1.15; text-align:center; padding:5px; opacity:.34; transform:rotate(-7deg); }
+
+/* Form gets origin/history presence; chart page stays deliberately quiet. */
+.page-chart .heritage-backdrop, .page-chart ~ .heritage-backdrop { opacity:.4; }
+body:has(.page-chart[style*="display: block"]) .heritage-backdrop { opacity:.4; }
+body:has(.page-chart[style*="display: block"]) .celestial-disc { width:min(52vw,650px); right:-22vw; }
+body:has(.page-chart[style*="display: block"]) .bagua-mark,
+body:has(.page-chart[style*="display: block"]) .five-phases { opacity:.16; }
+
+@media (max-width:700px) {
+  .celestial-disc { width:125vw; right:-60vw; opacity:.35; }
+  .bagua-mark { width:85px; height:85px; left:-10px; top:8%; }
+  .five-phases { left:-30px; bottom:8%; transform:scale(.7); }
+  .mark-top { left:15px; top:15px; font-size:9px; }
+  .mark-side, .seal-mark { display:none; }
+}
+@media (prefers-reduced-motion:reduce) { .pole-star { box-shadow:0 0 0 4px var(--accent-gold-soft); } }
