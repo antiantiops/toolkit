@@ -18,12 +18,22 @@ const VN = {
   '早子时':'Tý','子时':'Tý','丑时':'Sửu','寅时':'Dần','卯时':'Mão','辰时':'Thìn','巳时':'Tỵ','午时':'Ngọ','未时':'Mùi','申时':'Thân','酉时':'Dậu','戌时':'Tuất','亥时':'Hợi', 
   '子':'Tý','丑':'Sửu','寅':'Dần','卯':'Mão','辰':'Thìn','巳':'Tỵ','午':'Ngọ','未':'Mùi','申':'Thân','酉':'Dậu','戌':'Tuất','亥':'Hợi',
   '紫微':'Tử Vi','天机':'Thiên Cơ','太阳':'Thái Dương','武曲':'Vũ Khúc','天同':'Thiên Đồng','廉贞':'Liêm Trinh','天府':'Thiên Phủ','太阴':'Thái Âm','贪狼':'Tham Lang','巨门':'Cự Môn','天相':'Thiên Tướng','天梁':'Thiên Lương','七杀':'Thất Sát','破军':'Phá Quân',
+  '左辅':'Tả Phù','右弼':'Hữu Bật','文昌':'Văn Xương','文曲':'Văn Khúc','天魁':'Thiên Khôi','天钺':'Thiên Việt','禄存':'Lộc Tồn','擎羊':'Kình Dương','陀罗':'Đà La','火星':'Hỏa Tinh','铃星':'Linh Tinh','地空':'Địa Không','地劫':'Địa Kiếp',
+  '天马':'Thiên Mã','天刑':'Thiên Hình','天姚':'Thiên Diêu','天哭':'Thiên Khốc','天虚':'Thiên Hư','天喜':'Thiên Hỷ','天福':'Thiên Phúc','天官':'Thiên Quan','天贵':'Thiên Quý','天才':'Thiên Tài','天寿':'Thiên Thọ','天月':'Thiên Nguyệt','天巫':'Thiên Vu','天德':'Thiên Đức','月德':'Nguyệt Đức','天厨':'Thiên Trù','天伤':'Thiên Thương','天使':'Thiên Sứ','天寿':'Thiên Thọ',
+  '红鸾':'Hồng Loan','天钺':'Thiên Việt','龙池':'Long Trì','凤阁':'Phượng Các','三台':'Tam Thai','八座':'Bát Tọa','恩光':'Ân Quang','天贵':'Thiên Quý','台辅':'Thai Phụ','封诰':'Phong Cáo','解神':'Giải Thần','阴煞':'Âm Sát','孤辰':'Cô Thần','寡宿':'Quả Tú','蜚廉':'Phi Liêm','破碎':'Phá Toái','华盖':'Hoa Cái','咸池':'Hàm Trì','天才':'Thiên Tài','天寿':'Thiên Thọ',
+  '岁建':'Thái Tuế','晦气':'Hối Khí','丧门':'Tang Môn','贯索':'Quan Tác','官符':'Quan Phù','小耗':'Tiểu Hao','大耗':'Đại Hao','病符':'Bệnh Phù','伏兵':'Phục Binh','官府':'Quan Phủ','博士':'Bác Sĩ','力士':'Lực Sĩ','青龙':'Thanh Long','小耗':'Tiểu Hao','将军':'Tướng Quân','奏书':'Tấu Thư','飞廉':'Phi Liêm','喜神':'Hỷ Thần','病符':'Bệnh Phù',
+  '长生':'Tràng Sinh','沐浴':'Mộc Dục','冠带':'Quan Đới','临官':'Lâm Quan','帝旺':'Đế Vượng','衰':'Suy','病':'Bệnh','死':'Tử','墓':'Mộ','绝':'Tuyệt','胎':'Thai','养':'Dưỡng',
   '禄':'Lộc','权':'Quyền','科':'Khoa','忌':'Kỵ','庙':'Miếu','旺':'Vượng','得':'Đắc','利':'Lợi','平':'Bình','陷':'Hãm'
 };
 const MEANINGS = {
   menh:'Bản chất, khí chất và xu hướng sống', huynh:'Anh chị em, bạn bè gần', phuThe:'Hôn nhân, tình duyên, đối tác', tuTuc:'Con cái, sáng tạo, di sản', taiBach:'Tài chính, thu nhập, khả năng quản trị nguồn lực', tatAch:'Sức khỏe và trạng thái thân tâm', thienDi:'Môi trường bên ngoài, di chuyển, cơ hội xã hội', noBoc:'Bạn bè, đồng nghiệp, mạng lưới hỗ trợ', quanLoc:'Sự nghiệp, năng lực nghề nghiệp', dienTrach:'Nhà cửa, không gian sống, tài sản nền tảng', phucDuc:'Đời sống tinh thần, phúc khí gia tộc', phuMau:'Cha mẹ, nền tảng gia đình'
 };
-function vi(value = '') { return String(value).split('').map(c => VN[c] || c).join(''); }
+function vi(value = '') {
+  let text = String(value);
+  // Longest phrase first: star names are multi-character, never translate character-by-character.
+  for (const [zh, vn] of Object.entries(VN).sort(([a], [b]) => b.length - a.length)) text = text.split(zh).join(vn);
+  return text;
+}
 function starType(star) {
   if (star.type === 'major') return 'chinh';
   if (star.type === 'tough') return 'sat';
