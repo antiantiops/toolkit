@@ -25,9 +25,38 @@ export function initPanel(container, onLinkClick) {
   showEmpty();
 }
 
+const TOPIC_EXPLANATIONS = {
+  'su-nghiep': {
+    title: 'Sự nghiệp',
+    lead: 'Các ô sáng là các cung thường được đọc cùng nhau khi xét công việc. Đây là bản đồ điểm cần xem, không phải kết luận nghề nghiệp tự động.',
+    reasons: { menh: 'năng lực và cách làm việc', quanLoc: 'con đường nghề nghiệp, vị trí công việc', taiBach: 'thu nhập và nguồn lực', thienDi: 'cơ hội bên ngoài, môi trường và di chuyển' }
+  },
+  'tai-loc': {
+    title: 'Tài lộc', lead: 'Các ô sáng gom phần thu nhập, tích lũy, nền tảng tài sản và cách công việc tạo ra nguồn lực.',
+    reasons: { taiBach: 'thu nhập và dòng tiền', dienTrach: 'tài sản nền tảng, nơi ở', phucDuc: 'hậu thuẫn và mức độ bền vững', quanLoc: 'công việc tạo nguồn thu' }
+  },
+  'tinh-duyen': {
+    title: 'Tình duyên', lead: 'Các ô sáng liên quan quan hệ đôi lứa, bản thân, nền tảng cảm xúc và gia đình nhỏ.',
+    reasons: { phuThe: 'hôn nhân và đối tác', menh: 'cách bạn hiện diện trong quan hệ', phucDuc: 'đời sống tinh thần và nền tảng cảm xúc', tuTuc: 'gia đình nhỏ, con cái và sáng tạo' }
+  },
+  'gia-dao': {
+    title: 'Gia đạo', lead: 'Các ô sáng liên quan gia đình gốc, anh chị em, gia đình nhỏ và không gian sống.',
+    reasons: { phuMau: 'cha mẹ và nền tảng gia đình', tuTuc: 'con cái và gia đình nhỏ', huynh: 'anh chị em, người gần gũi', dienTrach: 'nhà cửa và môi trường sống' }
+  },
+  'suc-khoe': {
+    title: 'Sức khỏe', lead: 'Các ô sáng được dùng để xem trạng thái thân tâm trong tổng thể lá số. Không thay thế tư vấn hay chẩn đoán y khoa.',
+    reasons: { tatAch: 'trạng thái sức khỏe', menh: 'thể chất và thói quen cá nhân', phucDuc: 'tinh thần và khả năng hồi phục', dienTrach: 'môi trường sống' }
+  },
+  'quan-he': {
+    title: 'Quan hệ', lead: 'Các ô sáng liên quan bạn bè, đồng nghiệp, môi trường bên ngoài, người thân và cách bạn kết nối.',
+    reasons: { noBoc: 'bạn bè, đồng nghiệp và mạng lưới', thienDi: 'môi trường xã hội bên ngoài', huynh: 'người thân, bạn bè gần', menh: 'cách bạn tạo kết nối' }
+  }
+};
+
 export function setTopic(topicId) {
   currentTopic = topicId;
   if (currentPalace) renderPanel();
+  else showTopic(topicId);
 }
 
 export function setYear(year) {
@@ -40,6 +69,25 @@ export function showPalace(palaceId) {
   currentPalace = palaceId;
   currentTab = 'overview';
   renderPanel();
+}
+
+export function showTopic(topicId) {
+  currentPalace = null;
+  const topic = TOPIC_EXPLANATIONS[topicId];
+  if (!topic) { showEmpty(); return; }
+  const items = Object.entries(topic.reasons).map(([id, reason]) => {
+    const palace = getPalace(id);
+    if (!palace) return '';
+    return `<button class="topic-palace-card" data-palace="${id}"><strong>${palace.name}</strong><span>${reason}</span></button>`;
+  }).join('');
+  panelEl.innerHTML = `
+    <div class="panel-header"><div class="panel-palace-name">${topic.title}</div><div class="panel-palace-meaning">Vì sao các cung này được làm nổi bật?</div></div>
+    <div class="panel-content">
+      <div class="panel-section"><p class="panel-text">${topic.lead}</p></div>
+      <div class="panel-section"><h4 class="panel-section-title">Các cung đang được đánh dấu</h4><div class="topic-palace-list">${items}</div></div>
+      <div class="panel-section"><p class="panel-text-small">Bấm một cung để xem sao được an tại cung đó. Cần đọc kết hợp tam hợp, xung chiếu và bối cảnh thực tế.</p></div>
+    </div>`;
+  panelEl.querySelectorAll('.topic-palace-card').forEach(btn => btn.addEventListener('click', () => onPalaceLinkClick?.(btn.dataset.palace)));
 }
 
 function showEmpty() {

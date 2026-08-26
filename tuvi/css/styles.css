@@ -749,6 +749,27 @@ body::after {
   border-left: 3px solid var(--accent-gold);
 }
 
+.topic-palace-list { display: grid; gap: var(--space-sm); }
+.topic-palace-card {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-md);
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  color: var(--text-secondary);
+  text-align: left;
+  font: inherit;
+  font-size: .8rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.topic-palace-card:hover { border-color: var(--accent-gold); color: var(--text-primary); }
+.topic-palace-card strong { color: var(--accent-gold); font-size: .875rem; white-space: nowrap; }
+.topic-palace-card span { text-align: right; }
+
 /* Star chips */
 .star-chips {
   display: flex;
