@@ -50,11 +50,11 @@ RUN OPENCLAW_A2UI_SKIP_MISSING=1 pnpm_config_verify_deps_before_run=false pnpm c
      echo "/* A2UI bundle unavailable in this build */" > extensions/canvas/src/host/a2ui/a2ui.bundle.js && \
      echo "stub" > extensions/canvas/src/host/a2ui/.bundle.hash && \
      rm -rf vendor/a2ui apps/shared/OpenClawKit/Tools/CanvasA2UI)
-RUN NODE_OPTIONS=--max-old-space-size=8192 pnpm_config_verify_deps_before_run=false node scripts/tsdown-build.mjs && echo "tsdown-build completed"
-RUN pnpm_config_verify_deps_before_run=false node scripts/check-cli-bootstrap-imports.mjs && echo "check-cli-bootstrap-imports completed"
+RUN NODE_OPTIONS=--max-old-space-size=8192 pnpm_config_verify_deps_before_run=false node --import ./scripts/tsx.mjs scripts/tsdown-build.mts && echo "tsdown-build completed"
+RUN pnpm_config_verify_deps_before_run=false node --import ./scripts/tsx.mjs scripts/check-cli-bootstrap-imports.mts && echo "check-cli-bootstrap-imports completed"
 RUN pnpm_config_verify_deps_before_run=false node scripts/runtime-postbuild.mjs && echo "runtime-postbuild completed"
-RUN pnpm_config_verify_deps_before_run=false node scripts/build-stamp.mjs && echo "build-stamp completed"
-RUN pnpm_config_verify_deps_before_run=false node scripts/runtime-postbuild-stamp.mjs && echo "runtime-postbuild-stamp completed"
+RUN pnpm_config_verify_deps_before_run=false node --import ./scripts/tsx.mjs scripts/build-stamp.mts && echo "build-stamp completed"
+RUN pnpm_config_verify_deps_before_run=false node --import ./scripts/tsx.mjs scripts/runtime-postbuild-stamp.mts && echo "runtime-postbuild-stamp completed"
 RUN pnpm_config_verify_deps_before_run=false pnpm plugins:assets:build && echo "plugins:assets:build completed"
 RUN pnpm_config_verify_deps_before_run=false pnpm plugins:assets:copy && echo "plugins:assets:copy completed"
 RUN pnpm_config_verify_deps_before_run=false node --experimental-strip-types scripts/copy-hook-metadata.ts && echo "copy-hook-metadata completed"
