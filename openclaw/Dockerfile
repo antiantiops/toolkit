@@ -29,6 +29,8 @@ RUN --mount=type=cache,id=openclaw-bookworm-apt-cache,target=/var/cache/apt,shar
     fi
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+# Required by package.json preinstall; keep minimal build context.
+COPY node-version.mjs ./node-version.mjs
 COPY ui/package.json ./ui/package.json
 COPY patches ./patches
 COPY scripts ./scripts
