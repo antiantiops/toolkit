@@ -110,19 +110,9 @@ RUN OPENCLAW_A2UI_SKIP_MISSING=1 pnpm_config_verify_deps_before_run=false pnpm c
      echo "/* A2UI bundle unavailable in this build */" > extensions/canvas/src/host/a2ui/a2ui.bundle.js && \
      echo "stub" > extensions/canvas/src/host/a2ui/.bundle.hash && \
      rm -rf vendor/a2ui apps/shared/OpenClawKit/Tools/CanvasA2UI)
-RUN NODE_OPTIONS=--max-old-space-size=8192 pnpm_config_verify_deps_before_run=false node --import ./scripts/tsx.mjs scripts/tsdown-build.mts && echo "tsdown-build completed"
-RUN pnpm_config_verify_deps_before_run=false node --import ./scripts/tsx.mjs scripts/check-cli-bootstrap-imports.mts && echo "check-cli-bootstrap-imports completed"
-RUN pnpm_config_verify_deps_before_run=false node scripts/runtime-postbuild.mjs && echo "runtime-postbuild completed"
-RUN pnpm_config_verify_deps_before_run=false node --import ./scripts/tsx.mjs scripts/build-stamp.mts && echo "build-stamp completed"
-RUN pnpm_config_verify_deps_before_run=false node --import ./scripts/tsx.mjs scripts/runtime-postbuild-stamp.mts && echo "runtime-postbuild-stamp completed"
-RUN pnpm_config_verify_deps_before_run=false pnpm plugins:assets:build && echo "plugins:assets:build completed"
-RUN pnpm_config_verify_deps_before_run=false pnpm plugins:assets:copy && echo "plugins:assets:copy completed"
-RUN pnpm_config_verify_deps_before_run=false node --experimental-strip-types scripts/copy-hook-metadata.ts && echo "copy-hook-metadata completed"
-RUN pnpm_config_verify_deps_before_run=false node --experimental-strip-types scripts/copy-export-html-templates.ts && echo "copy-export-html-templates completed"
-RUN pnpm_config_verify_deps_before_run=false node --experimental-strip-types scripts/write-build-info.ts && echo "write-build-info completed"
-RUN sed -i 's/const BROWSER_HELP_RENDER_TIMEOUT_MS = 120_000;/const BROWSER_HELP_RENDER_TIMEOUT_MS = 300_000;/' scripts/write-cli-startup-metadata.ts && \
-    pnpm_config_verify_deps_before_run=false node --experimental-strip-types scripts/write-cli-startup-metadata.ts && echo "write-cli-startup-metadata completed"
-RUN pnpm_config_verify_deps_before_run=false node --experimental-strip-types scripts/write-cli-compat.ts && echo "write-cli-compat completed"
+# Upstream owns script names, loaders, metadata, and plugin asset ordering.
+RUN NODE_OPTIONS=--max-old-space-size=8192 OPENCLAW_RUN_NODE_SKIP_DTS_BUILD=1 \
+    pnpm_config_verify_deps_before_run=false pnpm build:docker && echo "docker build completed"
 RUN pnpm_config_verify_deps_before_run=false pnpm ui:build && echo "ui pnpm ui:build completed"
 RUN pnpm_config_verify_deps_before_run=false pnpm qa:lab:build && echo "qa lab build completed"
 RUN echo "Dockerfile build steps completed"
