@@ -35,6 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       openclaw_version: ${{ steps.version.outputs.openclaw_version }}
+      build_timestamp: ${{ steps.version.outputs.build_timestamp }}
     steps:
       - name: Resolve OpenClaw version
         id: version
@@ -54,6 +55,7 @@ jobs:
             rm -rf "$TEMP_DIR"
             echo "openclaw_version=$SHORT_SHA" >> "$GITHUB_OUTPUT"
           fi
+          echo "build_timestamp=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)" >> "$GITHUB_OUTPUT"
 
   # ── Base image: build natively per arch, then merge manifests ───
   base_build:
@@ -110,6 +112,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           build-args: |
             OPENCLAW_DOCKER_APT_PACKAGES=${{ github.event.inputs.apt_packages || '' }}
+            OPENCLAW_BUILD_TIMESTAMP=${{ needs.prepare.outputs.build_timestamp }}
           outputs: type=image,name=${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
           provenance: false
           sbom: false
@@ -235,6 +238,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           build-args: |
             OPENCLAW_DOCKER_APT_PACKAGES=${{ github.event.inputs.apt_packages || '' }}
+            OPENCLAW_BUILD_TIMESTAMP=${{ needs.prepare.outputs.build_timestamp }}
           outputs: type=image,name=${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
           provenance: false
           sbom: false

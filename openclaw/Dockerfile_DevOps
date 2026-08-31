@@ -73,6 +73,8 @@ ENV NODE_PATH=/usr/local/lib/node_modules
 WORKDIR /app
 
 ARG OPENCLAW_DOCKER_APT_PACKAGES=""
+ARG OPENCLAW_BUILD_TIMESTAMP
+ENV OPENCLAW_BUILD_TIMESTAMP=${OPENCLAW_BUILD_TIMESTAMP}
 RUN --mount=type=cache,id=openclaw-bookworm-apt-cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,id=openclaw-bookworm-apt-lists,target=/var/lib/apt,sharing=locked \
     if [ -n "$OPENCLAW_DOCKER_APT_PACKAGES" ]; then \
