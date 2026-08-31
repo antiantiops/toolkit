@@ -2,6 +2,84 @@
 
 This document tracks breaking changes / issues encountered when upgrading OpenClaw, along with verified fixes.
 
+## 2026.8.1 — Gateway and CLI version mismatch
+
+### Symptoms
+
+- `openclaw config validate` reports `meta`, `agents.defaults`, or `agents` as invalid.
+- CLI reports that configuration was written by `2026.8.1` while the command runs `2026.7.1`.
+- State errors mention a newer SQLite schema, for example:
+
+  ```text
+  state database ... uses newer schema version 15; this OpenClaw build supports 1
+  ```
+
+### Root cause
+
+The Gateway container and host/container CLI are running different OpenClaw
+versions. `v2026.8.1` adds stricter config/state validation and newer SQLite
+state handling. `agents.entries` is still the valid agent roster shape in
+`v2026.8.1`; converting it to `agents.list` is incorrect.
+
+### Fix
+
+Check both binaries and use the same release:
+
+```bash
+openclaw --version
+which openclaw
+openclaw gateway status --deep
+```
+
+Do not run an older `doctor --fix` against a newer Gateway state directory.
+Upgrade the CLI, then validate and migrate with the matching version:
+
+```bash
+openclaw config validate
+openclaw doctor --lint
+openclaw doctor --fix --non-interactive
+```
+
+Review backups before accepting any migration. The `openclaw` Docker image
+contains the matching CLI at `/app/openclaw.mjs`.
+
+## 2026.8.1 — Control UI protocol mismatch after Docker build
+
+### Symptoms
+
+- Control UI repeatedly shows `Offline`.
+- Gateway logs show:
+
+  ```text
+  Control UI updated; reload the page to continue
+  ```
+
+- Gateway and UI build IDs differ only by build time.
+
+### Root cause
+
+The Dockerfile ran Gateway build/stamp steps and `pnpm ui:build` at different
+times. OpenClaw `v2026.8.1` compares Gateway and Control UI artifact identity
+during WebSocket admission. Separate timestamps make one image look like two
+different builds.
+
+### Fix
+
+Commit `a5c04b2` (`fix(openclaw): pin build timestamp across gateway and UI`)
+adds `OPENCLAW_BUILD_TIMESTAMP` to both Dockerfiles and generates one timestamp
+in `.github/workflows/build-openclaw.yml`. It applies to base and DevOps images
+on both `amd64` and `arm64`.
+
+Rebuild/pull the image, then recreate the container:
+
+```bash
+docker pull antiantiops/openclaw:v2026.8.1-devops-tool
+docker compose up -d --force-recreate openclaw-gateway
+```
+
+Do not treat browser hard reload as the permanent fix; an image built without
+the shared timestamp will reproduce the problem.
+
 ---
 
 ## 2026.6.1 — Cron jobs "disappear" from the dashboard after upgrade

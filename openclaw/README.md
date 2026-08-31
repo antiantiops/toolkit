@@ -1,5 +1,9 @@
 # OpenClaw Docker Build
 
+Builds OpenClaw `v2026.8.1` and newer from upstream source. Base and DevOps
+images share one build timestamp so Gateway and Control UI report the same
+artifact identity.
+
 This folder contains the Dockerfile for building OpenClaw.
 
 ## Prerequisites
@@ -115,6 +119,9 @@ Then access:
 
 ### Run OpenClaw Gateway on an internal HTTP/IP network
 
+Use a CLI and Gateway from the same OpenClaw release. A newer Gateway state
+database cannot be safely repaired by an older CLI.
+
 When the Gateway is accessed from another machine via plain HTTP and a private IP (for example `http://192.168.101.36:18789`), OpenClaw's Control UI and model-provider SSRF guard need explicit config.
 
 Example `docker-compose.yml`:
@@ -122,7 +129,7 @@ Example `docker-compose.yml`:
 ```yaml
 services:
   openclaw-gateway:
-    image: antiantiops/openclaw:v2026.5.12-devops-tool
+    image: antiantiops/openclaw:v2026.8.1-devops-tool
     container_name: openclaw-gateway
     restart: unless-stopped
     ports:
@@ -240,6 +247,11 @@ Security note: these `dangerously*` flags are intended for trusted internal netw
 - `Dockerfile_DevOps` also installs Cursor CLI (`agent`), `kubectl`, and `9router`
 - `Dockerfile_DevOps` includes `ENV 9ROUTER_VERSION=...` (backed by build arg `NINE_ROUTER_VERSION`) to control installed 9router version
 - `Dockerfile_DevOps` starts `9router` and OpenClaw together at container startup
+- `OPENCLAW_BUILD_TIMESTAMP` is generated once by the workflow and passed to both image builds. Separate Gateway/UI timestamps cause Control UI protocol mismatch and repeated offline/reload messages.
+- OpenClaw `v2026.8.1` stores important runtime state in SQLite. After upgrades, run matching-version `openclaw doctor --lint`, then `openclaw doctor --fix` only after reviewing migrations.
+- `agents.entries` remains valid in `v2026.8.1`; do not convert it to `agents.list`.
+- Telegram DM access remains controlled by `channels.telegram.dmPolicy`; `pairing` requires approval for new users.
+- Cron jobs may be migrated into SQLite. Preserve `~/.openclaw/cron/jobs.json.migrated` and backups until job count is verified.
 
 ## Configuration
 
@@ -252,6 +264,7 @@ Security note: these `dangerously*` flags are intended for trusted internal netw
 
 - `9ROUTER_VERSION` - Exposed in `Dockerfile_DevOps` to reflect/control installed `9router` version
 - `NINE_ROUTER_CMD` - Startup command for `9router` in `Dockerfile_DevOps` (default: `9router`)
+- `OPENCLAW_BUILD_TIMESTAMP` - Fixed ISO-8601 UTC timestamp shared by Gateway and Control UI build steps. Set automatically by GitHub Actions.
 
 The GitHub Actions workflow supports:
 - Manual trigger with custom apt packages
