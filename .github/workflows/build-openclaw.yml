@@ -319,6 +319,16 @@ jobs:
       - name: Checkout toolkit repository
         uses: actions/checkout@v6
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
       - name: Setup Android
         uses: android-actions/setup-android@v4
 
@@ -338,7 +348,9 @@ jobs:
             OPENCLAW_VERSION="$(git -C openclaw-source rev-parse --short HEAD)"
           fi
 
-          cd openclaw-source/apps/android
+          cd openclaw-source
+          pnpm install --frozen-lockfile
+          cd apps/android
           ./gradlew clean assembleDebug
           APK="openclaw-android-$OPENCLAW_VERSION.apk"
           APK_SOURCE="$(find app/build/outputs/apk -type f -name '*debug*.apk' | head -n 1)"
