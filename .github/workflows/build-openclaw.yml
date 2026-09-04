@@ -349,7 +349,7 @@ jobs:
           fi
 
           cd openclaw-source
-          pnpm install --frozen-lockfile
+          PNPM_CONFIG_MINIMUM_RELEASE_AGE=0 pnpm install --filter @openclaw/mermaid-renderer... --frozen-lockfile
           cd apps/android
           ./gradlew clean assembleDebug
           APK="openclaw-android-$OPENCLAW_VERSION.apk"
