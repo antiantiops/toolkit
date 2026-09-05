@@ -15,9 +15,9 @@ on:
 env:
   IMAGE_NAME: antiantiops/9router
   # Updated by 9router Release Watch from decolua/9router GitHub tags.
-  DEFAULT_ROUTER_VERSION: "0.5.65"
-  DEFAULT_ROUTER_TAG: "v0.5.65"
-  DEFAULT_ROUTER_COMMIT: "4eda76e2abbcffe6e1b0511f4117f448240c46db"
+  DEFAULT_ROUTER_VERSION: "0.5.69"
+  DEFAULT_ROUTER_TAG: "v0.5.69"
+  DEFAULT_ROUTER_COMMIT: "eb712ca821f0ba6bc41043fbd14494c5af5daba5"
 
 jobs:
   build-and-push:
