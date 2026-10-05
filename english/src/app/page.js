@@ -331,10 +331,8 @@ export default function Home() {
           setConfirmAnalyze({ file, target: "grammar" });
         } else if (target === "writing1") {
           handleWFile1(file);
-          setConfirmAnalyze({ target: "writing", file1: file, file2: wImage2 });
         } else if (target === "writing2") {
           handleWFile2(file);
-          setConfirmAnalyze({ target: "writing", file1: wImage1, file2: file });
         } else {
           handleFile(file);
           setConfirmAnalyze({ file, target: "vocab" });
