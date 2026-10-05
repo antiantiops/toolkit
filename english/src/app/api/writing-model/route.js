@@ -22,41 +22,43 @@ Dựa vào thông tin đề bài Self-Writing:
 - Người gửi: ${task.sender || "Nhân viên"}
 - Người nhận: ${task.recipient || "Sếp / Quản lý"}
 - Yêu cầu bắt buộc: ${JSON.stringify(task.requirements || [])}
-- Word Bank (các từ cần dùng): ${JSON.stringify(task.wordBank || [])}
+- Word Bank (10 từ cần dùng): ${JSON.stringify(task.wordBank || [])}
 
-Hãy viết một BÀI MẪU TIẾNG VIỆT HOÀN CHỈNH cho bài viết này theo bố cục chuẩn email công việc gồm 4 phần:
+Hãy viết một BÀI MẪU HOÀN CHỈNH BẰNG TIẾNG VIỆT TỰ NHIÊN (không bọc dấu ngoặc vuông [], viết thành văn trôi chảy, liền mạch như một email công việc thực thụ).
+Bố cục email gồm 4 phần:
 1. Tiêu đề email & Lời chào (Subject line & Salutation)
-2. Mở đầu: Cảm ơn và ghi nhận thiện chí của sếp (Opening & Appreciation)
-3. Thân bài: Đàm phán điều kiện cụ thể & cam kết giá trị (Negotiation, Salary revision & New duties)
-4. Cam kết & Kết bài: Thiết lập đánh giá định kỳ hàng quý & hẹn gặp trực tiếp (Quarterly reviews & Sign-off)
+2. Mở đầu: Cảm ơn và ghi nhận thiện chí giữ chân của sếp
+3. Thân bài: Đàm phán điều kiện cụ thể (đề xuất xét lại mức lương, trách nhiệm mới, báo cáo)
+4. Cam kết & Kết bài: Thiết lập đánh giá định kỳ hàng quý, hẹn trao đổi trực tiếp & Chào kết
 
-QUY TẮC BẮT BUỘC:
-- Trong văn bản tiếng Việt của từng phần, hãy đặt tất cả các cụm từ quan trọng (đặc biệt là các từ trong Word Bank và các cụm từ đắt giá dùng để viết sang tiếng Anh) vào trong [dấu ngoặc vuông].
-- Với MỖI cụm từ trong [ngoặc vuông], phải có một mục tương ứng trong mảng "phrases":
-  + vi: đúng cụm tiếng Việt trong ngoặc
-  + en: cụm từ hoặc cấu trúc tiếng Anh tương đương chuẩn Business B1-B2
-  + ipa: phiên âm quốc tế chuẩn IPA
-  + easyReading: cách đọc bồi chuẩn theo âm IPA cho người Việt (ví dụ: /ˈkwɔːrtərli/ -> "cua-tờ-li")
-  + partOfSpeech: loại từ / vai trò ngữ pháp trong câu
-  + contextUsage: giải thích chi tiết cách dùng tiếng Anh trong ngữ cảnh đoạn văn này: vị trí trong câu, đi với giới từ/động từ nào, lý do người bản xứ dùng từ này trong đàm phán
-  + sentenceEn: câu tiếng Anh hoàn chỉnh trong bài mẫu sử dụng cụm từ này
+YÊU CẦU:
+- Văn phong chuyên nghiệp, lịch sự, đúng chuẩn Business.
+- Tự nhiên lồng ghép đầy đủ ý nghĩa của 10 từ trong Word Bank vào bài viết tiếng Việt.
+- Đồng thời cung cấp trước mảng "keyPhrases" cho các cụm từ đắt giá và 10 từ Word Bank để hỗ trợ học viên tra cứu nhanh:
+  + vi: cụm từ tiếng Việt trong bài
+  + en: cụm từ/cấu trúc tiếng Anh tương đương chuẩn Business
+  + ipa: phiên âm IPA
+  + easyReading: cách đọc bồi chuẩn âm IPA cho người Việt (ví dụ: /ˈkwɔːrtərli/ -> "cua-tờ-li")
+  + partOfSpeech: loại từ / vai trò ngữ pháp
+  + contextUsage: cách dùng tiếng Anh trong ngữ cảnh câu này
+  + sentenceEn: câu tiếng Anh hoàn chỉnh tương ứng trong bài
 
 Trả về DUY NHẤT một JSON hợp lệ, không bọc markdown hay lời giải thích:
 {
-  "title": "Email mẫu tham khảo tiếng Việt",
+  "title": "Email mẫu hoàn chỉnh bằng tiếng Việt",
   "paragraphs": [
     {
-      "part": "1. Tiêu đề & Lời chào",
-      "text": "Tiêu đề: [Phản hồi đề xuất giữ chân] và [đề nghị xét lại hợp đồng]\\nKính gửi sếp [Tên sếp],",
-      "phrases": [
+      "part": "1. Tiêu đề email & Lời chào",
+      "text": "Tiêu đề: Phản hồi đề xuất giữ chân và đề nghị điều chỉnh mức lương\\nKính gửi Quản lý,",
+      "keyPhrases": [
         {
           "vi": "Phản hồi đề xuất giữ chân",
           "en": "Response to Retention Offer",
           "ipa": "/rɪˈspɑːns tuː rɪˈtenʃn ˈɔːfər/",
           "easyReading": "ri-s-poón-s tu ri-ten-sần ó-phờ",
           "partOfSpeech": "noun phrase (tiêu đề)",
-          "contextUsage": "Dùng ở dòng Subject. Cấu trúc Response to + Noun phrase ngắn gọn, thể hiện tính chuyên nghiệp.",
-          "sentenceEn": "Subject: Response to Retention Offer and Request for Contract Revision"
+          "contextUsage": "Dùng ở dòng Subject. Cấu trúc Response to + Noun phrase ngắn gọn, lịch sự.",
+          "sentenceEn": "Subject: Response to Retention Offer and Request for Salary Revision"
         }
       ]
     }

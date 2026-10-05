@@ -27,6 +27,51 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
   const [loadingModel, setLoadingModel] = useState(false);
   const [modelErr, setModelErr] = useState(null);
   const [selectedPhrase, setSelectedPhrase] = useState(null);
+  const [viCache, setViCache] = useState({});
+
+  const handleViClick = async (clickedWord, fullSentence, paraContext, prePhrases = []) => {
+    const wordClean = clickedWord.trim();
+    if (!wordClean) return;
+
+    const matchedPre = prePhrases.find(p => p.vi && p.vi.toLowerCase().includes(wordClean.toLowerCase()));
+    if (matchedPre) {
+      setSelectedPhrase(matchedPre);
+      return;
+    }
+
+    const cacheKey = `${wordClean.toLowerCase()}::${fullSentence}`;
+    if (viCache[cacheKey]) {
+      setSelectedPhrase(viCache[cacheKey]);
+      return;
+    }
+
+    setSelectedPhrase({
+      vi: wordClean,
+      en: "",
+      loading: true,
+      contextUsage: "Đang tra cứu ngữ cảnh tiếng Anh..."
+    });
+
+    try {
+      const res = await fetch("/api/writing-lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ word: wordClean, sentence: fullSentence, context: paraContext }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Không tra được từ");
+      const info = d.result;
+      setViCache(prev => ({ ...prev, [cacheKey]: info }));
+      setSelectedPhrase(info);
+    } catch (e) {
+      setSelectedPhrase({
+        vi: wordClean,
+        en: "Chưa thể tra",
+        error: e.message,
+        contextUsage: "Lỗi kết nối hoặc AI không xử lý được."
+      });
+    }
+  };
 
   const fetchModelDraft = async () => {
     setLoadingModel(true);
@@ -360,10 +405,10 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
             <div className="flex flex-wrap items-center justify-between gap-3 mb-3 pb-3 border-b border-slate-800">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-teal-300 bg-teal-950/80 border border-teal-800 rounded px-2 py-0.5">
-                  🇻🇳 Bài mẫu tiếng Việt đối chiếu
+                  🇻🇳 Bài mẫu tiếng Việt hoàn chỉnh
                 </span>
                 <h3 className="text-base sm:text-lg font-bold text-white mt-1">
-                  Email mẫu hoàn chỉnh (bấm vào cụm màu để xem tiếng Anh & cách dùng)
+                  Email mẫu Self-Writing (bấm vào BẤT KỲ TỪ NÀO để tra tiếng Anh & ngữ cảnh)
                 </h3>
               </div>
               {!modelDraft && (
@@ -379,7 +424,7 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
                       <span>Đang soạn bài mẫu...</span>
                     </>
                   ) : (
-                    "✨ Tạo bài mẫu tiếng Việt đối ứng"
+                    "✨ Tạo bài mẫu tiếng Việt"
                   )}
                 </button>
               )}
@@ -394,16 +439,12 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
             {modelDraft ? (
               <div className="space-y-4">
                 <p className="text-xs text-slate-300 italic">
-                  💡 Nhấp vào các cụm từ bôi màu <span className="text-teal-300 font-semibold">[trong ngoặc]</span> để mở hộp thoại tra tiếng Anh tương ứng, phiên âm, cách đọc dễ và vị trí ngữ cảnh trong đoạn.
+                  💡 Bấm vào <b className="text-teal-300">bất kỳ từ nào</b> trong bài văn mẫu tiếng Việt dưới đây để tra tiếng Anh, phiên âm, cách đọc dễ và cách dùng trong câu.
                 </p>
                 {(modelDraft.paragraphs || []).map((p, pi) => {
-                  const phrasesMap = {};
-                  (p.phrases || []).forEach(item => {
-                    if (item.vi) phrasesMap[item.vi.trim().toLowerCase()] = item;
-                  });
-
-                  // Render text and highlight [phrase]
-                  const parts = (p.text || "").split(/(\[[^\]]+\])/g);
+                  const rawText = (p.text || "").replace(/\[|\]/g, "");
+                  const sentences = rawText.split(/(?<=[.!?\n])\s+/);
+                  const keyPhrases = p.keyPhrases || p.phrases || [];
 
                   return (
                     <div key={pi} className="rounded-xl border border-slate-700/80 bg-slate-950/80 p-3.5 sm:p-4">
@@ -411,29 +452,36 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
                         <span className="w-2 h-2 rounded-full bg-teal-400 inline-block" />
                         {p.part}
                       </div>
-                      <div className="text-sm leading-relaxed text-slate-200">
-                        {parts.map((pt, pti) => {
-                          const m = pt.match(/^\[(.*)\]$/);
-                          if (!m) return <span key={pti}>{pt}</span>;
-                          const viClean = m[1].trim();
-                          const found = phrasesMap[viClean.toLowerCase()] || (p.phrases || []).find(x => x.vi && (x.vi.includes(viClean) || viClean.includes(x.vi)));
-                          
+                      <div className="text-sm leading-relaxed text-slate-200 select-text">
+                        {sentences.map((sent, si) => {
+                          const tokens = sent.split(/([A-Za-zÀ-ỹ0-9_]+)/u);
                           return (
-                            <button
-                              key={pti}
-                              type="button"
-                              onClick={() => {
-                                setSelectedPhrase(found || {
-                                  vi: viClean,
-                                  en: "Đang cập nhật...",
-                                  contextUsage: "Nhấp tra từ trên thanh công cụ để dịch chính xác cụm này."
-                                });
-                              }}
-                              className="inline-block mx-0.5 px-2 py-0.5 rounded-lg bg-teal-950/90 border border-teal-600/70 text-teal-200 hover:bg-teal-800 hover:text-white font-medium transition-all text-sm underline decoration-teal-400 decoration-dotted underline-offset-4 active:scale-95"
-                              title="Bấm để xem tiếng Anh, phát âm & ngữ cảnh"
-                            >
-                              {viClean}
-                            </button>
+                            <span key={si} className="inline">
+                              {tokens.map((tok, ti) => {
+                                const isWord = /[A-Za-zÀ-ỹ0-9_]/u.test(tok);
+                                if (!isWord) return <span key={ti}>{tok}</span>;
+
+                                return (
+                                  <span
+                                    key={ti}
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => handleViClick(tok, sent, rawText, keyPhrases)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        handleViClick(tok, sent, rawText, keyPhrases);
+                                      }
+                                    }}
+                                    className="cursor-pointer hover:rounded hover:bg-teal-800/80 hover:text-white hover:underline decoration-teal-400 decoration-dotted underline-offset-2 transition-colors px-0.5"
+                                    title={`Bấm để dịch "${tok}" sang tiếng Anh`}
+                                  >
+                                    {tok}
+                                  </span>
+                                );
+                              })}
+                              {si < sentences.length - 1 ? " " : ""}
+                            </span>
                           );
                         })}
                       </div>
@@ -443,12 +491,12 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
               </div>
             ) : !loadingModel ? (
               <div className="text-center py-6 text-slate-400 text-xs sm:text-sm">
-                Bấm nút <b className="text-teal-300">"Tạo bài mẫu tiếng Việt đối ứng"</b> để AI viết bài tham khảo mẫu sát với tình huống đề bài và 10 từ Word Bank.
+                Bấm nút <b className="text-teal-300">"Tạo bài mẫu tiếng Việt"</b> để AI viết hoàn chỉnh email theo tình huống đề bài và 10 từ Word Bank.
               </div>
             ) : null}
           </div>
 
-          {/* Modal popup tra cụm từ tiếng Việt sang tiếng Anh */}
+          {/* Modal popup tra từ/cụm từ tiếng Việt sang tiếng Anh */}
           {selectedPhrase && (
             <div
               className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
@@ -461,7 +509,7 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
               >
                 <div className="flex items-start justify-between gap-3 border-b border-slate-800 pb-3">
                   <div>
-                    <span className="text-xs uppercase font-bold text-teal-400 tracking-wider">🇻🇳 Cụm từ tiếng Việt:</span>
+                    <span className="text-xs uppercase font-bold text-teal-400 tracking-wider">🇻🇳 Từ / Cụm từ tiếng Việt:</span>
                     <h3 className="text-lg font-bold text-white mt-0.5">{selectedPhrase.vi}</h3>
                   </div>
                   <button
@@ -473,55 +521,66 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
                   </button>
                 </div>
 
-                {/* English phrase and pronunciation */}
-                <div className="rounded-xl border border-teal-700/50 bg-teal-950/40 p-4 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold text-emerald-300 uppercase">🇬🇧 Tiếng Anh tương đương:</span>
-                    {selectedPhrase.partOfSpeech && (
-                      <span className="text-xs rounded-full border border-teal-800 bg-teal-900/60 px-2 py-0.5 text-teal-200">
-                        {selectedPhrase.partOfSpeech}
-                      </span>
-                    )}
+                {selectedPhrase.loading ? (
+                  <div className="py-8 text-center space-y-3">
+                    <span className="inline-block w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-sm text-teal-300 font-medium">Đang dịch và phân tích ngữ cảnh tiếng Anh...</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl font-bold text-emerald-200">{selectedPhrase.en}</span>
-                    <SpeakBtn text={selectedPhrase.en} className="rounded-lg bg-teal-900/80 px-2.5 py-1 text-xs text-white hover:bg-teal-800" />
-                    <CopyBtn text={selectedPhrase.en} />
-                  </div>
-                  {selectedPhrase.ipa && (
-                    <div className="text-xs text-slate-300 font-mono">
-                      IPA: <span className="text-teal-300">{selectedPhrase.ipa}</span>
-                    </div>
-                  )}
-                  {selectedPhrase.easyReading && (
-                    <div className="text-xs text-amber-200 bg-amber-950/40 border border-amber-800/60 rounded-lg p-2">
-                      🗣️ <b>Đọc dễ:</b> <i>{selectedPhrase.easyReading}</i>
-                    </div>
-                  )}
-                </div>
-
-                {/* Context usage */}
-                <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4 space-y-2 text-sm">
-                  <div className="text-xs font-bold text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
-                    <span>📌</span>
-                    <span>Cách dùng trong ngữ cảnh đoạn văn:</span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
-                    {selectedPhrase.contextUsage}
-                  </p>
-                  {selectedPhrase.sentenceEn && (
-                    <div className="mt-3 pt-3 border-t border-slate-800">
-                      <span className="text-xs font-semibold text-slate-400 block mb-1">Câu tiếng Anh mẫu trong bài:</span>
-                      <div className="flex items-start gap-2 bg-slate-900 rounded-lg p-2.5 border border-slate-800">
-                        <span className="text-xs sm:text-sm text-emerald-200 italic flex-1">
-                          "{selectedPhrase.sentenceEn}"
-                        </span>
-                        <SpeakBtn text={selectedPhrase.sentenceEn} className="shrink-0 text-xs px-2 py-1" />
-                        <CopyBtn text={selectedPhrase.sentenceEn} />
+                ) : (
+                  <>
+                    <div className="rounded-xl border border-teal-700/50 bg-teal-950/40 p-4 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold text-emerald-300 uppercase">🇬🇧 Tiếng Anh tương đương:</span>
+                        {selectedPhrase.partOfSpeech && (
+                          <span className="text-xs rounded-full border border-teal-800 bg-teal-900/60 px-2 py-0.5 text-teal-200">
+                            {selectedPhrase.partOfSpeech}
+                          </span>
+                        )}
                       </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl font-bold text-emerald-200">{selectedPhrase.en}</span>
+                        {selectedPhrase.en && (
+                          <>
+                            <SpeakBtn text={selectedPhrase.en} className="rounded-lg bg-teal-900/80 px-2.5 py-1 text-xs text-white hover:bg-teal-800" />
+                            <CopyBtn text={selectedPhrase.en} />
+                          </>
+                        )}
+                      </div>
+                      {selectedPhrase.ipa && (
+                        <div className="text-xs text-slate-300 font-mono">
+                          IPA: <span className="text-teal-300">{selectedPhrase.ipa}</span>
+                        </div>
+                      )}
+                      {selectedPhrase.easyReading && (
+                        <div className="text-xs text-amber-200 bg-amber-950/40 border border-amber-800/60 rounded-lg p-2">
+                          🗣️ <b>Đọc dễ:</b> <i>{selectedPhrase.easyReading}</i>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+
+                    <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4 space-y-2 text-sm">
+                      <div className="text-xs font-bold text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
+                        <span>📌</span>
+                        <span>Cách dùng trong ngữ cảnh đoạn văn:</span>
+                      </div>
+                      <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
+                        {selectedPhrase.contextUsage}
+                      </p>
+                      {selectedPhrase.sentenceEn && (
+                        <div className="mt-3 pt-3 border-t border-slate-800">
+                          <span className="text-xs font-semibold text-slate-400 block mb-1">Câu tiếng Anh mẫu hoàn chỉnh:</span>
+                          <div className="flex items-start gap-2 bg-slate-900 rounded-lg p-2.5 border border-slate-800">
+                            <span className="text-xs sm:text-sm text-emerald-200 italic flex-1">
+                              "{selectedPhrase.sentenceEn}"
+                            </span>
+                            <SpeakBtn text={selectedPhrase.sentenceEn} className="shrink-0 text-xs px-2 py-1" />
+                            <CopyBtn text={selectedPhrase.sentenceEn} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
 
                 <div className="text-right">
                   <button
