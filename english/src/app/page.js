@@ -91,13 +91,16 @@ export default function Home() {
   const [gSubmitted, setGSubmitted] = useState(false);
   const gFileRef = useRef(null);
 
-  // Writing state
-  const [wPreview, setWPreview] = useState(null);
-  const [wImage, setWImage] = useState(null);
+  // Writing state (supports 2 images: Sample + Self-Writing Task)
+  const [wPreview1, setWPreview1] = useState(null);
+  const [wImage1, setWImage1] = useState(null);
+  const [wPreview2, setWPreview2] = useState(null);
+  const [wImage2, setWImage2] = useState(null);
   const [writing, setWriting] = useState(null);
   const [wLoading, setWLoading] = useState(false);
   const [wError, setWError] = useState(null);
-  const wFileRef = useRef(null);
+  const wFileRef1 = useRef(null);
+  const wFileRef2 = useRef(null);
 
   const [confirmAnalyze, setConfirmAnalyze] = useState(null);
   const [cropPending, setCropPending] = useState(null);
@@ -161,22 +164,32 @@ export default function Home() {
     selectImage(e.dataTransfer.files[0], "grammar");
   }, [handleGFile]);
 
-  const handleWFile = useCallback((file) => {
+  const handleWFile1 = useCallback((file) => {
     if (!file || !file.type.startsWith("image/")) return;
-    setWPreview(URL.createObjectURL(file));
-    setWImage(file);
+    setWPreview1(URL.createObjectURL(file));
+    setWImage1(file);
     setWriting(null);
     setWError(null);
   }, []);
 
-  const analyzeWriting = async (targetFile = null) => {
-    const f = targetFile instanceof File || targetFile instanceof Blob ? targetFile : wImage;
-    if (!f) return;
+  const handleWFile2 = useCallback((file) => {
+    if (!file || !file.type.startsWith("image/")) return;
+    setWPreview2(URL.createObjectURL(file));
+    setWImage2(file);
+    setWriting(null);
+    setWError(null);
+  }, []);
+
+  const analyzeWriting = async (img1 = null, img2 = null) => {
+    const f1 = img1 instanceof File || img1 instanceof Blob ? img1 : wImage1;
+    const f2 = img2 instanceof File || img2 instanceof Blob ? img2 : wImage2;
+    if (!f1 && !f2) return;
     setWLoading(true);
     setWError(null);
     try {
       const formData = new FormData();
-      formData.append("image", f);
+      if (f1) formData.append("image1", f1);
+      if (f2) formData.append("image2", f2);
       const res = await fetch("/api/writing", { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Server error");
@@ -316,9 +329,12 @@ export default function Home() {
         else if (target === "grammar") {
           handleGFile(file);
           setConfirmAnalyze({ file, target: "grammar" });
-        } else if (target === "writing") {
-          handleWFile(file);
-          setConfirmAnalyze({ file, target: "writing" });
+        } else if (target === "writing1") {
+          handleWFile1(file);
+          setConfirmAnalyze({ target: "writing", file1: file, file2: wImage2 });
+        } else if (target === "writing2") {
+          handleWFile2(file);
+          setConfirmAnalyze({ target: "writing", file1: wImage1, file2: file });
         } else {
           handleFile(file);
           setConfirmAnalyze({ file, target: "vocab" });
@@ -336,7 +352,9 @@ export default function Home() {
               {confirmAnalyze.target === "grammar"
                 ? "Bắt đầu phân tích cấu trúc ngữ pháp từ ảnh đã chọn."
                 : confirmAnalyze.target === "writing"
-                ? "Bắt đầu phân tích bài viết mẫu và tạo hướng dẫn viết từ ảnh đã chọn."
+                ? (confirmAnalyze.file1 && confirmAnalyze.file2
+                    ? "Bắt đầu phân tích trọn bộ Unit (2 ảnh: Bài mẫu + Bài tập Self-Writing)."
+                    : "Bắt đầu phân tích trang Writing đã chọn.")
                 : "Bắt đầu phân tích từ vựng và tạo bài luyện tập từ ảnh đã chọn."}
             </p>
             <div className="flex gap-3">
@@ -350,7 +368,7 @@ export default function Home() {
                   const { file, target } = confirmAnalyze;
                   setConfirmAnalyze(null);
                   if (target === "grammar") analyzeGrammar(file);
-                  else if (target === "writing") analyzeWriting(file);
+                  else if (target === "writing") analyzeWriting(confirmAnalyze.file1, confirmAnalyze.file2);
                   else analyze(file);
                 }}
                 className={`flex-1 rounded-xl py-3 text-sm font-semibold text-white shadow-lg transition-colors ${
@@ -860,19 +878,146 @@ export default function Home() {
 
       {/* ============ WRITING MODE ============ */}
       {mode === "writing" && <>
-        <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); selectImage(e.dataTransfer.files[0], "writing"); }} onClick={() => wFileRef.current?.click()}
-          className="border-2 border-dashed border-emerald-600/50 rounded-2xl p-10 text-center cursor-pointer hover:border-emerald-400 hover:bg-slate-900 transition-all mb-6">
-          <input ref={wFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { selectImage(e.target.files[0], "writing"); e.target.value = ""; }} />
-          <div className="text-4xl sm:text-5xl mb-3">✍️</div>
-          <p className="text-sm sm:text-base text-slate-400">Kéo thả ảnh trang Writing (email, thư, đoạn văn mẫu) vào đây hoặc bấm chọn</p>
+        <div className="mb-4 text-center">
+          <p className="text-sm text-slate-300">
+            Tải lên <b className="text-emerald-300">1 hoặc 2 trang</b> trong cùng một Unit để AI hướng dẫn học và đối chiếu trọn vẹn:
+          </p>
         </div>
 
-        {wPreview && <div className="text-center mb-6"><img src={wPreview} alt="preview" className="max-h-64 sm:max-h-72 max-w-full rounded-xl border border-slate-700 inline-block" /></div>}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          {/* Slot 1: Sample Writing */}
+          <div className="rounded-2xl border-2 border-dashed border-emerald-600/50 p-4 sm:p-5 bg-slate-900/60 hover:border-emerald-400 transition-all flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-300 bg-emerald-950/80 border border-emerald-800/80 rounded-md px-2.5 py-1">
+                Trang 1 · Bài mẫu (Sample)
+              </span>
+              {wImage1 && (
+                <button
+                  type="button"
+                  onClick={() => { setWImage1(null); setWPreview1(null); }}
+                  className="rounded px-2 py-0.5 text-xs text-red-400 hover:bg-red-950/50 hover:text-red-300"
+                >
+                  ✕ Xóa
+                </button>
+              )}
+            </div>
+
+            {wPreview1 ? (
+              <div className="text-center my-auto py-2">
+                <img src={wPreview1} alt="Preview bài mẫu" className="max-h-56 mx-auto rounded-xl border border-slate-700 object-contain shadow-md" />
+                <button
+                  type="button"
+                  onClick={() => wFileRef1.current?.click()}
+                  className="mt-3 text-xs text-slate-400 hover:text-emerald-300 underline block mx-auto"
+                >
+                  Đổi ảnh khác
+                </button>
+              </div>
+            ) : (
+              <div
+                onClick={() => wFileRef1.current?.click()}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) selectImage(f, "writing1"); }}
+                className="py-8 text-center cursor-pointer my-auto rounded-xl hover:bg-slate-800/50 transition-colors"
+              >
+                <div className="text-3xl sm:text-4xl mb-2">📖</div>
+                <p className="text-sm font-semibold text-slate-200">Ảnh trang bài mẫu</p>
+                <p className="text-xs text-slate-400 mt-1">Email / thư mẫu của bài</p>
+              </div>
+            )}
+
+            <input
+              ref={wFileRef1}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) selectImage(f, "writing1");
+                e.target.value = "";
+              }}
+            />
+          </div>
+
+          {/* Slot 2: Self-Writing Task */}
+          <div className="rounded-2xl border-2 border-dashed border-amber-600/50 p-4 sm:p-5 bg-slate-900/60 hover:border-amber-400 transition-all flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-300 bg-amber-950/80 border border-amber-800/80 rounded-md px-2.5 py-1">
+                Trang 2 · Bài tập (Self-Writing)
+              </span>
+              {wImage2 && (
+                <button
+                  type="button"
+                  onClick={() => { setWImage2(null); setWPreview2(null); }}
+                  className="rounded px-2 py-0.5 text-xs text-red-400 hover:bg-red-950/50 hover:text-red-300"
+                >
+                  ✕ Xóa
+                </button>
+              )}
+            </div>
+
+            {wPreview2 ? (
+              <div className="text-center my-auto py-2">
+                <img src={wPreview2} alt="Preview bài tập" className="max-h-56 mx-auto rounded-xl border border-slate-700 object-contain shadow-md" />
+                <button
+                  type="button"
+                  onClick={() => wFileRef2.current?.click()}
+                  className="mt-3 text-xs text-slate-400 hover:text-amber-300 underline block mx-auto"
+                >
+                  Đổi ảnh khác
+                </button>
+              </div>
+            ) : (
+              <div
+                onClick={() => wFileRef2.current?.click()}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) selectImage(f, "writing2"); }}
+                className="py-8 text-center cursor-pointer my-auto rounded-xl hover:bg-slate-800/50 transition-colors"
+              >
+                <div className="text-3xl sm:text-4xl mb-2">✍️</div>
+                <p className="text-sm font-semibold text-slate-200">Ảnh trang bài tập</p>
+                <p className="text-xs text-slate-400 mt-1">Đề bài Self-Writing & Word Bank</p>
+              </div>
+            )}
+
+            <input
+              ref={wFileRef2}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) selectImage(f, "writing2");
+                e.target.value = "";
+              }}
+            />
+          </div>
+        </div>
 
         <div className="text-center mb-6">
-          <button onClick={() => analyzeWriting()} disabled={!wImage || wLoading} className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-xl font-semibold text-base sm:text-lg transition-colors">
-            {wLoading ? <span className="flex items-center gap-2 justify-center"><span className="w-5 h-5 border-2 border-slate-400 border-t-emerald-300 rounded-full animate-spin" />Đang phân tích...</span> : "🔍 Phân tích bài viết"}
+          <button
+            onClick={() => analyzeWriting()}
+            disabled={(!wImage1 && !wImage2) || wLoading}
+            className="w-full sm:w-auto px-8 py-3.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-xl font-semibold text-base sm:text-lg transition-colors shadow-lg shadow-emerald-900/30 text-white"
+          >
+            {wLoading ? (
+              <span className="flex items-center gap-2 justify-center">
+                <span className="w-5 h-5 border-2 border-slate-400 border-t-emerald-300 rounded-full animate-spin" />
+                Đang phân tích bài viết...
+              </span>
+            ) : wImage1 && wImage2 ? (
+              "🔍 Phân tích trọn bộ Unit (Bài mẫu + Bài tập Self-Writing)"
+            ) : wImage1 ? (
+              "🔍 Phân tích bài mẫu (Trang 1)"
+            ) : (
+              "🔍 Phân tích bài tập (Trang 2)"
+            )}
           </button>
+          {(!wImage1 || !wImage2) && (wImage1 || wImage2) && (
+            <p className="text-xs text-slate-400 mt-2">
+              💡 Mẹo: Tải thêm trang còn lại để xem trọn vẹn cả bài mẫu và đề tự viết.
+            </p>
+          )}
         </div>
 
         {wError && <div className="bg-red-950 border border-red-800 rounded-xl p-4 mb-6 text-red-300">❌ {wError}</div>}
