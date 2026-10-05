@@ -9,8 +9,14 @@ const PROMPT = `You are a patient Vietnamese teacher of English WRITING (busines
 Do NOT copy the page verbatim. Re-write the sample text in your own words, keeping the same structure, order, purpose of each part, and B1-B2 business English.
 Teach a beginner: show how the text is built, which sentences they can reuse, and why each sentence is written that way.
 
+First decide "kind": "sample" if the page shows a finished model text; "task" if it is a homework/self-writing assignment the student must write (instructions, word count, word bank, blank lines).
+For kind "task": do NOT write the answer for the student. "sections" are a suggested outline whose "sentences" are only starter frames with [placeholders] (not complete answers). Fill the "task" object from the page (paraphrase, keep every fact, number, name and the required word count).
+For kind "sample": omit "task" (or set null) and rewrite the model text as described.
+
 Return ONLY valid JSON, no markdown:
 {
+  "kind":"sample | task",
+  "task":{"scenario":"Task scenario in English (paraphrased)","scenarioVietnamese":"Dịch tiếng Việt, rõ ràng","sender":"Who writes (role)","recipient":"Who receives (role)","format":"email / letter / paragraph ...","minWords":100,"requirements":["Tiếng Việt: một yêu cầu bắt buộc của đề, ví dụ 'Nhắc lại cuộc nói chuyện giữ chân'"],"givenFacts":["Tiếng Việt: dữ kiện đề cho"],"wordBank":[{"word":"quarterly","partOfSpeech":"adj","meaning":"Nghĩa tiếng Việt","example":"Short business example sentence"}]},
   "title":"English title of the writing task",
   "titleVietnamese":"Tên tiếng Việt",
   "writingType":"email | letter | paragraph | essay | report ... (Vietnamese label ok)",
