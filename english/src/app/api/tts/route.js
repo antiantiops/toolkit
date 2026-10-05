@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 const URL_ = process.env.NINEROUTER_URL || "http://192.168.101.36:20128";
 const KEY = process.env.NINEROUTER_KEY || "";
-const VOICES = { "en-US": "en-US-AvaMultilingualNeural", "vi-VN": "vi-VN-HoaiMyNeural" };
+const VOICES = { "en-US": "en-US-SaraNeural", "vi-VN": "vi-VN-HoaiMyNeural" };
 
 export async function POST(request) {
   try {
