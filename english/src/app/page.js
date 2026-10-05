@@ -3,6 +3,7 @@ import { useState, useRef, useCallback } from "react";
 import ImageCrop from "./ImageCrop";
 import LessonChat from "./LessonChat";
 import Listening from "./Listening";
+import Writing from "./Writing";
 
 const AiTag = () => <span title="Sách không có, AI tự tạo 100%" className="ml-1 rounded bg-fuchsia-900/60 px-1.5 py-0.5 text-[10px] font-semibold text-fuchsia-200">🤖 AI</span>;
 
@@ -90,6 +91,14 @@ export default function Home() {
   const [gSubmitted, setGSubmitted] = useState(false);
   const gFileRef = useRef(null);
 
+  // Writing state
+  const [wPreview, setWPreview] = useState(null);
+  const [wImage, setWImage] = useState(null);
+  const [writing, setWriting] = useState(null);
+  const [wLoading, setWLoading] = useState(false);
+  const [wError, setWError] = useState(null);
+  const wFileRef = useRef(null);
+
   const [confirmAnalyze, setConfirmAnalyze] = useState(null);
   const [cropPending, setCropPending] = useState(null);
   const selectImage = (file, target) => {
@@ -151,6 +160,33 @@ export default function Home() {
     e.preventDefault();
     selectImage(e.dataTransfer.files[0], "grammar");
   }, [handleGFile]);
+
+  const handleWFile = useCallback((file) => {
+    if (!file || !file.type.startsWith("image/")) return;
+    setWPreview(URL.createObjectURL(file));
+    setWImage(file);
+    setWriting(null);
+    setWError(null);
+  }, []);
+
+  const analyzeWriting = async (targetFile = null) => {
+    const f = targetFile instanceof File || targetFile instanceof Blob ? targetFile : wImage;
+    if (!f) return;
+    setWLoading(true);
+    setWError(null);
+    try {
+      const formData = new FormData();
+      formData.append("image", f);
+      const res = await fetch("/api/writing", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Server error");
+      setWriting(data.writing);
+    } catch (e) {
+      setWError(e.message);
+    } finally {
+      setWLoading(false);
+    }
+  };
 
   const analyzeGrammar = async (targetFile = null) => {
     const fileToAnalyze = targetFile instanceof File || targetFile instanceof Blob ? targetFile : gImage;
@@ -280,6 +316,9 @@ export default function Home() {
         else if (target === "grammar") {
           handleGFile(file);
           setConfirmAnalyze({ file, target: "grammar" });
+        } else if (target === "writing") {
+          handleWFile(file);
+          setConfirmAnalyze({ file, target: "writing" });
         } else {
           handleFile(file);
           setConfirmAnalyze({ file, target: "vocab" });
@@ -296,6 +335,8 @@ export default function Home() {
             <p className="text-sm text-slate-400 mb-6 leading-relaxed">
               {confirmAnalyze.target === "grammar"
                 ? "Bắt đầu phân tích cấu trúc ngữ pháp từ ảnh đã chọn."
+                : confirmAnalyze.target === "writing"
+                ? "Bắt đầu phân tích bài viết mẫu và tạo hướng dẫn viết từ ảnh đã chọn."
                 : "Bắt đầu phân tích từ vựng và tạo bài luyện tập từ ảnh đã chọn."}
             </p>
             <div className="flex gap-3">
@@ -309,10 +350,11 @@ export default function Home() {
                   const { file, target } = confirmAnalyze;
                   setConfirmAnalyze(null);
                   if (target === "grammar") analyzeGrammar(file);
+                  else if (target === "writing") analyzeWriting(file);
                   else analyze(file);
                 }}
                 className={`flex-1 rounded-xl py-3 text-sm font-semibold text-white shadow-lg transition-colors ${
-                  confirmAnalyze.target === "grammar" ? "bg-purple-600 hover:bg-purple-500" : "bg-blue-600 hover:bg-blue-500"
+                  confirmAnalyze.target === "grammar" ? "bg-purple-600 hover:bg-purple-500" : confirmAnalyze.target === "writing" ? "bg-emerald-600 hover:bg-emerald-500" : "bg-blue-600 hover:bg-blue-500"
                 }`}
               >
                 OK, phân tích
@@ -330,6 +372,7 @@ export default function Home() {
       <div className="flex gap-2 mb-6 justify-center">
         <button onClick={() => setMode("vocab")} className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors ${mode === "vocab" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>📖 Vocabulary</button>
         <button onClick={() => setMode("grammar")} className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors ${mode === "grammar" ? "bg-purple-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>📐 Grammar</button>
+        <button onClick={() => setMode("writing")} className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors ${mode === "writing" ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>✍️ Writing</button>
       </div>
 
       {/* Quick lookup */}
@@ -815,8 +858,29 @@ export default function Home() {
         )}
       </>}
 
+      {/* ============ WRITING MODE ============ */}
+      {mode === "writing" && <>
+        <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); selectImage(e.dataTransfer.files[0], "writing"); }} onClick={() => wFileRef.current?.click()}
+          className="border-2 border-dashed border-emerald-600/50 rounded-2xl p-10 text-center cursor-pointer hover:border-emerald-400 hover:bg-slate-900 transition-all mb-6">
+          <input ref={wFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { selectImage(e.target.files[0], "writing"); e.target.value = ""; }} />
+          <div className="text-4xl sm:text-5xl mb-3">✍️</div>
+          <p className="text-sm sm:text-base text-slate-400">Kéo thả ảnh trang Writing (email, thư, đoạn văn mẫu) vào đây hoặc bấm chọn</p>
+        </div>
+
+        {wPreview && <div className="text-center mb-6"><img src={wPreview} alt="preview" className="max-h-64 sm:max-h-72 max-w-full rounded-xl border border-slate-700 inline-block" /></div>}
+
+        <div className="text-center mb-6">
+          <button onClick={() => analyzeWriting()} disabled={!wImage || wLoading} className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-xl font-semibold text-base sm:text-lg transition-colors">
+            {wLoading ? <span className="flex items-center gap-2 justify-center"><span className="w-5 h-5 border-2 border-slate-400 border-t-emerald-300 rounded-full animate-spin" />Đang phân tích...</span> : "🔍 Phân tích bài viết"}
+          </button>
+        </div>
+
+        {wError && <div className="bg-red-950 border border-red-800 rounded-xl p-4 mb-6 text-red-300">❌ {wError}</div>}
+        {writing && <Writing writing={writing} SpeakBtn={SpeakBtn} CopyBtn={CopyBtn} />}
+      </>}
+
       {/* Lookup modal */}
-      <LessonChat context={{ mode, lesson: mode === "grammar" ? grammar : words, practice: mode === "grammar" ? gPractice : practice, translation: quickResult, wordLookup: lookup && !lookup.loading && !lookup.error ? lookup : null }} />
+      <LessonChat context={{ mode, lesson: mode === "grammar" ? grammar : mode === "writing" ? writing : words, practice: mode === "grammar" ? gPractice : practice, translation: quickResult, wordLookup: lookup && !lookup.loading && !lookup.error ? lookup : null }} />
       {lookup && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/75 p-3" onClick={() => setLookup(null)}>
           <div className="max-h-[85dvh] overflow-y-auto w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-slate-600 bg-slate-900 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>

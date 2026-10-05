@@ -80,7 +80,7 @@ export default function LessonChat({ context }) {
     </button>}
     {<section ref={panel} inert={!open} aria-hidden={!open} data-open={open} style={{ transformOrigin: origin }} id="lesson-chat-panel" role="dialog" aria-label="Chat với AI về bài học" className="lesson-chat-motion fixed bottom-3 right-3 z-40 flex h-[min(70dvh,600px)] w-[calc(100%-1.5rem)] max-w-sm flex-col overflow-hidden rounded-2xl border border-slate-600 bg-slate-900 shadow-2xl">
       <header className="flex shrink-0 items-center justify-between border-b border-slate-700 p-3">
-        <div><h2 className="font-semibold text-sky-200">Hỏi AI về bài học</h2><p className="text-xs text-slate-400">Ngữ cảnh: {context.mode === "grammar" ? "Grammar" : "Vocabulary"}</p></div>
+        <div><h2 className="font-semibold text-sky-200">Hỏi AI về bài học</h2><p className="text-xs text-slate-400">Ngữ cảnh: {context.mode === "grammar" ? "Grammar" : context.mode === "writing" ? "Writing" : "Vocabulary"}</p></div>
         <div className="flex gap-1"><button disabled={busy} onClick={() => { setMessages([]); setError(""); }} className="rounded-lg px-2 py-1 text-xs text-slate-300 disabled:opacity-40">Xóa chat</button><button aria-label="Thu nhỏ chat" onClick={() => toggleChat(false)} className="rounded-lg px-2 py-1 text-slate-300">✕</button></div>
       </header>
       <div role="log" aria-live="polite" className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 text-sm">
