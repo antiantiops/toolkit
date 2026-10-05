@@ -148,12 +148,30 @@ export default function Home() {
   };
 
   // --- Shared helpers ---
-  const speak = (text, lang = "en-US") => {
+  // Neural TTS via /api/tts (Edge voices); fallback to browser voice on failure.
+  const ttsRef = useRef({ audio: null, cache: new Map() });
+  const speak = async (text, lang = "en-US") => {
+    const t = ttsRef.current;
+    t.audio?.pause();
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = lang;
-    u.rate = lang === "en-US" ? 0.68 : 0.85;
-    speechSynthesis.speak(u);
+    try {
+      const k = lang + "|" + text;
+      let url = t.cache.get(k);
+      if (!url) {
+        const res = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, lang }) });
+        if (!res.ok) throw new Error("tts");
+        url = URL.createObjectURL(await res.blob());
+        t.cache.set(k, url);
+      }
+      t.audio = new Audio(url);
+      t.audio.playbackRate = lang === "en-US" ? 0.85 : 1;
+      await t.audio.play();
+    } catch {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = lang;
+      u.rate = lang === "en-US" ? 0.68 : 0.85;
+      speechSynthesis.speak(u);
+    }
   };
 
   const SpeakViBtn = ({ text }) => <button onClick={() => speak(text, "vi-VN")} className="ml-2 mt-1 inline-flex items-center rounded-md bg-slate-800 px-2 py-1 text-xs text-slate-300 hover:bg-slate-700 hover:text-white" title="Đọc tiếng Việt" aria-label="Đọc tiếng Việt">🔊</button>;
