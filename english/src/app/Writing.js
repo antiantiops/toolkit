@@ -400,103 +400,6 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
             Dàn ý gợi ý chi tiết để viết bài Self-Writing dựa trên cấu trúc bài mẫu. Thay phần{" "}
             <mark className="rounded bg-amber-300/20 px-1 text-amber-200">[trong ngoặc]</mark> để viết câu của bạn:
           </p>
-          {/* Vietnamese Interactive Model Draft */}
-          <div className="rounded-2xl border border-teal-700/60 bg-gradient-to-b from-slate-900 to-teal-950/20 p-4 sm:p-5 shadow-lg">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-3 pb-3 border-b border-slate-800">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-teal-300 bg-teal-950/80 border border-teal-800 rounded px-2 py-0.5">
-                  🇻🇳 Bài mẫu tiếng Việt hoàn chỉnh
-                </span>
-                <h3 className="text-base sm:text-lg font-bold text-white mt-1">
-                  Email mẫu Self-Writing (bấm vào BẤT KỲ TỪ NÀO để tra tiếng Anh & ngữ cảnh)
-                </h3>
-              </div>
-              {!modelDraft && (
-                <button
-                  type="button"
-                  onClick={fetchModelDraft}
-                  disabled={loadingModel}
-                  className="rounded-xl bg-teal-600 hover:bg-teal-500 disabled:bg-slate-700 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow transition-colors flex items-center gap-1.5"
-                >
-                  {loadingModel ? (
-                    <>
-                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Đang soạn bài mẫu...</span>
-                    </>
-                  ) : (
-                    "✨ Tạo bài mẫu tiếng Việt"
-                  )}
-                </button>
-              )}
-            </div>
-
-            {modelErr && (
-              <div className="rounded-xl border border-red-800 bg-red-950/80 p-3 text-xs text-red-300 mb-3">
-                ❌ {modelErr}
-              </div>
-            )}
-
-            {modelDraft ? (
-              <div className="space-y-4">
-                <p className="text-xs text-slate-300 italic">
-                  💡 Bấm vào <b className="text-teal-300">bất kỳ từ nào</b> trong bài văn mẫu tiếng Việt dưới đây để tra tiếng Anh, phiên âm, cách đọc dễ và cách dùng trong câu.
-                </p>
-                {(modelDraft.paragraphs || []).map((p, pi) => {
-                  const rawText = (p.text || "").replace(/\[|\]/g, "");
-                  const lines = rawText.split("\n");
-                  const keyPhrases = p.keyPhrases || p.phrases || [];
-
-                  return (
-                    <div key={pi} className="rounded-xl border border-slate-700/80 bg-slate-950/80 p-4">
-                      <div className="text-xs font-bold text-teal-400 uppercase tracking-wide mb-2.5 flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-teal-400 inline-block" />
-                        {p.part}
-                      </div>
-                      <div className="text-sm leading-relaxed text-slate-100 select-text space-y-1.5">
-                        {lines.map((line, li) => {
-                          if (!line.trim()) return <div key={li} className="h-2" />;
-                          const tokens = line.split(/([\p{L}\p{N}]+)/u);
-
-                          return (
-                            <p key={li} className="m-0 leading-relaxed">
-                              {tokens.map((tok, ti) => {
-                                const isWord = /[\p{L}\p{N}]/u.test(tok);
-                                if (!isWord) return <span key={ti}>{tok}</span>;
-
-                                return (
-                                  <span
-                                    key={ti}
-                                    role="button"
-                                    tabIndex={0}
-                                    onClick={() => handleViClick(tok, line, rawText, keyPhrases)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter" || e.key === " ") {
-                                        e.preventDefault();
-                                        handleViClick(tok, line, rawText, keyPhrases);
-                                      }
-                                    }}
-                                    className="cursor-pointer hover:text-teal-300 hover:underline decoration-teal-400 decoration-dotted underline-offset-4 focus:outline-none"
-                                    title={`Bấm để dịch "${tok}" sang tiếng Anh`}
-                                  >
-                                    {tok}
-                                  </span>
-                                );
-                              })}
-                            </p>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : !loadingModel ? (
-              <div className="text-center py-6 text-slate-400 text-xs sm:text-sm">
-                Bấm nút <b className="text-teal-300">"Tạo bài mẫu tiếng Việt"</b> để AI viết hoàn chỉnh email theo tình huống đề bài và 10 từ Word Bank.
-              </div>
-            ) : null}
-          </div>
-
           {/* Modal popup tra từ/cụm từ tiếng Việt sang tiếng Anh */}
           {selectedPhrase && (
             <div
@@ -622,6 +525,103 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
               </div>
             );
           })}
+
+          {/* Vietnamese Interactive Model Draft */}
+          <div className="rounded-2xl border border-teal-700/60 bg-gradient-to-b from-slate-900 to-teal-950/20 p-4 sm:p-5 shadow-lg">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-3 pb-3 border-b border-slate-800">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-teal-300 bg-teal-950/80 border border-teal-800 rounded px-2 py-0.5">
+                  🇻🇳 Bài mẫu tiếng Việt hoàn chỉnh
+                </span>
+                <h3 className="text-base sm:text-lg font-bold text-white mt-1">
+                  Email mẫu Self-Writing (bấm vào BẤT KỲ TỪ NÀO để tra tiếng Anh & ngữ cảnh)
+                </h3>
+              </div>
+              {!modelDraft && (
+                <button
+                  type="button"
+                  onClick={fetchModelDraft}
+                  disabled={loadingModel}
+                  className="rounded-xl bg-teal-600 hover:bg-teal-500 disabled:bg-slate-700 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow transition-colors flex items-center gap-1.5"
+                >
+                  {loadingModel ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Đang soạn bài mẫu...</span>
+                    </>
+                  ) : (
+                    "✨ Tạo bài mẫu tiếng Việt"
+                  )}
+                </button>
+              )}
+            </div>
+
+            {modelErr && (
+              <div className="rounded-xl border border-red-800 bg-red-950/80 p-3 text-xs text-red-300 mb-3">
+                ❌ {modelErr}
+              </div>
+            )}
+
+            {modelDraft ? (
+              <div className="space-y-4">
+                <p className="text-xs text-slate-300 italic">
+                  💡 Bấm vào <b className="text-teal-300">bất kỳ từ nào</b> trong bài văn mẫu tiếng Việt dưới đây để tra tiếng Anh, phiên âm, cách đọc dễ và cách dùng trong câu.
+                </p>
+                {(modelDraft.paragraphs || []).map((p, pi) => {
+                  const rawText = (p.text || "").replace(/\[|\]/g, "");
+                  const lines = rawText.split("\n");
+                  const keyPhrases = p.keyPhrases || p.phrases || [];
+
+                  return (
+                    <div key={pi} className="rounded-xl border border-slate-700/80 bg-slate-950/80 p-4">
+                      <div className="text-xs font-bold text-teal-400 uppercase tracking-wide mb-2.5 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-teal-400 inline-block" />
+                        {p.part}
+                      </div>
+                      <div className="text-sm leading-relaxed text-slate-100 select-text space-y-1.5">
+                        {lines.map((line, li) => {
+                          if (!line.trim()) return <div key={li} className="h-2" />;
+                          const tokens = line.split(/([\p{L}\p{N}]+)/u);
+
+                          return (
+                            <p key={li} className="m-0 leading-relaxed">
+                              {tokens.map((tok, ti) => {
+                                const isWord = /[\p{L}\p{N}]/u.test(tok);
+                                if (!isWord) return <span key={ti}>{tok}</span>;
+
+                                return (
+                                  <span
+                                    key={ti}
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => handleViClick(tok, line, rawText, keyPhrases)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        handleViClick(tok, line, rawText, keyPhrases);
+                                      }
+                                    }}
+                                    className="cursor-pointer hover:text-teal-300 hover:underline decoration-teal-400 decoration-dotted underline-offset-4 focus:outline-none"
+                                    title={`Bấm để dịch "${tok}" sang tiếng Anh`}
+                                  >
+                                    {tok}
+                                  </span>
+                                );
+                              })}
+                            </p>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : !loadingModel ? (
+              <div className="text-center py-6 text-slate-400 text-xs sm:text-sm">
+                Bấm nút <b className="text-teal-300">"Tạo bài mẫu tiếng Việt"</b> để AI viết hoàn chỉnh email theo tình huống đề bài và 10 từ Word Bank.
+              </div>
+            ) : null}
+          </div>
         </div>
       )}
 
