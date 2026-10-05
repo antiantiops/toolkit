@@ -443,22 +443,24 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
                 </p>
                 {(modelDraft.paragraphs || []).map((p, pi) => {
                   const rawText = (p.text || "").replace(/\[|\]/g, "");
-                  const sentences = rawText.split(/(?<=[.!?\n])\s+/);
+                  const lines = rawText.split("\n");
                   const keyPhrases = p.keyPhrases || p.phrases || [];
 
                   return (
-                    <div key={pi} className="rounded-xl border border-slate-700/80 bg-slate-950/80 p-3.5 sm:p-4">
-                      <div className="text-xs font-bold text-teal-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                    <div key={pi} className="rounded-xl border border-slate-700/80 bg-slate-950/80 p-4">
+                      <div className="text-xs font-bold text-teal-400 uppercase tracking-wide mb-2.5 flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-teal-400 inline-block" />
                         {p.part}
                       </div>
-                      <div className="text-sm leading-relaxed text-slate-200 select-text">
-                        {sentences.map((sent, si) => {
-                          const tokens = sent.split(/([A-Za-zÀ-ỹ0-9_]+)/u);
+                      <div className="text-sm leading-relaxed text-slate-100 select-text space-y-1.5">
+                        {lines.map((line, li) => {
+                          if (!line.trim()) return <div key={li} className="h-2" />;
+                          const tokens = line.split(/([\p{L}\p{N}]+)/u);
+
                           return (
-                            <span key={si} className="inline">
+                            <p key={li} className="m-0 leading-relaxed">
                               {tokens.map((tok, ti) => {
-                                const isWord = /[A-Za-zÀ-ỹ0-9_]/u.test(tok);
+                                const isWord = /[\p{L}\p{N}]/u.test(tok);
                                 if (!isWord) return <span key={ti}>{tok}</span>;
 
                                 return (
@@ -466,22 +468,21 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
                                     key={ti}
                                     role="button"
                                     tabIndex={0}
-                                    onClick={() => handleViClick(tok, sent, rawText, keyPhrases)}
+                                    onClick={() => handleViClick(tok, line, rawText, keyPhrases)}
                                     onKeyDown={(e) => {
                                       if (e.key === "Enter" || e.key === " ") {
                                         e.preventDefault();
-                                        handleViClick(tok, sent, rawText, keyPhrases);
+                                        handleViClick(tok, line, rawText, keyPhrases);
                                       }
                                     }}
-                                    className="cursor-pointer hover:rounded hover:bg-teal-800/80 hover:text-white hover:underline decoration-teal-400 decoration-dotted underline-offset-2 transition-colors px-0.5"
+                                    className="cursor-pointer hover:text-teal-300 hover:underline decoration-teal-400 decoration-dotted underline-offset-4 focus:outline-none"
                                     title={`Bấm để dịch "${tok}" sang tiếng Anh`}
                                   >
                                     {tok}
                                   </span>
                                 );
                               })}
-                              {si < sentences.length - 1 ? " " : ""}
-                            </span>
+                            </p>
                           );
                         })}
                       </div>
