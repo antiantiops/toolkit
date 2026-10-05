@@ -6,6 +6,48 @@ import Listening from "./Listening";
 
 const AiTag = () => <span title="Sách không có, AI tự tạo 100%" className="ml-1 rounded bg-fuchsia-900/60 px-1.5 py-0.5 text-[10px] font-semibold text-fuchsia-200">🤖 AI</span>;
 
+// Neural TTS via /api/tts (Edge voices); fallback to browser voice on failure.
+const tts = { audio: null, cache: new Map() };
+async function speak(text, lang = "en-US") {
+  tts.audio?.pause();
+  speechSynthesis.cancel();
+  try {
+    const k = lang + "|" + text;
+    let url = tts.cache.get(k);
+    if (!url) {
+      const res = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, lang }) });
+      if (!res.ok) throw new Error("tts");
+      url = URL.createObjectURL(await res.blob());
+      tts.cache.set(k, url);
+    }
+    tts.audio = new Audio(url);
+    tts.audio.playbackRate = lang === "en-US" ? 0.85 : 1;
+    await tts.audio.play();
+  } catch {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang;
+    u.rate = lang === "en-US" ? 0.68 : 0.85;
+    speechSynthesis.speak(u);
+  }
+}
+
+// Speaker button: spinner + disabled while audio is being fetched, re-enabled once playback starts.
+function SpeakBtn({ text, lang = "en-US", className = "", children = "🔊", ...rest }) {
+  const [loading, setLoading] = useState(false);
+  const click = async () => {
+    if (loading) return;
+    setLoading(true);
+    try { await speak(text, lang); } finally { setLoading(false); }
+  };
+  return (
+    <button type="button" onClick={click} disabled={loading} aria-busy={loading} className={`${className} disabled:cursor-wait disabled:opacity-70`} {...rest}>
+      {loading ? <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-white align-middle" /> : children}
+    </button>
+  );
+}
+
+const SpeakViBtn = ({ text }) => <SpeakBtn text={text} lang="vi-VN" className="ml-2 mt-1 inline-flex items-center rounded-md bg-slate-800 px-2 py-1 text-xs text-slate-300 hover:bg-slate-700 hover:text-white" title="Đọc tiếng Việt" aria-label="Đọc tiếng Việt" />;
+
 export default function Home() {
   // --- Mode: "vocab" | "grammar" ---
   const [mode, setMode] = useState("vocab");
@@ -148,34 +190,6 @@ export default function Home() {
   };
 
   // --- Shared helpers ---
-  // Neural TTS via /api/tts (Edge voices); fallback to browser voice on failure.
-  const ttsRef = useRef({ audio: null, cache: new Map() });
-  const speak = async (text, lang = "en-US") => {
-    const t = ttsRef.current;
-    t.audio?.pause();
-    speechSynthesis.cancel();
-    try {
-      const k = lang + "|" + text;
-      let url = t.cache.get(k);
-      if (!url) {
-        const res = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, lang }) });
-        if (!res.ok) throw new Error("tts");
-        url = URL.createObjectURL(await res.blob());
-        t.cache.set(k, url);
-      }
-      t.audio = new Audio(url);
-      t.audio.playbackRate = lang === "en-US" ? 0.85 : 1;
-      await t.audio.play();
-    } catch {
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = lang;
-      u.rate = lang === "en-US" ? 0.68 : 0.85;
-      speechSynthesis.speak(u);
-    }
-  };
-
-  const SpeakViBtn = ({ text }) => <button onClick={() => speak(text, "vi-VN")} className="ml-2 mt-1 inline-flex items-center rounded-md bg-slate-800 px-2 py-1 text-xs text-slate-300 hover:bg-slate-700 hover:text-white" title="Đọc tiếng Việt" aria-label="Đọc tiếng Việt">🔊</button>;
-
   const lookupText = async (imageFile = null, overrideDir = null) => {
     const text = quickQuery.trim();
     const dir = overrideDir || quickDirection;
@@ -488,14 +502,14 @@ export default function Home() {
                 </span>
                 <span className="flex shrink-0 items-center gap-1">
                   <CopyBtn text={quickResult.corrected} />
-                  <button
-                    onClick={() => speak(quickResult.corrected)}
+                  <SpeakBtn
+                    text={quickResult.corrected}
                     className="inline-flex h-7 w-7 items-center justify-center rounded-md text-sky-300 transition-colors hover:bg-sky-900"
                     title="Nghe đọc tiếng Anh"
                     aria-label="Nghe tiếng Anh"
                   >
                     🔊
-                  </button>
+                  </SpeakBtn>
                 </span>
               </div>
 
@@ -604,7 +618,7 @@ export default function Home() {
                   <div className="flex items-center gap-1 text-lg sm:text-xl font-bold text-blue-400 break-words"><span>{w.word}</span><CopyBtn text={w.word} /></div>
                   <div className="mt-1 flex items-center gap-2"><span className="text-purple-400 italic text-sm">{w.ipa}</span>{w.partOfSpeech && <span className="rounded-full border border-blue-800 bg-blue-950 px-2 py-0.5 text-xs font-semibold text-blue-200">{w.partOfSpeech}</span>}</div>
                 </div>
-                <button onClick={() => speak(w.word)} className="shrink-0 w-10 h-10 rounded-full bg-emerald-600 hover:bg-emerald-500 flex items-center justify-center text-lg transition-colors" title="Nghe phát âm">🔊</button>
+                <SpeakBtn text={w.word} className="shrink-0 w-10 h-10 rounded-full bg-emerald-600 hover:bg-emerald-500 flex items-center justify-center text-lg transition-colors" title="Nghe phát âm">🔊</SpeakBtn>
               </div>
               <div className="mt-3 text-slate-100 font-medium">{w.meaning}</div>
               {w.definition && (
@@ -613,7 +627,7 @@ export default function Home() {
                     <span>English definition</span>
                     <div className="flex gap-1">
                       <CopyBtn text={w.definition} />
-                      <button onClick={() => speak(w.definition)} className="shrink-0 rounded-md bg-violet-800/70 px-2 py-1 normal-case text-violet-100 hover:bg-violet-700" title="Đọc định nghĩa tiếng Anh">🔊 Đọc</button>
+                      <SpeakBtn text={w.definition} className="shrink-0 rounded-md bg-violet-800/70 px-2 py-1 normal-case text-violet-100 hover:bg-violet-700" title="Đọc định nghĩa tiếng Anh">🔊 Đọc</SpeakBtn>
                     </div>
                   </div>
                   <div className="mt-1 text-sm text-slate-200 leading-relaxed">{clickableText(w.definition)}</div>
@@ -642,9 +656,9 @@ export default function Home() {
                       <span className="text-slate-500">Trái nghĩa:</span>{!w.antonymsInBook && <AiTag />} {clickableText(w.antonyms)}<CopyBtn text={w.antonyms} />
                     </div>
                   )}
-                  {w.collocations?.length > 0 && <div className="mt-3 rounded-lg border border-teal-800/70 bg-teal-950/40 p-3"><div className="text-xs font-semibold uppercase tracking-wide text-teal-300">Collocation</div>{w.collocations.map((c, ci) => <div key={ci} className="mt-2 text-sm"><div className="font-medium text-teal-100">{clickableText(c.phrase)}<CopyBtn text={c.phrase} /> <button onClick={() => speak(c.phrase)} className="text-xs text-teal-300 hover:text-white">🔊</button></div><div className="mt-1 text-teal-200/70">{c.meaning}{c.note && ` — ${c.note}`}</div></div>)}</div>}
+                  {w.collocations?.length > 0 && <div className="mt-3 rounded-lg border border-teal-800/70 bg-teal-950/40 p-3"><div className="text-xs font-semibold uppercase tracking-wide text-teal-300">Collocation</div>{w.collocations.map((c, ci) => <div key={ci} className="mt-2 text-sm"><div className="font-medium text-teal-100">{clickableText(c.phrase)}<CopyBtn text={c.phrase} /> <SpeakBtn text={c.phrase} className="text-xs text-teal-300 hover:text-white">🔊</SpeakBtn></div><div className="mt-1 text-teal-200/70">{c.meaning}{c.note && ` — ${c.note}`}</div></div>)}</div>}
                   {w.note && <div className="text-sm text-amber-400 mt-2">💡 {w.note}</div>}
-                  <button onClick={() => speak(w.example)} className="mt-3 text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">🔊 Nghe ví dụ</button>
+                  <SpeakBtn text={w.example} className="mt-3 text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">🔊 Nghe ví dụ</SpeakBtn>
                 </div>
               </details>
             </div>
@@ -686,7 +700,7 @@ export default function Home() {
 
             {grammar.everydayContext && <div className="rounded-xl border border-sky-800 bg-sky-950/50 p-4">
               <div className="mb-2 text-sm font-semibold text-sky-300">1. Bắt đầu từ tình huống quen thuộc</div>
-              <div className="text-sm text-slate-100">{clickableText(grammar.everydayContext.english)}<CopyBtn text={grammar.everydayContext.english} /> <button onClick={() => speak(grammar.everydayContext.english)} className="text-xs text-slate-400 hover:text-white">🔊</button></div>
+              <div className="text-sm text-slate-100">{clickableText(grammar.everydayContext.english)}<CopyBtn text={grammar.everydayContext.english} /> <SpeakBtn text={grammar.everydayContext.english} className="text-xs text-slate-400 hover:text-white">🔊</SpeakBtn></div>
               <div className="mt-1 text-sm italic text-slate-400">{grammar.everydayContext.vietnamese}<SpeakViBtn text={grammar.everydayContext.vietnamese} /></div>
               {grammar.everydayContext.question && <div className="mt-3 rounded-lg bg-slate-950 p-3 text-sm text-amber-200">🤔 {grammar.everydayContext.question}<SpeakViBtn text={grammar.everydayContext.question} /></div>}
             </div>}
@@ -712,7 +726,7 @@ export default function Home() {
                       <div key={ei} className="rounded-lg bg-slate-950 border border-slate-800 p-3">
                         <div className="flex flex-wrap items-start gap-1 break-words text-sm text-slate-200">
                           <span>🔹</span><span>{clickableText(ex.english)}</span><CopyBtn text={ex.english} />
-                          <button onClick={() => speak(ex.english)} className="ml-1 shrink-0 text-xs text-slate-500 hover:text-slate-300">🔊</button>
+                          <SpeakBtn text={ex.english} className="ml-1 shrink-0 text-xs text-slate-500 hover:text-slate-300">🔊</SpeakBtn>
                         </div>
                         <div className="mt-1 break-words pl-5 text-sm italic text-slate-400">{ex.vietnamese}<SpeakViBtn text={ex.vietnamese} /></div>
                       </div>
@@ -818,7 +832,7 @@ export default function Home() {
               {lookup.synonyms && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Đồng nghĩa: </span><AiTag /> {lookup.synonyms}</div>}
               {lookup.antonyms && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Trái nghĩa: </span><AiTag /> {lookup.antonyms}</div>}
               {lookup.easyReading && <div className="mt-4 rounded-xl border border-sky-900 bg-sky-950/50 p-3 text-sm leading-relaxed text-sky-100"><span className="font-semibold text-sky-300">Dễ đọc: </span>{lookup.easyReading}</div>}
-              <button onClick={() => speak(lookup.word)} className="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-500">🔊 Nghe từ</button>
+              <SpeakBtn text={lookup.word} className="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-500">🔊 Nghe từ</SpeakBtn>
             </>}
           </div>
         </div>
