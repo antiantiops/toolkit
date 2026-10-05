@@ -617,6 +617,11 @@ export default function Home() {
                       <span className="text-slate-500">Đồng nghĩa:</span> {clickableText(w.synonyms)}<CopyBtn text={w.synonyms} />
                     </div>
                   )}
+                  {w.antonyms && (
+                    <div className="text-sm text-slate-400">
+                      <span className="text-slate-500">Trái nghĩa:</span> {clickableText(w.antonyms)}<CopyBtn text={w.antonyms} />
+                    </div>
+                  )}
                   {w.collocations?.length > 0 && <div className="mt-3 rounded-lg border border-teal-800/70 bg-teal-950/40 p-3"><div className="text-xs font-semibold uppercase tracking-wide text-teal-300">Collocation</div>{w.collocations.map((c, ci) => <div key={ci} className="mt-2 text-sm"><div className="font-medium text-teal-100">{clickableText(c.phrase)}<CopyBtn text={c.phrase} /> <button onClick={() => speak(c.phrase)} className="text-xs text-teal-300 hover:text-white">🔊</button></div><div className="mt-1 text-teal-200/70">{c.meaning}{c.note && ` — ${c.note}`}</div></div>)}</div>}
                   {w.note && <div className="text-sm text-amber-400 mt-2">💡 {w.note}</div>}
                   <button onClick={() => speak(w.example)} className="mt-3 text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">🔊 Nghe ví dụ</button>
@@ -791,6 +796,7 @@ export default function Home() {
               <div className="mt-4 text-lg font-medium text-white">{lookup.meaning}</div>
               {lookup.usage && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Cách dùng: </span>{lookup.usage}</div>}
               {lookup.synonyms && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Đồng nghĩa: </span>{lookup.synonyms}</div>}
+              {lookup.antonyms && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Trái nghĩa: </span>{lookup.antonyms}</div>}
               {lookup.easyReading && <div className="mt-4 rounded-xl border border-sky-900 bg-sky-950/50 p-3 text-sm leading-relaxed text-sky-100"><span className="font-semibold text-sky-300">Dễ đọc: </span>{lookup.easyReading}</div>}
               <button onClick={() => speak(lookup.word)} className="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-500">🔊 Nghe từ</button>
             </>}

@@ -17,12 +17,13 @@ For each word, provide:
 7. definition: Short English dictionary definition. If an English definition is printed beside word in image, preserve its meaning; otherwise write concise accurate definition.
 8. definitionVietnamese: Natural Vietnamese translation of definition.
 9. easyReading: Phiên âm bồi tiếng Việt chuẩn theo IPA tiếng Anh (ví dụ: /oʊ/ -> "âu", /ˈpetʃoʊ/ -> "pé-châu", không đọc vẹt mặt chữ như "pê-chô"). Đánh dấu sắc/huyền theo trọng âm IPA. Format: "<word> = <meaning>. Đọc gần như “...”, lưu ý âm ...".
-10. synonyms: 1-2 synonyms if applicable (comma separated), or empty string
-11. collocations: 1-3 useful fixed word combinations with this word, especially one from example. Array items: {"phrase":"English phrase","meaning":"Vietnamese meaning","note":"short Vietnamese usage tip"}. Use [] when none.
-12. note: A short learning tip or usage note in Vietnamese, or empty string
+10. synonyms: If the image prints synonyms for this word (labels like "Syn", "Syn.", "Synonym", "Synonyms"), copy them exactly, comma separated. Otherwise give 1-2 accurate synonyms if applicable, or empty string
+11. antonyms: If the image prints antonyms for this word (labels like "Ant", "Ant.", "Antonym", "Opp", "Opposite"), copy them exactly, comma separated. Otherwise give 1-2 accurate antonyms if applicable, or empty string
+12. collocations: 1-3 useful fixed word combinations with this word, especially one from example. Array items: {"phrase":"English phrase","meaning":"Vietnamese meaning","note":"short Vietnamese usage tip"}. Use [] when none.
+13. note: A short learning tip or usage note in Vietnamese, or empty string
 
 Respond ONLY with a valid JSON array, no markdown fences, no explanation:
-[{"word":"sand","ipa":"/s\u00E6nd/","meaning":"c\u00E1t","partOfSpeech":"noun","definition":"A loose substance made of very small pieces of rock.","definitionVietnamese":"M\u1ED9t ch\u1EA5t r\u1EDDi g\u1ED3m nh\u1EEFng m\u1EA3nh \u0111\u00E1 r\u1EA5t nh\u1ECF.","easyReading":"Sand = c\u00E1t. \u0110\u1ECDc g\u1EA7n nh\u01B0 \u201Cxand\u201D, \u00E2m /s/ r\u00F5 \u1EDF \u0111\u1EA7u v\u00E0 /d/ \u1EDF cu\u1ED1i.","example":"The children play in the sand.","exampleVietnamese":"B\u1ECDn tr\u1EBB ch\u01A1i trong c\u00E1t.","synonyms":"","note":"Kh\u00F4ng \u0111\u1EBFm \u0111\u01B0\u1EE3c khi n\u00F3i chung v\u1EC1 c\u00E1t."}]`;
+[{"word":"sand","ipa":"/s\u00E6nd/","meaning":"c\u00E1t","partOfSpeech":"noun","definition":"A loose substance made of very small pieces of rock.","definitionVietnamese":"M\u1ED9t ch\u1EA5t r\u1EDDi g\u1ED3m nh\u1EEFng m\u1EA3nh \u0111\u00E1 r\u1EA5t nh\u1ECF.","easyReading":"Sand = c\u00E1t. \u0110\u1ECDc g\u1EA7n nh\u01B0 \u201Cxand\u201D, \u00E2m /s/ r\u00F5 \u1EDF \u0111\u1EA7u v\u00E0 /d/ \u1EDF cu\u1ED1i.","example":"The children play in the sand.","exampleVietnamese":"B\u1ECDn tr\u1EBB ch\u01A1i trong c\u00E1t.","synonyms":"","antonyms":"","note":"Kh\u00F4ng \u0111\u1EBFm \u0111\u01B0\u1EE3c khi n\u00F3i chung v\u1EC1 c\u00E1t."}]`;
 
 export async function POST(request) {
   try {

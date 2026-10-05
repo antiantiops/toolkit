@@ -25,7 +25,8 @@ Return ONLY JSON with string fields:
   "meaning": "Vietnamese meaning in this context",
   "easyReading": "Phiên âm bồi chuẩn theo âm IPA tiếng Anh sang âm đọc tiếng Việt (ví dụ: /ˈpetʃoʊ/ -> 'pé-châu', /ˈkʌv.ɚz/ -> 'cớ-vờ-z', /ˈwɔː.tər/ -> 'oá-tờ', /oʊ/ -> 'âu'). TUYỆT ĐỐI không đọc vẹt theo mặt chữ kiểu tiếng Việt hay tiếng Pháp (như 'pê-chô'). Đánh dấu sắc/huyền theo đúng trọng âm IPA.",
   "usage": "short Vietnamese usage explanation and one English example with Vietnamese translation",
-  "synonyms": "1-3 context-appropriate alternatives with Vietnamese meanings"
+  "synonyms": "1-3 context-appropriate alternatives with Vietnamese meanings",
+  "antonyms": "1-3 context-appropriate opposites with Vietnamese meanings, or empty string"
 }
 If context is empty, use common sense and mention ambiguity if needed.`;
     const res = await fetch(`${NINEROUTER_URL}/v1/chat/completions`, {
