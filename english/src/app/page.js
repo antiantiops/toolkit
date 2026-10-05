@@ -787,7 +787,7 @@ export default function Home() {
                       return (
                         <button key={opt} disabled={gSubmitted} onClick={() => setGChooseAnswers((v) => ({ ...v, [qi]: letter }))}
                           className={`rounded-lg border px-3 py-2.5 text-left text-sm transition-colors ${gSubmitted ? (letter === q.answer ? "border-emerald-500 bg-emerald-950 text-emerald-200" : gChooseAnswers[qi] === letter ? "border-red-500 bg-red-950 text-red-200" : "border-slate-700 text-slate-400") : gChooseAnswers[qi] === letter ? "border-amber-400 bg-amber-950 text-amber-100" : "border-slate-700 bg-slate-900 hover:border-purple-400"}`}>
-                          {clickableText(opt)}
+                          {opt}
                         </button>
                       );
                     })}</div>
