@@ -46,6 +46,7 @@ export default function Home() {
   const [gSubmitted, setGSubmitted] = useState(false);
   const gFileRef = useRef(null);
 
+  const [confirmAnalyze, setConfirmAnalyze] = useState(null);
   const [cropPending, setCropPending] = useState(null);
   const selectImage = (file, target) => {
     if (!file || !file.type.startsWith("image/")) return;
@@ -69,13 +70,14 @@ export default function Home() {
     selectImage(e.dataTransfer.files[0], "vocab");
   }, [handleFile]);
 
-  const analyze = async () => {
-    if (!image) return;
+  const analyze = async (targetFile = null) => {
+    const fileToAnalyze = targetFile instanceof File || targetFile instanceof Blob ? targetFile : image;
+    if (!fileToAnalyze) return;
     setLoading(true);
     setError(null);
     try {
       const formData = new FormData();
-      formData.append("image", image);
+      formData.append("image", fileToAnalyze);
       const res = await fetch("/api/analyze", { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Server error");
@@ -106,13 +108,14 @@ export default function Home() {
     selectImage(e.dataTransfer.files[0], "grammar");
   }, [handleGFile]);
 
-  const analyzeGrammar = async () => {
-    if (!gImage) return;
+  const analyzeGrammar = async (targetFile = null) => {
+    const fileToAnalyze = targetFile instanceof File || targetFile instanceof Blob ? targetFile : gImage;
+    if (!fileToAnalyze) return;
     setGLoading(true);
     setGError(null);
     try {
       const formData = new FormData();
-      formData.append("image", gImage);
+      formData.append("image", fileToAnalyze);
       const res = await fetch("/api/grammar", { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Server error");
@@ -240,9 +243,50 @@ export default function Home() {
         const target = cropPending.target;
         setCropPending(null);
         if (target === "quick") lookupText(file);
-        else if (target === "grammar") handleGFile(file);
-        else handleFile(file);
+        else if (target === "grammar") {
+          handleGFile(file);
+          setConfirmAnalyze({ file, target: "grammar" });
+        } else {
+          handleFile(file);
+          setConfirmAnalyze({ file, target: "vocab" });
+        }
       }} />}
+
+      {confirmAnalyze && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setConfirmAnalyze(null)} onKeyDown={e => { if (e.key === "Escape") setConfirmAnalyze(null); }}>
+          <div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 p-6 text-center shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600/20 text-3xl">
+              🔍
+            </div>
+            <h3 className="text-lg font-bold text-white mb-2">Tiến hành phân tích ảnh này?</h3>
+            <p className="text-sm text-slate-400 mb-6 leading-relaxed">
+              {confirmAnalyze.target === "grammar"
+                ? "Bắt đầu phân tích cấu trúc ngữ pháp từ ảnh đã chọn."
+                : "Bắt đầu phân tích từ vựng và tạo bài luyện tập từ ảnh đã chọn."}
+            </p>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setConfirmAnalyze(null)} className="flex-1 rounded-xl bg-slate-800 py-3 text-sm font-semibold text-slate-300 hover:bg-slate-700 transition-colors">
+                Để sau
+              </button>
+              <button
+                type="button"
+                autoFocus
+                onClick={() => {
+                  const { file, target } = confirmAnalyze;
+                  setConfirmAnalyze(null);
+                  if (target === "grammar") analyzeGrammar(file);
+                  else analyze(file);
+                }}
+                className={`flex-1 rounded-xl py-3 text-sm font-semibold text-white shadow-lg transition-colors ${
+                  confirmAnalyze.target === "grammar" ? "bg-purple-600 hover:bg-purple-500" : "bg-blue-600 hover:bg-blue-500"
+                }`}
+              >
+                OK, phân tích
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <h1 className="text-2xl sm:text-3xl font-bold text-center mb-5 sm:mb-8 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
         📚 English Learner
