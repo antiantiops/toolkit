@@ -75,6 +75,8 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
   };
 
   const [activeSentenceId, setActiveSentenceId] = useState(null);
+  const [selectedSentence, setSelectedSentence] = useState(null);
+  const [draftLang, setDraftLang] = useState("vi");
 
   const fetchModelDraft = async () => {
     setLoadingModel(true);
@@ -533,29 +535,53 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
             <div className="flex flex-wrap items-center justify-between gap-3 mb-3 pb-3 border-b border-slate-800">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-teal-300 bg-teal-950/80 border border-teal-800 rounded px-2 py-0.5">
-                  🇻🇳 🇬🇧 Bài mẫu song ngữ A2-B1 (Khớp câu & cụm từ)
+                  🇻🇳 🇬🇧 Bài mẫu email đơn giản
                 </span>
                 <h3 className="text-base sm:text-lg font-bold text-white mt-1">
-                  Email mẫu câu ngắn đơn giản (Click vào câu để xem khớp Việt - Anh & cụm từ)
+                  Đoạn văn email tự nhiên (Bấm vào câu để tra chi tiết)
                 </h3>
               </div>
-              {!modelDraft && (
-                <button
-                  type="button"
-                  onClick={fetchModelDraft}
-                  disabled={loadingModel}
-                  className="rounded-xl bg-teal-600 hover:bg-teal-500 disabled:bg-slate-700 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow transition-colors flex items-center gap-1.5"
-                >
-                  {loadingModel ? (
-                    <>
-                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Đang soạn bài mẫu song ngữ...</span>
-                    </>
-                  ) : (
-                    "✨ Tạo bài mẫu song ngữ"
-                  )}
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {modelDraft && (
+                  <div className="inline-flex rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setDraftLang("vi")}
+                      className={`px-3 py-1 rounded-lg transition-colors ${
+                        draftLang === "vi" ? "bg-teal-600 text-white shadow" : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      🇻🇳 Tiếng Việt
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDraftLang("en")}
+                      className={`px-3 py-1 rounded-lg transition-colors ${
+                        draftLang === "en" ? "bg-teal-600 text-white shadow" : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      🇬🇧 English
+                    </button>
+                  </div>
+                )}
+                {!modelDraft && (
+                  <button
+                    type="button"
+                    onClick={fetchModelDraft}
+                    disabled={loadingModel}
+                    className="rounded-xl bg-teal-600 hover:bg-teal-500 disabled:bg-slate-700 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow transition-colors flex items-center gap-1.5"
+                  >
+                    {loadingModel ? (
+                      <>
+                        <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>Đang soạn bài mẫu...</span>
+                      </>
+                    ) : (
+                      "✨ Tạo bài mẫu email"
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
 
             {modelErr && (
@@ -564,92 +590,124 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
               </div>
             )}
 
-            {modelDraft ? (
-              <div className="space-y-5">
-                <div className="flex items-center justify-between text-xs text-slate-300 bg-slate-950/60 border border-slate-800 rounded-xl p-3">
-                  <p className="italic m-0">
-                    💡 Bấm vào <b className="text-teal-300">từng câu</b> để highlight đồng bộ bản dịch tiếng Việt và các cụm từ quan trọng.
-                  </p>
-                  {modelDraft.totalWords && (
-                    <span className="shrink-0 rounded-md bg-teal-950 border border-teal-800 text-teal-300 px-2 py-0.5 font-mono text-[11px]">
-                      ~{modelDraft.totalWords} từ
+            {/* Popup chi tiết câu khi bấm trên điện thoại / desktop */}
+            {selectedSentence && (
+              <div
+                className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 p-0 sm:p-4 backdrop-blur-sm"
+                onClick={() => setSelectedSentence(null)}
+              >
+                <div
+                  className="w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl border border-teal-600 bg-slate-900 p-5 sm:p-6 text-left shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <span className="text-xs uppercase font-bold text-teal-400 tracking-wider">
+                      🔍 Chi tiết đối chiếu câu & từ vựng
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSentence(null)}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* Bản tiếng Anh */}
+                  <div className="rounded-xl bg-slate-950/80 border border-slate-800 p-3.5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">🇬🇧 Tiếng Anh:</span>
+                      <div className="flex items-center gap-1">
+                        <SpeakBtn text={selectedSentence.en} className="rounded-lg bg-teal-900/80 px-2.5 py-1 text-xs text-white hover:bg-teal-800" />
+                        <CopyBtn text={selectedSentence.en} />
+                      </div>
+                    </div>
+                    <p className="text-base font-semibold text-teal-200 leading-relaxed m-0">
+                      {selectedSentence.en}
+                    </p>
+                  </div>
+
+                  {/* Bản dịch tiếng Việt */}
+                  <div className="rounded-xl bg-slate-950/80 border border-slate-800 p-3.5 space-y-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400/90">🇻🇳 Nghĩa tiếng Việt:</span>
+                    <p className="text-sm font-medium text-slate-200 leading-relaxed m-0">
+                      {selectedSentence.vi}
+                    </p>
+                  </div>
+
+                  {/* Cụm từ quan trọng */}
+                  {(selectedSentence.phrases || []).length > 0 && (
+                    <div className="rounded-xl bg-slate-950/80 border border-teal-900/60 p-3.5 space-y-2">
+                      <span className="text-xs font-bold text-teal-300 uppercase tracking-wide block">
+                        🧩 Các cụm từ ăn điểm trong câu:
+                      </span>
+                      <div className="space-y-2">
+                        {selectedSentence.phrases.map((ph, phi) => (
+                          <div
+                            key={phi}
+                            className="flex flex-col gap-1 rounded-lg bg-slate-900 p-2.5 border border-slate-800"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-sm font-bold text-white">{ph.en}</span>
+                              <span className="text-xs font-medium text-amber-300">{ph.vi}</span>
+                            </div>
+                            {ph.note && <span className="text-[11px] text-slate-400 italic">💡 {ph.note}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
+
+                  <div className="text-right pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSentence(null)}
+                      className="w-full sm:w-auto rounded-xl bg-slate-800 hover:bg-slate-700 px-6 py-2.5 text-sm font-semibold text-white transition-colors"
+                    >
+                      Đóng
+                    </button>
+                  </div>
                 </div>
+              </div>
+            )}
+
+            {modelDraft ? (
+              <div className="space-y-4">
+                <p className="text-xs text-slate-300 italic mb-2">
+                  💡 Đoạn văn email liền mạch. Bấm vào <b className="text-teal-300">bất kỳ câu nào</b> để bật popup đối chiếu tiếng Anh - Việt và từ vựng.
+                </p>
 
                 {(modelDraft.paragraphs || []).map((p, pi) => {
                   const sentences = p.sentences || [];
 
                   return (
-                    <div key={pi} className="rounded-xl border border-slate-700/80 bg-slate-950/80 p-4 space-y-3">
+                    <div key={pi} className="rounded-xl border border-slate-700/80 bg-slate-950/90 p-4 sm:p-5 space-y-2.5">
                       <div className="text-xs font-bold text-teal-400 uppercase tracking-wide flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-teal-400 inline-block" />
                         {p.part}
                       </div>
 
-                      <div className="space-y-2.5">
+                      {/* Hiển thị như một đoạn văn tự nhiên (flowing text) */}
+                      <div className="text-sm sm:text-base leading-relaxed text-slate-100 space-x-1.5">
                         {sentences.map((st, si) => {
-                          const sId = st.id || `p${pi}_s${si}`;
-                          const isActive = activeSentenceId === sId;
-                          const phrases = st.phrases || [];
-
+                          const displayText = draftLang === "en" ? st.en : st.vi;
                           return (
-                            <div
-                              key={sId}
-                              onClick={() => setActiveSentenceId(isActive ? null : sId)}
-                              className={`cursor-pointer rounded-xl p-3.5 border transition-all ${
-                                isActive
-                                  ? "bg-teal-950/50 border-teal-500 shadow-md ring-1 ring-teal-500/50"
-                                  : "bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900"
-                              }`}
+                            <span
+                              key={si}
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => setSelectedSentence(st)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  setSelectedSentence(st);
+                                }
+                              }}
+                              className="inline cursor-pointer rounded px-1.5 py-0.5 transition-colors hover:bg-teal-900/60 hover:text-teal-200 underline decoration-teal-500/40 decoration-dotted underline-offset-4 focus:outline-none"
+                              title="Bấm để xem đối chiếu song ngữ"
                             >
-                              {/* English sentence */}
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className="text-[10px] uppercase font-bold text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">
-                                      EN
-                                    </span>
-                                    <p className={`text-sm sm:text-base font-semibold leading-relaxed m-0 ${isActive ? "text-teal-200" : "text-white"}`}>
-                                      {st.en}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                                  <SpeakBtn text={st.en} className="rounded-lg bg-slate-800 hover:bg-slate-700 px-2 py-1 text-xs" />
-                                  <CopyBtn text={st.en} />
-                                </div>
-                              </div>
-
-                              {/* Vietnamese translation */}
-                              <div className="mt-2 pt-2 border-t border-slate-800/80 flex items-start gap-2">
-                                <span className="text-[10px] uppercase font-bold text-amber-400/80 bg-amber-950/60 px-1.5 py-0.5 rounded shrink-0 mt-0.5">
-                                  VI
-                                </span>
-                                <p className={`text-xs sm:text-sm leading-relaxed m-0 ${isActive ? "text-amber-200 font-medium" : "text-slate-300"}`}>
-                                  {st.vi}
-                                </p>
-                              </div>
-
-                              {/* Mapped phrases within this sentence */}
-                              {phrases.length > 0 && (
-                                <div className="mt-3 pt-2.5 border-t border-slate-800/60 flex flex-wrap items-center gap-2">
-                                  <span className="text-[11px] font-semibold text-slate-400">Cụm từ khớp:</span>
-                                  {phrases.map((ph, phi) => (
-                                    <span
-                                      key={phi}
-                                      className="inline-flex items-center gap-1.5 text-xs bg-slate-800/90 hover:bg-slate-700 text-teal-300 border border-teal-800/60 rounded-lg px-2.5 py-1 transition-colors"
-                                      title={ph.note || ""}
-                                    >
-                                      <span className="font-semibold text-white">{ph.en}</span>
-                                      <span className="text-slate-400">↔</span>
-                                      <span className="text-amber-300">{ph.vi}</span>
-                                      {ph.note && <span className="text-[10px] text-slate-400 italic">({ph.note})</span>}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
+                              {displayText}{" "}
+                            </span>
                           );
                         })}
                       </div>
@@ -659,7 +717,7 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
               </div>
             ) : !loadingModel ? (
               <div className="text-center py-6 text-slate-400 text-xs sm:text-sm">
-                Bấm nút <b className="text-teal-300">"Tạo bài mẫu song ngữ"</b> để AI viết bài đơn giản (A2-B1) có đối chiếu từng câu Anh - Việt và cụm từ.
+                Bấm nút <b className="text-teal-300">"Tạo bài mẫu email"</b> để AI viết bài đơn giản (A2-B1) dạng văn bản tự nhiên.
               </div>
             ) : null}
           </div>
