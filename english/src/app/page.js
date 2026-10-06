@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import ImageCrop from "./ImageCrop";
 import LessonChat from "./LessonChat";
 import Listening from "./Listening";
@@ -111,6 +111,32 @@ export default function Home() {
   };
 
   // --- Vocab handlers ---
+  // Load cached session from server on mount
+  useEffect(() => {
+    fetch("/api/session")
+      .then((res) => res.json())
+      .then((res) => {
+        if (res.session?.words?.length) {
+          setWords(res.session.words);
+          if (res.session.preview) setPreview(res.session.preview);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const clearCachedLesson = async () => {
+    try {
+      await fetch("/api/session", { method: "DELETE" });
+    } catch {}
+    setWords([]);
+    setPreview(null);
+    setImage(null);
+    setPractice(false);
+    setSubmitted(false);
+    setMatchAnswers({});
+    setFillAnswers({});
+  };
+
   const handleFile = useCallback((file) => {
     if (!file || !file.type.startsWith("image/")) return;
     setPreview(URL.createObjectURL(file));
@@ -623,7 +649,19 @@ export default function Home() {
 
         {error && <div className="bg-red-950 border border-red-800 rounded-xl p-4 mb-6 text-red-300">❌ {error}</div>}
 
-        {words.length > 0 && <p className="text-center text-slate-400 mb-4">✅ Tìm thấy {words.length} từ vựng</p>}
+        {words.length > 0 && (
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <p className="text-slate-400">✅ Tìm thấy {words.length} từ vựng</p>
+            <button
+              type="button"
+              onClick={clearCachedLesson}
+              className="text-xs text-red-400 hover:text-red-300 hover:underline px-2 py-1 rounded bg-slate-800/80"
+              title="Xóa bài học đang lưu trên server"
+            >
+              ✕ Xóa bài / Bài mới
+            </button>
+          </div>
+        )}
 
         {words.length > 0 && !practice && (
           <div className="mb-5 rounded-2xl border border-amber-600/40 bg-amber-950/30 p-4 text-center">

@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
+import { saveSession } from "../session/storage";
 
 const NINEROUTER_URL = process.env.NINEROUTER_URL || "http://192.168.101.36:20128";
 const NINEROUTER_KEY = process.env.NINEROUTER_KEY || "";
@@ -75,7 +77,26 @@ export async function POST(request) {
     }
 
     const words = JSON.parse(jsonMatch[0]);
-    return NextResponse.json({ words });
+
+    // Cookie session management:
+    let sid = request.cookies.get("vocab_sid")?.value;
+    const isNewSid = !sid;
+    if (isNewSid) sid = randomUUID();
+
+    // Cache words and preview on server for 24 hours
+    saveSession(sid, { words, preview: dataUrl });
+
+    const response = NextResponse.json({ words, preview: dataUrl });
+    if (isNewSid) {
+      response.cookies.set("vocab_sid", sid, {
+        maxAge: 86400,
+        path: "/",
+        sameSite: "lax",
+        httpOnly: true,
+      });
+    }
+
+    return response;
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
