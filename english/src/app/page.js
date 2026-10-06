@@ -1,4 +1,5 @@
 "use client";
+import { fetchWithRetry } from "./fetch-helper";
 import { useState, useRef, useCallback, useEffect } from "react";
 import ImageCrop from "./ImageCrop";
 import LessonChat from "./LessonChat";
@@ -224,7 +225,7 @@ export default function Home() {
       const formData = new FormData();
       formData.append("image", fileToAnalyze);
       // ponytail: 120s timeout covers slow cellular/international links. Add progress bar if model time grows.
-      const res = await fetch("/api/analyze", { method: "POST", body: formData, signal: AbortSignal.timeout(120000) });
+      const res = await fetchWithRetry("/api/analyze", { method: "POST", body: formData, timeout: 120000 }, 2, 1500);
       const data = await parseApiResponse(res);
       setWords(data.words || []);
       setPractice(false);
@@ -279,7 +280,7 @@ export default function Home() {
       const formData = new FormData();
       if (f1) formData.append("image1", f1);
       if (f2) formData.append("image2", f2);
-      const res = await fetch("/api/writing", { method: "POST", body: formData });
+      const res = await fetchWithRetry("/api/writing", { method: "POST", body: formData, timeout: 120000 }, 2, 1500);
       const data = await parseApiResponse(res);
       setWriting(data.writing);
     } catch (e) {
@@ -297,7 +298,7 @@ export default function Home() {
     try {
       const formData = new FormData();
       formData.append("image", fileToAnalyze);
-      const res = await fetch("/api/grammar", { method: "POST", body: formData });
+      const res = await fetchWithRetry("/api/grammar", { method: "POST", body: formData, timeout: 120000 }, 2, 1500);
       const data = await parseApiResponse(res);
       setGrammar(data.grammar);
       setGPractice(false);
@@ -317,7 +318,7 @@ export default function Home() {
     setGRewriteAnswers({});
     setGSubmitted(false);
     try {
-      const res = await fetch("/api/grammar-practice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ grammar }) });
+      const res = await fetchWithRetry("/api/grammar-practice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ grammar }), timeout: 90000 }, 2, 1500);
       const data = await parseApiResponse(res);
       setGPracticeData(data);
     } catch (e) { setGError(formatErrorMessage(e)); }
@@ -337,7 +338,7 @@ export default function Home() {
       form.append("text", text);
       form.append("direction", dir);
       if (imageFile) form.append("image", imageFile);
-      const res = await fetch("/api/lookup", { method: "POST", body: form });
+      const res = await fetchWithRetry("/api/lookup", { method: "POST", body: form, timeout: 60000 }, 2, 1000);
       const data = await parseApiResponse(res);
       setQuickResult(data.result);
     } catch (e) { setQuickResult({ error: formatErrorMessage(e) }); }
@@ -372,7 +373,7 @@ export default function Home() {
     setGroupAnswers({});
     setSubmitted(false);
     try {
-      const res = await fetch("/api/practice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ words }) });
+      const res = await fetchWithRetry("/api/practice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ words }), timeout: 90000 }, 2, 1500);
       const data = await parseApiResponse(res);
       setGroupQuestions(data.groups);
       setGeneratedFills(data.fills);

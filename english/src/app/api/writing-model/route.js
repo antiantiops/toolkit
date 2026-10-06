@@ -14,51 +14,73 @@ export async function POST(request) {
     const headers = { "Content-Type": "application/json" };
     if (NINEROUTER_KEY) headers.Authorization = "Bearer " + NINEROUTER_KEY;
 
-    const prompt = `Bạn là giáo viên chuyên dạy viết tiếng Anh công việc (Business English Writing) cho học viên Việt Nam.
-Dựa vào thông tin đề bài Self-Writing:
-- Tiêu đề: ${title || task.title || "Self-Writing Task"}
-- Tình huống: ${task.scenario || ""}
-- Tình huống tiếng Việt: ${task.scenarioVietnamese || ""}
-- Người gửi: ${task.sender || "Nhân viên"}
-- Người nhận: ${task.recipient || "Sếp / Quản lý"}
-- Yêu cầu bắt buộc: ${JSON.stringify(task.requirements || [])}
-- Word Bank (10 từ cần dùng): ${JSON.stringify(task.wordBank || [])}
+    const prompt = `You are an English writing teacher helping Vietnamese adult beginners write simple, clear business emails.
 
-Hãy viết một BÀI MẪU HOÀN CHỈNH BẰNG TIẾNG VIỆT TỰ NHIÊN (không bọc dấu ngoặc vuông [], viết thành văn trôi chảy, liền mạch như một email công việc thực thụ).
-Bố cục email gồm 4 phần:
-1. Tiêu đề email & Lời chào (Subject line & Salutation)
-2. Mở đầu: Cảm ơn và ghi nhận thiện chí giữ chân của sếp
-3. Thân bài: Đàm phán điều kiện cụ thể (đề xuất xét lại mức lương, trách nhiệm mới, báo cáo)
-4. Cam kết & Kết bài: Thiết lập đánh giá định kỳ hàng quý, hẹn trao đổi trực tiếp & Chào kết
+Task Information:
+- Title: ${title || task.title || "Self-Writing Task"}
+- Scenario: ${task.scenario || ""}
+- Scenario (Vietnamese): ${task.scenarioVietnamese || ""}
+- Sender: ${task.sender || "Employee"}
+- Recipient: ${task.recipient || "Manager"}
+- Requirements: ${JSON.stringify(task.requirements || [])}
+- Word Bank (Required vocabulary): ${JSON.stringify(task.wordBank || [])}
 
-YÊU CẦU:
-- Văn phong chuyên nghiệp, lịch sự, đúng chuẩn Business.
-- Tự nhiên lồng ghép đầy đủ ý nghĩa của 10 từ trong Word Bank vào bài viết tiếng Việt.
-- Đồng thời cung cấp trước mảng "keyPhrases" cho các cụm từ đắt giá và 10 từ Word Bank để hỗ trợ học viên tra cứu nhanh:
-  + vi: cụm từ tiếng Việt trong bài
-  + en: cụm từ/cấu trúc tiếng Anh tương đương chuẩn Business
-  + ipa: phiên âm IPA
-  + easyReading: cách đọc bồi chuẩn âm IPA cho cả 2 giọng Anh - Anh (UK) và Anh - Mỹ (US) (Format: 🇬🇧 UK: “...” • 🇺🇸 US: “...”)
-  + partOfSpeech: loại từ / vai trò ngữ pháp
-  + contextUsage: cách dùng tiếng Anh trong ngữ cảnh câu này
-  + sentenceEn: câu tiếng Anh hoàn chỉnh tương ứng trong bài
+GOAL:
+Write a SIMPLE, CLEAR, SHORT model email (~100-130 words) at A2-B1 level.
+CRITICAL RULES FOR LANGUAGE:
+1. DO NOT use fancy, overly formal C1/C2 words. Avoid words like "formally request", "sudden complications", "furthermore", "hereby", "undertake".
+2. Use SIMPLE, direct everyday workplace English (Subject + Verb + Object).
+   - BAD: "I am writing to formally request urgent sick leave due to sudden health complications."
+   - GOOD: "I am writing to ask for sick leave today because I am sick." or "I need to take today off because I caught a bad cold."
+3. Natural business structure with 4 short parts:
+   - Part 1: Subject Line & Greeting
+   - Part 2: Main reason / Direct request (simple sentence)
+   - Part 3: Details & coverage plan (who covers, work status)
+   - Part 4: Next step & Sign-off
+4. Naturally use words from the Word Bank in simple sentences.
 
-Trả về DUY NHẤT một JSON hợp lệ, không bọc markdown hay lời giải thích:
+MAPPING REQUIREMENT:
+Break the email down sentence-by-sentence. For every single sentence:
+- Provide "en": clear, simple English sentence.
+- Provide "vi": natural, accurate Vietnamese translation of that exact sentence.
+- Provide "phrases": list of key vocabulary/chunks mapped between English and Vietnamese in this sentence (including any word from Word Bank used).
+  Format of each phrase: { "en": "ask for sick leave", "vi": "xin nghỉ ốm", "note": "cụm từ thông dụng" }
+
+Return ONLY valid JSON matching this exact structure:
 {
-  "title": "Email mẫu hoàn chỉnh bằng tiếng Việt",
+  "title": "Simple Model Email",
+  "totalWords": 110,
   "paragraphs": [
     {
-      "part": "1. Tiêu đề email & Lời chào",
-      "text": "Tiêu đề: Phản hồi đề xuất giữ chân và đề nghị điều chỉnh mức lương\\nKính gửi Quản lý,",
-      "keyPhrases": [
+      "part": "1. Tiêu đề & Lời chào",
+      "sentences": [
         {
-          "vi": "Phản hồi đề xuất giữ chân",
-          "en": "Response to Retention Offer",
-          "ipa": "/rɪˈspɑːns tuː rɪˈtenʃn ˈɔːfər/",
-          "easyReading": "🇬🇧 UK: “ri-s-poón-s tu ri-ten-sần ó-phờ” • 🇺🇸 US: “ri-s-pán-s tu ri-ten-sần á-phơr”",
-          "partOfSpeech": "noun phrase (tiêu đề)",
-          "contextUsage": "Dùng ở dòng Subject. Cấu trúc Response to + Noun phrase ngắn gọn, lịch sự.",
-          "sentenceEn": "Subject: Response to Retention Offer and Request for Salary Revision"
+          "id": "s1",
+          "en": "Subject: Sick Leave Request - [Your Name]",
+          "vi": "Tiêu đề: Đơn xin nghỉ ốm - [Tên bạn]",
+          "phrases": [
+            { "en": "Sick Leave Request", "vi": "Đơn xin nghỉ ốm", "note": "Tiêu đề email xin nghỉ" }
+          ]
+        },
+        {
+          "id": "s2",
+          "en": "Dear Mr. Davis,",
+          "vi": "Kính gửi anh Davis,",
+          "phrases": []
+        }
+      ]
+    },
+    {
+      "part": "2. Lý do xin nghỉ",
+      "sentences": [
+        {
+          "id": "s3",
+          "en": "I am writing to ask for sick leave today because I have a high fever.",
+          "vi": "Tôi viết thư này để xin nghỉ ốm hôm nay vì tôi bị sốt cao.",
+          "phrases": [
+            { "en": "ask for sick leave", "vi": "xin nghỉ ốm", "note": "cấu trúc đơn giản, trực tiếp" },
+            { "en": "have a high fever", "vi": "bị sốt cao", "note": "triệu chứng ốm" }
+          ]
         }
       ]
     }
@@ -68,6 +90,7 @@ Trả về DUY NHẤT một JSON hợp lệ, không bọc markdown hay lời gi�
     const res = await fetch(`${NINEROUTER_URL}/v1/chat/completions`, {
       method: "POST",
       headers,
+      signal: AbortSignal.timeout(120000),
       body: JSON.stringify({
         model: MODEL,
         stream: false,

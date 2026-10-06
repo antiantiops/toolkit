@@ -1,4 +1,5 @@
 "use client";
+import { fetchWithRetry, parseApiResponse, formatErrorMessage } from "./fetch-helper";
 import { useState } from "react";
 
 const COLORS = [
@@ -73,20 +74,21 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
     }
   };
 
+  const [activeSentenceId, setActiveSentenceId] = useState(null);
+
   const fetchModelDraft = async () => {
     setLoadingModel(true);
     setModelErr(null);
     try {
-      const res = await fetch("/api/writing-model", {
+      const res = await fetchWithRetry("/api/writing-model", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ task, title: w.title }),
-      });
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error || "Không tải được bài mẫu");
+      }, 2, 1000);
+      const d = await parseApiResponse(res);
       setModelDraft(d.modelDraft);
     } catch (e) {
-      setModelErr(e.message);
+      setModelErr(formatErrorMessage(e));
     } finally {
       setLoadingModel(false);
     }
@@ -526,15 +528,15 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
             );
           })}
 
-          {/* Vietnamese Interactive Model Draft */}
+          {/* Interactive Bilingual Model Draft (Zero-latency mapped) */}
           <div className="rounded-2xl border border-teal-700/60 bg-gradient-to-b from-slate-900 to-teal-950/20 p-4 sm:p-5 shadow-lg">
             <div className="flex flex-wrap items-center justify-between gap-3 mb-3 pb-3 border-b border-slate-800">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-teal-300 bg-teal-950/80 border border-teal-800 rounded px-2 py-0.5">
-                  🇻🇳 Bài mẫu tiếng Việt hoàn chỉnh
+                  🇻🇳 🇬🇧 Bài mẫu song ngữ A2-B1 (Khớp câu & cụm từ)
                 </span>
                 <h3 className="text-base sm:text-lg font-bold text-white mt-1">
-                  Email mẫu Self-Writing (bấm vào BẤT KỲ TỪ NÀO để tra tiếng Anh & ngữ cảnh)
+                  Email mẫu câu ngắn đơn giản (Click vào câu để xem khớp Việt - Anh & cụm từ)
                 </h3>
               </div>
               {!modelDraft && (
@@ -547,10 +549,10 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
                   {loadingModel ? (
                     <>
                       <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Đang soạn bài mẫu...</span>
+                      <span>Đang soạn bài mẫu song ngữ...</span>
                     </>
                   ) : (
-                    "✨ Tạo bài mẫu tiếng Việt"
+                    "✨ Tạo bài mẫu song ngữ"
                   )}
                 </button>
               )}
@@ -563,52 +565,91 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
             )}
 
             {modelDraft ? (
-              <div className="space-y-4">
-                <p className="text-xs text-slate-300 italic">
-                  💡 Bấm vào <b className="text-teal-300">bất kỳ từ nào</b> trong bài văn mẫu tiếng Việt dưới đây để tra tiếng Anh, phiên âm, cách đọc dễ và cách dùng trong câu.
-                </p>
+              <div className="space-y-5">
+                <div className="flex items-center justify-between text-xs text-slate-300 bg-slate-950/60 border border-slate-800 rounded-xl p-3">
+                  <p className="italic m-0">
+                    💡 Bấm vào <b className="text-teal-300">từng câu</b> để highlight đồng bộ bản dịch tiếng Việt và các cụm từ quan trọng.
+                  </p>
+                  {modelDraft.totalWords && (
+                    <span className="shrink-0 rounded-md bg-teal-950 border border-teal-800 text-teal-300 px-2 py-0.5 font-mono text-[11px]">
+                      ~{modelDraft.totalWords} từ
+                    </span>
+                  )}
+                </div>
+
                 {(modelDraft.paragraphs || []).map((p, pi) => {
-                  const rawText = (p.text || "").replace(/\[|\]/g, "");
-                  const lines = rawText.split("\n");
-                  const keyPhrases = p.keyPhrases || p.phrases || [];
+                  const sentences = p.sentences || [];
 
                   return (
-                    <div key={pi} className="rounded-xl border border-slate-700/80 bg-slate-950/80 p-4">
-                      <div className="text-xs font-bold text-teal-400 uppercase tracking-wide mb-2.5 flex items-center gap-1.5">
+                    <div key={pi} className="rounded-xl border border-slate-700/80 bg-slate-950/80 p-4 space-y-3">
+                      <div className="text-xs font-bold text-teal-400 uppercase tracking-wide flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-teal-400 inline-block" />
                         {p.part}
                       </div>
-                      <div className="text-sm leading-relaxed text-slate-100 select-text space-y-1.5">
-                        {lines.map((line, li) => {
-                          if (!line.trim()) return <div key={li} className="h-2" />;
-                          const tokens = line.split(/([\p{L}\p{N}]+)/u);
+
+                      <div className="space-y-2.5">
+                        {sentences.map((st, si) => {
+                          const sId = st.id || `p${pi}_s${si}`;
+                          const isActive = activeSentenceId === sId;
+                          const phrases = st.phrases || [];
 
                           return (
-                            <p key={li} className="m-0 leading-relaxed">
-                              {tokens.map((tok, ti) => {
-                                const isWord = /[\p{L}\p{N}]/u.test(tok);
-                                if (!isWord) return <span key={ti}>{tok}</span>;
+                            <div
+                              key={sId}
+                              onClick={() => setActiveSentenceId(isActive ? null : sId)}
+                              className={`cursor-pointer rounded-xl p-3.5 border transition-all ${
+                                isActive
+                                  ? "bg-teal-950/50 border-teal-500 shadow-md ring-1 ring-teal-500/50"
+                                  : "bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900"
+                              }`}
+                            >
+                              {/* English sentence */}
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-[10px] uppercase font-bold text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">
+                                      EN
+                                    </span>
+                                    <p className={`text-sm sm:text-base font-semibold leading-relaxed m-0 ${isActive ? "text-teal-200" : "text-white"}`}>
+                                      {st.en}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                  <SpeakBtn text={st.en} className="rounded-lg bg-slate-800 hover:bg-slate-700 px-2 py-1 text-xs" />
+                                  <CopyBtn text={st.en} />
+                                </div>
+                              </div>
 
-                                return (
-                                  <span
-                                    key={ti}
-                                    role="button"
-                                    tabIndex={0}
-                                    onClick={() => handleViClick(tok, line, rawText, keyPhrases)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter" || e.key === " ") {
-                                        e.preventDefault();
-                                        handleViClick(tok, line, rawText, keyPhrases);
-                                      }
-                                    }}
-                                    className="cursor-pointer hover:text-teal-300 hover:underline decoration-teal-400 decoration-dotted underline-offset-4 focus:outline-none"
-                                    title={`Bấm để dịch "${tok}" sang tiếng Anh`}
-                                  >
-                                    {tok}
-                                  </span>
-                                );
-                              })}
-                            </p>
+                              {/* Vietnamese translation */}
+                              <div className="mt-2 pt-2 border-t border-slate-800/80 flex items-start gap-2">
+                                <span className="text-[10px] uppercase font-bold text-amber-400/80 bg-amber-950/60 px-1.5 py-0.5 rounded shrink-0 mt-0.5">
+                                  VI
+                                </span>
+                                <p className={`text-xs sm:text-sm leading-relaxed m-0 ${isActive ? "text-amber-200 font-medium" : "text-slate-300"}`}>
+                                  {st.vi}
+                                </p>
+                              </div>
+
+                              {/* Mapped phrases within this sentence */}
+                              {phrases.length > 0 && (
+                                <div className="mt-3 pt-2.5 border-t border-slate-800/60 flex flex-wrap items-center gap-2">
+                                  <span className="text-[11px] font-semibold text-slate-400">Cụm từ khớp:</span>
+                                  {phrases.map((ph, phi) => (
+                                    <span
+                                      key={phi}
+                                      className="inline-flex items-center gap-1.5 text-xs bg-slate-800/90 hover:bg-slate-700 text-teal-300 border border-teal-800/60 rounded-lg px-2.5 py-1 transition-colors"
+                                      title={ph.note || ""}
+                                    >
+                                      <span className="font-semibold text-white">{ph.en}</span>
+                                      <span className="text-slate-400">↔</span>
+                                      <span className="text-amber-300">{ph.vi}</span>
+                                      {ph.note && <span className="text-[10px] text-slate-400 italic">({ph.note})</span>}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           );
                         })}
                       </div>
@@ -618,14 +659,13 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
               </div>
             ) : !loadingModel ? (
               <div className="text-center py-6 text-slate-400 text-xs sm:text-sm">
-                Bấm nút <b className="text-teal-300">"Tạo bài mẫu tiếng Việt"</b> để AI viết hoàn chỉnh email theo tình huống đề bài và 10 từ Word Bank.
+                Bấm nút <b className="text-teal-300">"Tạo bài mẫu song ngữ"</b> để AI viết bài đơn giản (A2-B1) có đối chiếu từng câu Anh - Việt và cụm từ.
               </div>
             ) : null}
           </div>
         </div>
       )}
-
-      {/* ================= VIEW: WRITE (Dual or Single Task) ================= */}
+{/* ================= VIEW: WRITE (Dual or Single Task) ================= */}
       {((isDual && view === "write") || (isTask && view === "write")) && (
         <div className="space-y-4">
           <div className="rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm text-slate-300">
