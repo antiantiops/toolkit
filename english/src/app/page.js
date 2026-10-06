@@ -394,6 +394,12 @@ export default function Home() {
     return <button onClick={(e) => { e.stopPropagation(); copyText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); }} className="ml-1 inline-flex shrink-0 items-center rounded px-1 py-0.5 text-xs text-slate-500 hover:bg-slate-800 hover:text-slate-300" title="Copy">{copied ? "✓" : "📋"}</button>;
   };
 
+  const clickableText = (text = "") => <span data-lookup-context={text} className="select-text" style={{ WebkitUserSelect: "text", userSelect: "text", WebkitTouchCallout: "default" }}>{text.split(/(\b[A-Za-z]+(?:['-][A-Za-z]+)*\b)/g).map((part, index) =>
+    /^[A-Za-z]+(?:['-][A-Za-z]+)*$/.test(part)
+      ? <span key={index} role="button" tabIndex={0} onClick={() => { lookupWord(part, text); }} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); lookupWord(part, text); } }} className="cursor-pointer hover:rounded hover:bg-sky-900/70 hover:text-sky-200 focus:bg-sky-900/70 focus:outline-none">{part}</span>
+      : part
+  )}</span>;
+
   const renderAnnotatedWords = (raw = "") => {
     if (!raw || typeof raw !== "string") return null;
     const items = [];
