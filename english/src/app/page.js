@@ -49,6 +49,69 @@ function SpeakBtn({ text, lang = "en-US", className = "", children = "🔊", ...
 
 const SpeakViBtn = ({ text }) => <SpeakBtn text={text} lang="vi-VN" className="ml-2 mt-1 inline-flex items-center rounded-md bg-slate-800 px-2 py-1 text-xs text-slate-300 hover:bg-slate-700 hover:text-white" title="Đọc tiếng Việt" aria-label="Đọc tiếng Việt" />;
 
+async function parseApiResponse(res) {
+  const text = await res.text().catch(() => "");
+  let data = null;
+  try { data = JSON.parse(text); } catch {}
+  if (!res.ok) {
+    const msg = data?.error || data?.message || (text ? `HTTP ${res.status}: ${text.slice(0, 200)}` : `Lỗi HTTP ${res.status}`);
+    throw new Error(msg);
+  }
+  return data || {};
+}
+
+function formatErrorMessage(e) {
+  if (!e) return "";
+  const msg = e.message || String(e);
+  if (msg === "Failed to fetch" || e.name === "TypeError") {
+    return "Mất kết nối máy chủ (Failed to fetch).\n• Hết hạn phiên đăng nhập Google → Bấm 'Tải lại trang' để đăng nhập lại.\n• Mạng gián đoạn hoặc proxy ngắt kết nối giữa chừng.\n• Ảnh tải lên quá nặng làm gián đoạn đường truyền.";
+  }
+  if (e.name === "TimeoutError" || e.name === "AbortError" || /timeout|aborted/i.test(msg)) {
+    return "Quá thời gian xử lý (Timeout >120s).\nAI phản hồi chậm hoặc ảnh quá lớn. Hãy thử cắt gọn vùng chữ hoặc thử lại.";
+  }
+  return msg;
+}
+
+// ponytail: basic error banner with refresh shortcut for auth/connection drops. Add Sentry when error tracking is set up.
+function ErrorBanner({ message, onDismiss }) {
+  if (!message) return null;
+  const isAuthOrNetwork = message.includes("Failed to fetch") || message.includes("đăng nhập") || message.includes("kết nối");
+  return (
+    <div className="bg-red-950/80 border border-red-700/80 rounded-2xl p-4 sm:p-5 mb-6 text-red-200 shadow-lg">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl shrink-0 leading-none">⚠️</span>
+          <div className="min-w-0 flex-1">
+            <div className="font-bold text-red-100 text-sm sm:text-base mb-1">Có lỗi xảy ra khi xử lý:</div>
+            <div className="text-xs sm:text-sm text-red-200/90 whitespace-pre-line leading-relaxed">{message}</div>
+            {isAuthOrNetwork && (
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-800 hover:bg-red-700 text-white transition-colors"
+                >
+                  🔄 Tải lại trang (F5)
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+        {onDismiss && (
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors shrink-0"
+            title="Đóng thông báo"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   // --- Mode: "vocab" | "grammar" ---
   const [mode, setMode] = useState("vocab");
@@ -162,15 +225,14 @@ export default function Home() {
       formData.append("image", fileToAnalyze);
       // ponytail: 120s timeout covers slow cellular/international links. Add progress bar if model time grows.
       const res = await fetch("/api/analyze", { method: "POST", body: formData, signal: AbortSignal.timeout(120000) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Server error");
+      const data = await parseApiResponse(res);
       setWords(data.words || []);
       setPractice(false);
       setSubmitted(false);
       setMatchAnswers({});
       setFillAnswers({});
     } catch (e) {
-      setError(e.message);
+      setError(formatErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -218,11 +280,10 @@ export default function Home() {
       if (f1) formData.append("image1", f1);
       if (f2) formData.append("image2", f2);
       const res = await fetch("/api/writing", { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Server error");
+      const data = await parseApiResponse(res);
       setWriting(data.writing);
     } catch (e) {
-      setWError(e.message);
+      setWError(formatErrorMessage(e));
     } finally {
       setWLoading(false);
     }
@@ -237,14 +298,13 @@ export default function Home() {
       const formData = new FormData();
       formData.append("image", fileToAnalyze);
       const res = await fetch("/api/grammar", { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Server error");
+      const data = await parseApiResponse(res);
       setGrammar(data.grammar);
       setGPractice(false);
       setGSubmitted(false);
       setGPracticeData(null);
     } catch (e) {
-      setGError(e.message);
+      setGError(formatErrorMessage(e));
     } finally {
       setGLoading(false);
     }
@@ -258,10 +318,9 @@ export default function Home() {
     setGSubmitted(false);
     try {
       const res = await fetch("/api/grammar-practice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ grammar }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Không tạo được bài");
+      const data = await parseApiResponse(res);
       setGPracticeData(data);
-    } catch (e) { setGError(e.message); }
+    } catch (e) { setGError(formatErrorMessage(e)); }
     finally { setGPracticeLoading(false); }
   };
 
@@ -279,10 +338,9 @@ export default function Home() {
       form.append("direction", dir);
       if (imageFile) form.append("image", imageFile);
       const res = await fetch("/api/lookup", { method: "POST", body: form });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Không tra được câu");
+      const data = await parseApiResponse(res);
       setQuickResult(data.result);
-    } catch (e) { setQuickResult({ error: e.message }); }
+    } catch (e) { setQuickResult({ error: formatErrorMessage(e) }); }
     finally { setQuickLoading(false); }
   };
 
@@ -294,11 +352,10 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ word, context }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Không tra được từ");
+      const data = await parseApiResponse(res);
       setLookup({ ...data.word, loading: false });
     } catch (e) {
-      setLookup({ word, error: e.message, loading: false });
+      setLookup({ word, error: formatErrorMessage(e), loading: false });
     }
   };
 
@@ -316,11 +373,10 @@ export default function Home() {
     setSubmitted(false);
     try {
       const res = await fetch("/api/practice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ words }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Không tạo được bài");
+      const data = await parseApiResponse(res);
       setGroupQuestions(data.groups);
       setGeneratedFills(data.fills);
-    } catch (e) { setError(e.message); }
+    } catch (e) { setError(formatErrorMessage(e)); }
     finally { setGroupLoading(false); }
   };
 
@@ -647,7 +703,8 @@ export default function Home() {
           </button>
         </div>
 
-        {error && <div className="bg-red-950 border border-red-800 rounded-xl p-4 mb-6 text-red-300">❌ {error}</div>}
+        {/* Error notification */}
+        <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
         {words.length > 0 && (
           <div className="flex items-center justify-center gap-3 mb-4">
@@ -783,7 +840,8 @@ export default function Home() {
           </button>
         </div>
 
-        {gError && <div className="bg-red-950 border border-red-800 rounded-xl p-4 mb-6 text-red-300">❌ {gError}</div>}
+        {/* Error notification */}
+        <ErrorBanner message={gError} onDismiss={() => setGError(null)} />
 
         {/* Grammar cards */}
         {grammar && !gPractice && (
@@ -1057,7 +1115,8 @@ export default function Home() {
           )}
         </div>
 
-        {wError && <div className="bg-red-950 border border-red-800 rounded-xl p-4 mb-6 text-red-300">❌ {wError}</div>}
+        {/* Error notification */}
+        <ErrorBanner message={wError} onDismiss={() => setWError(null)} />
         {writing && <Writing writing={writing} SpeakBtn={SpeakBtn} CopyBtn={CopyBtn} />}
       </>}
 
