@@ -41,9 +41,11 @@ export async function POST(request) {
     const headers = { "Content-Type": "application/json" };
     if (NINEROUTER_KEY) headers["Authorization"] = `Bearer ${NINEROUTER_KEY}`;
 
+    // ponytail: 120s timeout covers slow upstream AI processing on high-res images.
     const res = await fetch(`${NINEROUTER_URL}/v1/chat/completions`, {
       method: "POST",
       headers,
+      signal: AbortSignal.timeout(120000),
       body: JSON.stringify({
         model: MODEL,
         messages: [{

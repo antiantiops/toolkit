@@ -134,7 +134,8 @@ export default function Home() {
     try {
       const formData = new FormData();
       formData.append("image", fileToAnalyze);
-      const res = await fetch("/api/analyze", { method: "POST", body: formData });
+      // ponytail: 120s timeout covers slow cellular/international links. Add progress bar if model time grows.
+      const res = await fetch("/api/analyze", { method: "POST", body: formData, signal: AbortSignal.timeout(120000) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Server error");
       setWords(data.words || []);
