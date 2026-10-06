@@ -38,7 +38,7 @@ YÊU CẦU:
   + vi: cụm từ tiếng Việt trong bài
   + en: cụm từ/cấu trúc tiếng Anh tương đương chuẩn Business
   + ipa: phiên âm IPA
-  + easyReading: cách đọc bồi chuẩn âm IPA cho người Việt (ví dụ: /ˈkwɔːrtərli/ -> "cua-tờ-li")
+  + easyReading: cách đọc bồi chuẩn âm IPA cho cả 2 giọng Anh - Anh (UK) và Anh - Mỹ (US) (Format: 🇬🇧 UK: “...” • 🇺🇸 US: “...”)
   + partOfSpeech: loại từ / vai trò ngữ pháp
   + contextUsage: cách dùng tiếng Anh trong ngữ cảnh câu này
   + sentenceEn: câu tiếng Anh hoàn chỉnh tương ứng trong bài
@@ -55,7 +55,7 @@ Trả về DUY NHẤT một JSON hợp lệ, không bọc markdown hay lời gi�
           "vi": "Phản hồi đề xuất giữ chân",
           "en": "Response to Retention Offer",
           "ipa": "/rɪˈspɑːns tuː rɪˈtenʃn ˈɔːfər/",
-          "easyReading": "ri-s-poón-s tu ri-ten-sần ó-phờ",
+          "easyReading": "🇬🇧 UK: “ri-s-poón-s tu ri-ten-sần ó-phờ” • 🇺🇸 US: “ri-s-pán-s tu ri-ten-sần á-phơr”",
           "partOfSpeech": "noun phrase (tiêu đề)",
           "contextUsage": "Dùng ở dòng Subject. Cấu trúc Response to + Noun phrase ngắn gọn, lịch sự.",
           "sentenceEn": "Subject: Response to Retention Offer and Request for Salary Revision"

@@ -26,7 +26,7 @@ Nhiệm vụ:
 1. Xác định CỤM TỪ tiếng Việt trọn nghĩa chứa từ này trong câu (ví dụ nếu bấm "lương" trong "điều chỉnh mức lương", cụm trọn vẹn là "điều chỉnh mức lương" hoặc "mức lương"; nếu bấm "giữ" trong "giữ chân nhân viên", cụm là "giữ chân nhân viên").
 2. Dịch sang cụm từ/cấu trúc tiếng Anh công việc (Business English B1-B2) chuẩn xác nhất theo ngữ cảnh câu này.
 3. Cung cấp phiên âm quốc tế IPA chuẩn.
-4. Cách đọc bồi chuẩn theo âm IPA tiếng Anh cho người Việt dễ đọc (ví dụ: /ˈkwɔːrtərli/ -> "cua-tờ-li").
+4. Cách đọc bồi chuẩn theo âm IPA tiếng Anh cho cả 2 giọng Anh - Anh (UK) và Anh - Mỹ (US) (ví dụ: automate -> UK: “ó-tơ-mệt”, US: “ó-dơ-mệt”). Đánh dấu sắc/huyền theo trọng âm. Format: "🇬🇧 UK: “...” • 🇺🇸 US: “...”".
 5. Loại từ / vai trò ngữ pháp (noun phrase, verb phrase, adj,...).
 6. Giải thích chi tiết cách dùng tiếng Anh này trong ngữ cảnh đoạn văn: vị trí câu, giới từ/động từ đi kèm, tại sao dùng trong thư đàm phán/công việc.
 7. Câu tiếng Anh hoàn chỉnh tương ứng của câu này trong bài viết.

@@ -23,7 +23,7 @@ Return ONLY JSON with string fields:
   "ipa": "/…/",
   "partOfSpeech": "noun / verb / adjective / adverb / phrase, plus Vietnamese label and plural when relevant",
   "meaning": "Vietnamese meaning in this context",
-  "easyReading": "Phiên âm bồi chuẩn theo âm IPA tiếng Anh sang âm đọc tiếng Việt (ví dụ: /ˈpetʃoʊ/ -> 'pé-châu', /ˈkʌv.ɚz/ -> 'cớ-vờ-z', /ˈwɔː.tər/ -> 'oá-tờ', /oʊ/ -> 'âu'). TUYỆT ĐỐI không đọc vẹt theo mặt chữ kiểu tiếng Việt hay tiếng Pháp (như 'pê-chô'). Đánh dấu sắc/huyền theo đúng trọng âm IPA.",
+  "easyReading": "Phiên âm bồi chuẩn theo âm IPA tiếng Anh cho cả 2 giọng Anh - Anh (UK) và Anh - Mỹ (US) (ví dụ: automate -> UK: 'ó-tơ-mệt', US: 'ó-dơ-mệt'; water -> UK: 'oá-tờ', US: 'oá-đờr'). Đánh dấu sắc/huyền theo trọng âm. Format: '🇬🇧 UK: “...” • 🇺🇸 US: “...”. <lưu ý ngắn nếu có>'",
   "usage": "short Vietnamese usage explanation and one English example with Vietnamese translation",
   "synonyms": "1-3 context-appropriate alternatives with Vietnamese meanings",
   "antonyms": "1-3 context-appropriate opposites with Vietnamese meanings, or empty string"
