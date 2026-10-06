@@ -25,8 +25,8 @@ Return ONLY JSON with string fields:
   "meaning": "Vietnamese meaning in this context",
   "easyReading": "Phiên âm bồi chuẩn theo âm IPA tiếng Anh cho cả 2 giọng Anh - Anh (UK) và Anh - Mỹ (US) (ví dụ: automate -> UK: 'ó-tơ-mệt', US: 'ó-dơ-mệt'; water -> UK: 'oá-tờ', US: 'oá-đờr'). Đánh dấu sắc/huyền theo trọng âm. Format: '🇬🇧 UK: “...” • 🇺🇸 US: “...”. <lưu ý ngắn nếu có>'",
   "usage": "short Vietnamese usage explanation and one English example with Vietnamese translation",
-  "synonyms": "1-3 context-appropriate alternatives with Vietnamese meanings",
-  "antonyms": "1-3 context-appropriate opposites with Vietnamese meanings, or empty string"
+  "synonyms": "1-3 context-appropriate alternatives with Vietnamese meanings in parentheses, e.g. 'feature (đặc tính), property (thuộc tính)'",
+  "antonyms": "1-3 context-appropriate opposites with Vietnamese meanings in parentheses, e.g. 'disadvantage (nhược điểm)', or empty string"
 }
 If context is empty, use common sense and mention ambiguity if needed.`;
     const res = await fetch(`${NINEROUTER_URL}/v1/chat/completions`, {

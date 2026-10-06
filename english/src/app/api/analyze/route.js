@@ -19,9 +19,9 @@ For each word, provide:
 7. definition: Short English dictionary definition. If an English definition is printed beside word in image, preserve its meaning; otherwise write concise accurate definition.
 8. definitionVietnamese: Natural Vietnamese translation of definition.
 9. easyReading: Phiên âm bồi tiếng Việt chuẩn theo IPA tiếng Anh cho cả 2 giọng Anh - Anh (UK) và Anh - Mỹ (US) (ví dụ: automate -> UK: “ó-tơ-mệt”, US flap-t: “ó-dơ-mệt”; water -> UK: “oá-tờ”, US: “oá-đờr”). Đánh dấu sắc/huyền theo trọng âm. Format: "🇬🇧 UK: “...” • 🇺🇸 US: “...”. <lưu ý ngắn nếu có>".
-10. synonyms: If the image prints synonyms for this word (labels like "Syn", "Syn.", "Synonym", "Synonyms"), copy them exactly, comma separated. Otherwise give 1-2 accurate synonyms if applicable, or empty string
+10. synonyms: If the image prints synonyms, copy them and add concise Vietnamese meaning in parentheses for each word, e.g. "feature (đặc tính), property (thuộc tính)". Otherwise provide 1-2 accurate context-appropriate synonyms with Vietnamese meaning in parentheses, or empty string.
     synonymsInBook: true ONLY if synonyms were printed in the image; false if you generated them yourself.
-11. antonyms: If the image prints antonyms for this word (labels like "Ant", "Ant.", "Antonym", "Opp", "Opposite"), copy them exactly, comma separated. Otherwise give 1-2 accurate antonyms if applicable, or empty string
+11. antonyms: If the image prints antonyms, copy them and add concise Vietnamese meaning in parentheses for each word, e.g. "disadvantage (nhược điểm)". Otherwise provide 1-2 accurate context-appropriate antonyms with Vietnamese meaning in parentheses, or empty string.
     antonymsInBook: true ONLY if antonyms were printed in the image; false if you generated them yourself.
 12. collocations: 1-3 useful fixed word combinations with this word, especially one from example. Array items: {"phrase":"English phrase","meaning":"Vietnamese meaning","note":"short Vietnamese usage tip"}. Use [] when none.
 13. note: A short learning tip or usage note in Vietnamese, or empty string

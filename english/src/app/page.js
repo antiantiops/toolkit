@@ -394,11 +394,41 @@ export default function Home() {
     return <button onClick={(e) => { e.stopPropagation(); copyText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); }} className="ml-1 inline-flex shrink-0 items-center rounded px-1 py-0.5 text-xs text-slate-500 hover:bg-slate-800 hover:text-slate-300" title="Copy">{copied ? "✓" : "📋"}</button>;
   };
 
-  const clickableText = (text = "") => <span data-lookup-context={text} className="select-text" style={{ WebkitUserSelect: "text", userSelect: "text", WebkitTouchCallout: "default" }}>{text.split(/(\b[A-Za-z]+(?:['-][A-Za-z]+)*\b)/g).map((part, index) =>
-    /^[A-Za-z]+(?:['-][A-Za-z]+)*$/.test(part)
-      ? <span key={index} role="button" tabIndex={0} onClick={() => { lookupWord(part, text); }} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); lookupWord(part, text); } }} className="cursor-pointer hover:rounded hover:bg-sky-900/70 hover:text-sky-200 focus:bg-sky-900/70 focus:outline-none">{part}</span>
-      : part
-  )}</span>;
+  const renderAnnotatedWords = (raw = "") => {
+    if (!raw || typeof raw !== "string") return null;
+    const items = [];
+    let cur = "";
+    let depth = 0;
+    for (let i = 0; i < raw.length; i++) {
+      const c = raw[i];
+      if (c === "(" || c === "[" || c === "“") depth++;
+      else if (c === ")" || c === "]" || c === "”") depth = Math.max(0, depth - 1);
+      if ((c === "," || c === ";") && depth === 0) {
+        if (cur.trim()) items.push(cur.trim());
+        cur = "";
+      } else {
+        cur += c;
+      }
+    }
+    if (cur.trim()) items.push(cur.trim());
+
+    return items.map((item, idx) => {
+      const m = item.match(/^(.+?)\s*\(([^)]+)\)$/) || item.match(/^([^:\-]+)\s*[:\-]\s*(.+)$/);
+      const en = m ? m[1].trim() : item.trim();
+      const vi = m ? m[2].trim() : "";
+      return (
+        <span key={idx}>
+          {clickableText(en)}
+          {vi && (
+            <span className="text-amber-300 font-normal ml-1">
+              ({vi})
+            </span>
+          )}
+          {idx < items.length - 1 && <span className="text-slate-500 mr-1.5">, </span>}
+        </span>
+      );
+    });
+  };
 
   // --- Grammar practice scores ---
   const gChooseScore = gPracticeData?.choose?.filter((q, i) => gChooseAnswers[i] === q.answer).length || 0;
@@ -803,13 +833,13 @@ export default function Home() {
                     {w.exampleVietnamese && <div className="text-slate-400 italic mt-1">{w.exampleVietnamese}</div>}
                   </div>
                   {w.synonyms && (
-                    <div className="text-sm text-slate-400">
-                      <span className="text-slate-500">Đồng nghĩa:</span>{!w.synonymsInBook && <AiTag />} {clickableText(w.synonyms)}<CopyBtn text={w.synonyms} />
+                    <div className="text-sm text-slate-300">
+                      <span className="text-slate-400 font-medium">Đồng nghĩa:</span>{!w.synonymsInBook && <AiTag />} {renderAnnotatedWords(w.synonyms)}<CopyBtn text={w.synonyms} />
                     </div>
                   )}
                   {w.antonyms && (
-                    <div className="text-sm text-slate-400">
-                      <span className="text-slate-500">Trái nghĩa:</span>{!w.antonymsInBook && <AiTag />} {clickableText(w.antonyms)}<CopyBtn text={w.antonyms} />
+                    <div className="text-sm text-slate-300">
+                      <span className="text-slate-400 font-medium">Trái nghĩa:</span>{!w.antonymsInBook && <AiTag />} {renderAnnotatedWords(w.antonyms)}<CopyBtn text={w.antonyms} />
                     </div>
                   )}
                   {w.collocations?.length > 0 && <div className="mt-3 rounded-lg border border-teal-800/70 bg-teal-950/40 p-3"><div className="text-xs font-semibold uppercase tracking-wide text-teal-300">Collocation</div>{w.collocations.map((c, ci) => <div key={ci} className="mt-2 text-sm"><div className="font-medium text-teal-100">{clickableText(c.phrase)}<CopyBtn text={c.phrase} /> <SpeakBtn text={c.phrase} className="text-xs text-teal-300 hover:text-white">🔊</SpeakBtn></div><div className="mt-1 text-teal-200/70">{c.meaning}{c.note && ` — ${c.note}`}</div></div>)}</div>}
@@ -1135,8 +1165,8 @@ export default function Home() {
               {lookup.partOfSpeech && <div className="mt-2"><span className="inline-block max-w-full rounded-lg border border-amber-500/40 bg-amber-950/50 px-2.5 py-1 text-xs font-semibold leading-relaxed text-amber-200">{lookup.partOfSpeech}</span></div>}
               <div className="mt-4 text-lg font-medium text-white">{lookup.meaning}</div>
               {lookup.usage && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Cách dùng: </span>{lookup.usage}</div>}
-              {lookup.synonyms && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Đồng nghĩa: </span><AiTag /> {lookup.synonyms}</div>}
-              {lookup.antonyms && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Trái nghĩa: </span><AiTag /> {lookup.antonyms}</div>}
+              {lookup.synonyms && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Đồng nghĩa: </span><AiTag /> {renderAnnotatedWords(lookup.synonyms)}</div>}
+              {lookup.antonyms && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Trái nghĩa: </span><AiTag /> {renderAnnotatedWords(lookup.antonyms)}</div>}
               {lookup.easyReading && <div className="mt-4 rounded-xl border border-sky-900 bg-sky-950/50 p-3 text-sm leading-relaxed text-sky-100"><span className="font-semibold text-sky-300">Dễ đọc: </span>{lookup.easyReading}</div>}
               <SpeakBtn text={lookup.word} className="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-500">🔊 Nghe từ</SpeakBtn>
             </>}
