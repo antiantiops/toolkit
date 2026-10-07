@@ -626,7 +626,7 @@ export default function Home() {
                           <div data-testid="contrast-example-body" className={`mt-3 border-l-2 pl-3 ${sec.opposite ? "border-rose-500/50" : "border-emerald-500/50"}`}>
                             <div className="mb-1 flex justify-end gap-1">
                               <CopyBtn text={example.english} />
-                              <SpeakBtn text={example.english} className="rounded-md px-2 py-1 text-xs text-sky-200 hover:bg-slate-800">Nghe</SpeakBtn>
+                              <SpeakBtn text={example.english} title="Nghe câu ví dụ" aria-label="Nghe câu ví dụ" className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sm text-sky-200 hover:bg-slate-800" />
                             </div>
                             <div className="break-words text-sm font-medium text-sky-100">{clickableText(example.english)}</div>
                             <div className="mt-1.5 text-sm leading-relaxed text-slate-400">{example.vietnamese}</div>
