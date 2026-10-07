@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getUploadedFile } from "../upload/storage";
 
 const NINEROUTER_URL = process.env.NINEROUTER_URL || "http://192.168.101.36:20128";
 const NINEROUTER_KEY = process.env.NINEROUTER_KEY || "";
@@ -104,30 +105,60 @@ Return ONLY valid JSON, no markdown:
   "yourTurn":{"scenario":"Tình huống mới bằng tiếng Việt để người học tự viết cùng loại bài","hints":["Gợi ý ý cần có"]}
 }`;
 
+async function resolveImageData(fileOrId) {
+  if (!fileOrId) return null;
+  if (typeof fileOrId === "string") {
+    const item = getUploadedFile(fileOrId);
+    if (!item) return null;
+    return {
+      base64: item.buffer.toString("base64"),
+      mime: item.mime,
+    };
+  }
+  if (fileOrId instanceof File) {
+    const buf = Buffer.from(await fileOrId.arrayBuffer());
+    return {
+      base64: buf.toString("base64"),
+      mime: fileOrId.type || "image/jpeg",
+    };
+  }
+  return null;
+}
+
 export async function POST(request) {
   try {
-    const formData = await request.formData();
-    const file1 = formData.get("image1") || formData.get("image");
-    const file2 = formData.get("image2");
+    let img1Ref = null;
+    let img2Ref = null;
 
-    if (!file1 && !file2) {
-      return NextResponse.json({ error: "Chưa chọn ảnh nào" }, { status: 400 });
+    const contentType = request.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      const body = await request.json();
+      img1Ref = body.image1Id || body.imageId1 || body.image1;
+      img2Ref = body.image2Id || body.imageId2 || body.image2;
+    } else {
+      const formData = await request.formData();
+      img1Ref = formData.get("image1Id") || formData.get("image1") || formData.get("image");
+      img2Ref = formData.get("image2Id") || formData.get("image2");
     }
 
-    const hasBoth = file1 instanceof File && file2 instanceof File;
+    const data1 = await resolveImageData(img1Ref);
+    const data2 = await resolveImageData(img2Ref);
+
+    if (!data1 && !data2) {
+      return NextResponse.json({ error: "Chưa chọn ảnh nào hoặc ảnh tải lên không tồn tại" }, { status: 400 });
+    }
+
+    const hasBoth = Boolean(data1 && data2);
     const content = [];
 
     if (hasBoth) {
       content.push({ type: "text", text: DUAL_PROMPT });
-      const b1 = Buffer.from(await file1.arrayBuffer()).toString("base64");
-      const b2 = Buffer.from(await file2.arrayBuffer()).toString("base64");
-      content.push({ type: "image_url", image_url: { url: `data:${file1.type || "image/jpeg"};base64,${b1}` } });
-      content.push({ type: "image_url", image_url: { url: `data:${file2.type || "image/jpeg"};base64,${b2}` } });
+      content.push({ type: "image_url", image_url: { url: `data:${data1.mime};base64,${data1.base64}` } });
+      content.push({ type: "image_url", image_url: { url: `data:${data2.mime};base64,${data2.base64}` } });
     } else {
-      const single = file1 instanceof File ? file1 : file2;
+      const single = data1 || data2;
       content.push({ type: "text", text: SINGLE_PROMPT });
-      const b = Buffer.from(await single.arrayBuffer()).toString("base64");
-      content.push({ type: "image_url", image_url: { url: `data:${single.type || "image/jpeg"};base64,${b}` } });
+      content.push({ type: "image_url", image_url: { url: `data:${single.mime};base64,${single.base64}` } });
     }
 
     const headers = { "Content-Type": "application/json" };
@@ -153,7 +184,7 @@ export async function POST(request) {
     const choice = data.choices?.[0];
     const textOut = choice?.message?.content || "";
     if (!textOut && choice?.finish_reason === "recitation") {
-      return NextResponse.json({ error: "AI từ chối chép nguyên văn trang sách. Thử cắt ảnh nhỏ hơn hoặc phân tích lại." }, { status: 502 });
+      return NextResponse.json({ error: "AI từ chối chép nguyên văn trang sách. Thử chụp lại hoặc phân tích lại." }, { status: 502 });
     }
 
     const m = textOut.match(/\{[\s\S]*\}/);

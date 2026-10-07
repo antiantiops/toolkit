@@ -160,6 +160,9 @@ export default function Home() {
   const [wImage1, setWImage1] = useState(null);
   const [wPreview2, setWPreview2] = useState(null);
   const [wImage2, setWImage2] = useState(null);
+  const [wSkipSlot1, setWSkipSlot1] = useState(false);
+  const [wUpload1, setWUpload1] = useState({ loading: false, id: null, size: 0, error: null });
+  const [wUpload2, setWUpload2] = useState({ loading: false, id: null, size: 0, error: null });
   const [writing, setWriting] = useState(null);
   const [wLoading, setWLoading] = useState(false);
   const [wError, setWError] = useState(null);
@@ -170,7 +173,7 @@ export default function Home() {
   const [cropPending, setCropPending] = useState(null);
   const selectImage = (file, target) => {
     if (!file || !file.type.startsWith("image/")) return;
-    if (file.size > 15 * 1024 * 1024) { alert("Ảnh quá lớn. Chọn ảnh dưới 15 MB."); return; }
+    if (file.size > 25 * 1024 * 1024) { alert("Ảnh quá lớn. Chọn ảnh dưới 25 MB."); return; }
     setCropPending({ file, target });
   };
 
@@ -254,12 +257,30 @@ export default function Home() {
     selectImage(e.dataTransfer.files[0], "grammar");
   }, [handleGFile]);
 
+  const uploadWritingFile = async (file, slot) => {
+    const setUpload = slot === 1 ? setWUpload1 : setWUpload2;
+    setUpload({ loading: true, id: null, size: file.size, error: null });
+    setWError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetchWithRetry("/api/upload", { method: "POST", body: fd, timeout: 90000 }, 2, 1000);
+      const data = await parseApiResponse(res);
+      if (!data.id) throw new Error(data.error || "Không nhận được mã ảnh tải lên");
+      setUpload({ loading: false, id: data.id, size: data.size || file.size, error: null });
+    } catch (e) {
+      setUpload({ loading: false, id: null, size: file.size, error: formatErrorMessage(e) });
+    }
+  };
+
   const handleWFile1 = useCallback((file) => {
     if (!file || !file.type.startsWith("image/")) return;
     setWPreview1(URL.createObjectURL(file));
     setWImage1(file);
+    setWSkipSlot1(false);
     setWriting(null);
     setWError(null);
+    uploadWritingFile(file, 1);
   }, []);
 
   const handleWFile2 = useCallback((file) => {
@@ -268,19 +289,51 @@ export default function Home() {
     setWImage2(file);
     setWriting(null);
     setWError(null);
+    uploadWritingFile(file, 2);
   }, []);
 
-  const analyzeWriting = async (img1 = null, img2 = null) => {
-    const f1 = img1 instanceof File || img1 instanceof Blob ? img1 : wImage1;
-    const f2 = img2 instanceof File || img2 instanceof Blob ? img2 : wImage2;
-    if (!f1 && !f2) return;
+  const removeWImage1 = () => {
+    if (wUpload1.id) {
+      fetch(`/api/upload?id=${encodeURIComponent(wUpload1.id)}`, { method: "DELETE" }).catch(() => {});
+    }
+    setWImage1(null);
+    setWPreview1(null);
+    setWUpload1({ loading: false, id: null, size: 0, error: null });
+    setWriting(null);
+  };
+
+  const removeWImage2 = () => {
+    if (wUpload2.id) {
+      fetch(`/api/upload?id=${encodeURIComponent(wUpload2.id)}`, { method: "DELETE" }).catch(() => {});
+    }
+    setWImage2(null);
+    setWPreview2(null);
+    setWUpload2({ loading: false, id: null, size: 0, error: null });
+    setWriting(null);
+  };
+
+  const isSlot2Locked = !wSkipSlot1 && (!wUpload1.id || wUpload1.loading);
+  const isUploading = wUpload1.loading || wUpload2.loading;
+  const canAnalyzeWriting = (Boolean(wUpload1.id) || Boolean(wUpload2.id)) &&
+    !isUploading &&
+    !wLoading &&
+    (!wImage1 || Boolean(wUpload1.id)) &&
+    (!wImage2 || Boolean(wUpload2.id));
+
+  const analyzeWriting = async () => {
+    if (!canAnalyzeWriting) return;
     setWLoading(true);
     setWError(null);
     try {
-      const formData = new FormData();
-      if (f1) formData.append("image1", f1);
-      if (f2) formData.append("image2", f2);
-      const res = await fetchWithRetry("/api/writing", { method: "POST", body: formData, timeout: 120000 }, 2, 1500);
+      const payload = {};
+      if (wUpload1.id) payload.image1Id = wUpload1.id;
+      if (wUpload2.id) payload.image2Id = wUpload2.id;
+      const res = await fetchWithRetry("/api/writing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        timeout: 120000,
+      }, 2, 1500);
       const data = await parseApiResponse(res);
       setWriting(data.writing);
     } catch (e) {
@@ -1018,29 +1071,62 @@ export default function Home() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           {/* Slot 1: Sample Writing */}
-          <div className="rounded-2xl border-2 border-dashed border-emerald-600/50 p-4 sm:p-5 bg-slate-900/60 hover:border-emerald-400 transition-all flex flex-col justify-between">
+          <div className={`rounded-2xl border-2 border-dashed p-4 sm:p-5 bg-slate-900/60 transition-all flex flex-col justify-between ${
+            wUpload1.id ? "border-emerald-500 shadow-md shadow-emerald-950/40" : wUpload1.error ? "border-red-500/70" : "border-emerald-600/50 hover:border-emerald-400"
+          }`}>
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-bold uppercase tracking-wider text-emerald-300 bg-emerald-950/80 border border-emerald-800/80 rounded-md px-2.5 py-1">
                 Trang 1 · Bài mẫu (Sample)
               </span>
-              {wImage1 && (
-                <button
-                  type="button"
-                  onClick={() => { setWImage1(null); setWPreview1(null); }}
-                  className="rounded px-2 py-0.5 text-xs text-red-400 hover:bg-red-950/50 hover:text-red-300"
-                >
-                  ✕ Xóa
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {wUpload1.loading && (
+                  <span className="text-xs text-amber-300 flex items-center gap-1">
+                    <span className="w-3.5 h-3.5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                    Đang tải...
+                  </span>
+                )}
+                {wUpload1.id && (
+                  <span className="text-xs text-emerald-400 font-medium">
+                    ✓ Đã lưu server
+                  </span>
+                )}
+                {wImage1 && !wUpload1.loading && (
+                  <button
+                    type="button"
+                    onClick={removeWImage1}
+                    className="rounded px-2 py-0.5 text-xs text-red-400 hover:bg-red-950/50 hover:text-red-300"
+                  >
+                    ✕ Xóa
+                  </button>
+                )}
+              </div>
             </div>
 
             {wPreview1 ? (
               <div className="text-center my-auto py-2">
                 <img src={wPreview1} alt="Preview bài mẫu" className="max-h-56 mx-auto rounded-xl border border-slate-700 object-contain shadow-md" />
+                {wUpload1.error && (
+                  <div className="mt-2 text-xs text-red-300 bg-red-950/60 border border-red-800/60 rounded-lg p-2">
+                    ⚠️ {wUpload1.error}
+                    <button
+                      type="button"
+                      onClick={() => uploadWritingFile(wImage1, 1)}
+                      className="ml-2 underline font-semibold text-white"
+                    >
+                      Thử tải lại
+                    </button>
+                  </div>
+                )}
+                {!wUpload1.loading && !wUpload1.error && wUpload1.id && (
+                  <p className="mt-2 text-xs text-emerald-300 font-medium">
+                    Ảnh đã lên server ({(wUpload1.size / (1024 * 1024)).toFixed(1)} MB).
+                  </p>
+                )}
                 <button
                   type="button"
                   onClick={() => wFileRef1.current?.click()}
-                  className="mt-3 text-xs text-slate-400 hover:text-emerald-300 underline block mx-auto"
+                  disabled={wUpload1.loading}
+                  className="mt-3 text-xs text-slate-400 hover:text-emerald-300 underline block mx-auto disabled:opacity-40"
                 >
                   Đổi ảnh khác
                 </button>
@@ -1072,31 +1158,77 @@ export default function Home() {
           </div>
 
           {/* Slot 2: Self-Writing Task */}
-          <div className="rounded-2xl border-2 border-dashed border-amber-600/50 p-4 sm:p-5 bg-slate-900/60 hover:border-amber-400 transition-all flex flex-col justify-between">
+          <div className={`rounded-2xl border-2 border-dashed p-4 sm:p-5 bg-slate-900/60 transition-all flex flex-col justify-between ${
+            isSlot2Locked ? "opacity-50 border-slate-700 pointer-events-none" : wUpload2.id ? "border-amber-500 shadow-md shadow-amber-950/40" : wUpload2.error ? "border-red-500/70" : "border-amber-600/50 hover:border-amber-400"
+          }`}>
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-bold uppercase tracking-wider text-amber-300 bg-amber-950/80 border border-amber-800/80 rounded-md px-2.5 py-1">
                 Trang 2 · Bài tập (Self-Writing)
               </span>
-              {wImage2 && (
-                <button
-                  type="button"
-                  onClick={() => { setWImage2(null); setWPreview2(null); }}
-                  className="rounded px-2 py-0.5 text-xs text-red-400 hover:bg-red-950/50 hover:text-red-300"
-                >
-                  ✕ Xóa
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {wUpload2.loading && (
+                  <span className="text-xs text-amber-300 flex items-center gap-1">
+                    <span className="w-3.5 h-3.5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                    Đang tải...
+                  </span>
+                )}
+                {wUpload2.id && (
+                  <span className="text-xs text-amber-300 font-medium">
+                    ✓ Đã lưu server
+                  </span>
+                )}
+                {wImage2 && !wUpload2.loading && (
+                  <button
+                    type="button"
+                    onClick={removeWImage2}
+                    className="rounded px-2 py-0.5 text-xs text-red-400 hover:bg-red-950/50 hover:text-red-300"
+                  >
+                    ✕ Xóa
+                  </button>
+                )}
+              </div>
             </div>
 
             {wPreview2 ? (
               <div className="text-center my-auto py-2">
                 <img src={wPreview2} alt="Preview bài tập" className="max-h-56 mx-auto rounded-xl border border-slate-700 object-contain shadow-md" />
+                {wUpload2.error && (
+                  <div className="mt-2 text-xs text-red-300 bg-red-950/60 border border-red-800/60 rounded-lg p-2">
+                    ⚠️ {wUpload2.error}
+                    <button
+                      type="button"
+                      onClick={() => uploadWritingFile(wImage2, 2)}
+                      className="ml-2 underline font-semibold text-white"
+                    >
+                      Thử tải lại
+                    </button>
+                  </div>
+                )}
+                {!wUpload2.loading && !wUpload2.error && wUpload2.id && (
+                  <p className="mt-2 text-xs text-amber-300 font-medium">
+                    Ảnh đã lên server ({(wUpload2.size / (1024 * 1024)).toFixed(1)} MB).
+                  </p>
+                )}
                 <button
                   type="button"
                   onClick={() => wFileRef2.current?.click()}
-                  className="mt-3 text-xs text-slate-400 hover:text-amber-300 underline block mx-auto"
+                  disabled={wUpload2.loading}
+                  className="mt-3 text-xs text-slate-400 hover:text-amber-300 underline block mx-auto disabled:opacity-40"
                 >
                   Đổi ảnh khác
+                </button>
+              </div>
+            ) : isSlot2Locked ? (
+              <div className="py-8 text-center my-auto">
+                <div className="text-3xl sm:text-4xl mb-2">🔒</div>
+                <p className="text-sm font-semibold text-slate-400">Chờ Trang 1 tải lên xong</p>
+                <p className="text-xs text-slate-500 mt-1">Hoặc bỏ qua Trang 1 nếu chỉ học bài tập</p>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setWSkipSlot1(true); }}
+                  className="mt-3 pointer-events-auto rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700 hover:text-white"
+                >
+                  Bỏ qua Trang 1 → Tải thẳng Trang 2
                 </button>
               </div>
             ) : (
@@ -1129,7 +1261,7 @@ export default function Home() {
         <div className="text-center mb-6">
           <button
             onClick={() => analyzeWriting()}
-            disabled={(!wImage1 && !wImage2) || wLoading}
+            disabled={!canAnalyzeWriting}
             className="w-full sm:w-auto px-8 py-3.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-xl font-semibold text-base sm:text-lg transition-colors shadow-lg shadow-emerald-900/30 text-white"
           >
             {wLoading ? (
@@ -1137,15 +1269,22 @@ export default function Home() {
                 <span className="w-5 h-5 border-2 border-slate-400 border-t-emerald-300 rounded-full animate-spin" />
                 Đang phân tích bài viết...
               </span>
-            ) : wImage1 && wImage2 ? (
+            ) : isUploading ? (
+              <span className="flex items-center gap-2 justify-center">
+                <span className="w-5 h-5 border-2 border-slate-400 border-t-emerald-300 rounded-full animate-spin" />
+                Đang tải ảnh lên server...
+              </span>
+            ) : wUpload1.id && wUpload2.id ? (
               "🔍 Phân tích trọn bộ Unit (Bài mẫu + Bài tập Self-Writing)"
-            ) : wImage1 ? (
+            ) : wUpload1.id ? (
               "🔍 Phân tích bài mẫu (Trang 1)"
-            ) : (
+            ) : wUpload2.id ? (
               "🔍 Phân tích bài tập (Trang 2)"
+            ) : (
+              "Vui lòng chọn ảnh"
             )}
           </button>
-          {(!wImage1 || !wImage2) && (wImage1 || wImage2) && (
+          {(!wUpload1.id || !wUpload2.id) && (wUpload1.id || wUpload2.id) && (
             <p className="text-xs text-slate-400 mt-2">
               💡 Mẹo: Tải thêm trang còn lại để xem trọn vẹn cả bài mẫu và đề tự viết.
             </p>

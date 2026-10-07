@@ -77,7 +77,10 @@ export default function ImageCrop({ file, onCancel, onApply }) {
       <footer className="shrink-0 border-t border-slate-800 p-4">
         {error && <p role="alert" className="mb-2 text-sm text-red-300">{error}</p>}
         {box && <button disabled={busy} onClick={() => setBox(null)} className="mb-2 min-h-12 w-full text-sm text-slate-300 hover:text-white">Đặt lại vùng chọn</button>}
-        <button disabled={busy || !ready} onClick={crop} className="min-h-12 w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold hover:bg-blue-500 disabled:opacity-40">{busy ? "Đang cắt..." : "Dùng ảnh này"}</button>
+        <button disabled={busy || !ready} onClick={crop} className="min-h-12 w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold hover:bg-blue-500 disabled:opacity-40">{busy ? "Đang cắt..." : (box ? "Dùng vùng đã chọn" : "Dùng ảnh này")}</button>
+        <button disabled={busy} onClick={() => onApply(file)} type="button" className="mt-2 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-2 text-xs sm:text-sm font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+          📁 Dùng nguyên ảnh gốc (Giữ 100% chất lượng)
+        </button>
         <p className="mt-2 text-center text-xs text-slate-400">{box ? "Chỉ vùng đã chọn được gửi AI" : "Chưa chỉnh vùng: dùng toàn ảnh"}</p>
       </footer>
     </section>
