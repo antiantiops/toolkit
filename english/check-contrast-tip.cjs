@@ -25,3 +25,11 @@ console.log('PASS: comparison examples collapsed by default with native details'
 
 assert.ok(page.includes('data-testid="contrast-example-body"'));
 assert.ok(page.includes("absolute right-0 top-0"));
+
+const css = read('globals.css');
+assert.ok(page.includes('className="example-chevron"'));
+assert.ok(css.includes('details:not([open]) > summary .example-chevron'));
+assert.ok(css.includes('example-nudge 4.5s'));
+assert.ok(css.includes('translateY(2px)'));
+assert.ok(css.includes('.example-chevron { animation: none !important; }'));
+console.log('PASS: closed-only chevron hint with reduced-motion support');

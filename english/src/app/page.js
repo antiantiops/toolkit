@@ -621,7 +621,7 @@ export default function Home() {
                         <details data-testid="contrast-example" className="group/example">
                           <summary aria-label={`Ví dụ cho ${word}`} className="absolute right-0 top-0 flex min-h-9 cursor-pointer list-none items-center gap-1.5 rounded-md px-2 text-xs font-medium text-slate-400 hover:text-sky-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400 [&::-webkit-details-marker]:hidden">
                             <span>Ví dụ</span>
-                            <span aria-hidden="true" className="transition-transform motion-reduce:transition-none group-open/example:rotate-180">⌄</span>
+                            <span aria-hidden="true" className="example-chevron">⌄</span>
                           </summary>
                           <div data-testid="contrast-example-body" className={`mt-3 border-l-2 pl-3 ${sec.opposite ? "border-rose-500/50" : "border-emerald-500/50"}`}>
                             <div className="mb-1 flex justify-end gap-1">

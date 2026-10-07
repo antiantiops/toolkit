@@ -49,3 +49,16 @@
   .lesson-chat-motion, #lesson-chat-toggle { transition: none !important; }
   .chat-message-in, .chat-typing i { animation: none; }
 }
+
+/* Hint only; transform keeps text and layout stationary. */
+@keyframes example-nudge {
+  0%, 8%, 20%, 100% { transform: translateY(0); }
+  14% { transform: translateY(2px); }
+}
+details:not([open]) > summary .example-chevron {
+  animation: example-nudge 4.5s ease-in-out infinite;
+}
+details[open] > summary .example-chevron { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) {
+  .example-chevron { animation: none !important; }
+}
