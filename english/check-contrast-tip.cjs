@@ -33,3 +33,11 @@ assert.ok(css.includes('example-nudge 4.5s'));
 assert.ok(css.includes('translateY(2px)'));
 assert.ok(css.includes('.example-chevron { animation: none !important; }'));
 console.log('PASS: closed-only chevron hint with reduced-motion support');
+
+const modal = page.slice(page.indexOf('{/* Lookup modal */}'));
+assert.ok(modal.includes('data-testid="lookup-word-header"'));
+assert.ok(modal.indexOf('{lookup.partOfSpeech}') < modal.indexOf('{lookup.ipa}'));
+assert.ok(modal.indexOf('{lookup.ipa}') < modal.indexOf('{lookup.easyReading}'));
+assert.ok(modal.indexOf('{lookup.easyReading}') < modal.indexOf('{lookup.meaning}'));
+assert.ok(!modal.includes('🔊 Nghe từ'));
+console.log('PASS: lookup order word/speaker, part of speech, IPA, easy reading, meaning');

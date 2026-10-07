@@ -1538,19 +1538,21 @@ export default function Home() {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/75 p-3" onClick={() => setLookup(null)}>
           <div className="max-h-[85dvh] overflow-y-auto w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-slate-600 bg-slate-900 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between gap-3">
-              <div className="text-xl font-bold text-sky-300">{lookup.word}</div>
+              <div data-testid="lookup-word-header" className="flex min-w-0 flex-wrap items-center gap-2">
+                <div className="break-words text-xl font-bold text-sky-300">{lookup.word}</div>
+                <SpeakBtn text={lookup.word} title="Nghe từ" aria-label="Nghe từ" className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-base text-white hover:bg-emerald-500" />
+              </div>
               <button onClick={() => setLookup(null)} className="rounded-lg px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-white" aria-label="Đóng">✕</button>
             </div>
             {lookup.loading ? <div className="mt-5 text-slate-400">Đang tra từ...</div> : lookup.error ? <div className="mt-4 text-red-300">{lookup.error}</div> : <>
-              <div className="mt-1 text-violet-300 italic">{lookup.ipa}</div>
               {lookup.partOfSpeech && <div className="mt-2"><span className="inline-block max-w-full rounded-lg border border-amber-500/40 bg-amber-950/50 px-2.5 py-1 text-xs font-semibold leading-relaxed text-amber-200">{lookup.partOfSpeech}</span></div>}
+              <div className="mt-1 text-violet-300 italic">{lookup.ipa}</div>
+              {lookup.easyReading && <div className="mt-4 rounded-xl border border-sky-900 bg-sky-950/50 p-3 text-sm leading-relaxed text-sky-100"><span className="font-semibold text-sky-300">Dễ đọc: </span>{lookup.easyReading}</div>}
               <div className="mt-4 text-lg font-medium text-white">{lookup.meaning}</div>
               {lookup.usage && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Cách dùng: </span>{lookup.usage}</div>}
               {lookup.synonyms && !lookup.contrastTip && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Đồng nghĩa: </span><AiTag /> {renderAnnotatedWords(lookup.synonyms)}</div>}
               {lookup.antonyms && !lookup.contrastTip && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Trái nghĩa: </span><AiTag /> {renderAnnotatedWords(lookup.antonyms)}</div>}
               {lookup.contrastTip && <div data-testid="lookup-contrast-tip" className="mt-3 rounded-lg border border-amber-800/60 bg-amber-950/30 p-3 text-sm"><div className="font-semibold text-amber-300">Mẹo nhớ cực ngắn<AiTag /></div>{renderContrastTip(lookup.contrastTip, lookup.contrastExamples)}</div>}
-              {lookup.easyReading && <div className="mt-4 rounded-xl border border-sky-900 bg-sky-950/50 p-3 text-sm leading-relaxed text-sky-100"><span className="font-semibold text-sky-300">Dễ đọc: </span>{lookup.easyReading}</div>}
-              <SpeakBtn text={lookup.word} className="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-500">🔊 Nghe từ</SpeakBtn>
             </>}
           </div>
         </div>
