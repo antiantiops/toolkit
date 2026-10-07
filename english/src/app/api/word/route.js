@@ -27,7 +27,7 @@ Return ONLY JSON with string fields:
   "usage": "short Vietnamese usage explanation and one English example with Vietnamese translation",
   "synonyms": "1-3 context-appropriate alternatives with Vietnamese meanings in parentheses, e.g. 'feature (đặc tính), property (thuộc tính)'",
   "antonyms": "1-3 context-appropriate opposites with Vietnamese meanings in parentheses, e.g. 'disadvantage (nhược điểm)', or empty string",
-  "contrastTip": "Very short Vietnamese memory aid comparing selected word with synonyms/antonyms: 2-4 lines word = sắc thái riêng (3-8 Vietnamese words each), plus at most one short usage contrast or warning. Explain differences rather than repeat translations; match supplied context; avoid absolute claims across all senses. Empty string if no useful contrast."
+  "contrastTip": "Compare ONLY the main word and EVERY word already listed in this same response’s synonyms and antonyms. NEVER introduce extra comparison words. Give one short Vietnamese line per listed word describing when/context it is used, not just its translation. Group lines under Đồng nghĩa and Trái nghĩa. Include the main word’s use in the supplied example; do not restrict a multi-sense word to one unrelated meaning. Mention non-interchangeability or a different construction where relevant. No 2-4 line limit: cover all listed words, each explanation 3-12 Vietnamese words. If both lists are empty, return empty string."
 }
 If context is empty, use common sense and mention ambiguity if needed.`;
     const res = await fetch(`${NINEROUTER_URL}/v1/chat/completions`, {
