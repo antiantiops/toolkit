@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { randomUUID } from "crypto";
 import { saveSession } from "../session/storage";
 import { getUploadedFile } from "../upload/storage";
@@ -31,7 +31,7 @@ For each word, provide:
 Respond ONLY with a valid JSON array, no markdown fences, no explanation:
 [{"word":"sand","ipa":"/sænd/","meaning":"cát","partOfSpeech":"noun","definition":"A loose substance made of very small pieces of rock.","definitionVietnamese":"Một chất rời gồm những mảnh đá rất nhỏ.","easyReading":"🇬🇧 UK: “xand” • 🇺🇸 US: “sænd”. Âm /s/ rõ ở đầu và /d/ ở cuối.","example":"The children play in the sand.","exampleVietnamese":"Bọn trẻ chơi trong cát.","synonyms":"","synonymsInBook":false,"antonyms":"","antonymsInBook":false,"contrastTip":"","note":"Không đếm được khi nói chung về cát."}]`;
 
-export async function POST(request) {
+async function analyzeImage(request, sessionId) {
   const requestId = randomUUID();
   let stage = "read-image";
   const started = Date.now();
@@ -124,7 +124,7 @@ export async function POST(request) {
     stage = "save-session";
 
     // Cookie session management:
-    let sid = request.cookies.get("vocab_sid")?.value;
+    let sid = sessionId || request.cookies.get("vocab_sid")?.value;
     const isNewSid = !sid;
     if (isNewSid) sid = randomUUID();
 
@@ -147,4 +147,43 @@ export async function POST(request) {
   } catch (e) {
     return fail(`${e.name}: ${e.message}${e.cause?.code ? `; cause=${e.cause.code}` : ""}`, stage.startsWith("ai-") ? 502 : 500);
   }
+}
+
+// ponytail: single persistent Node process. Use durable worker queue before scaling replicas.
+const jobs = globalThis.vocabAnalysisJobs ||= new Map();
+const TTL = 2 * 60 * 60 * 1000;
+export async function POST(request) {
+  let body;
+  try { body = await request.clone().json(); } catch { return NextResponse.json({ error: "Expected JSON { imageId }" }, { status: 400 }); }
+  if (typeof body.imageId !== "string" || !/^[a-f0-9-]{36}\.[a-z0-9]{1,10}$/.test(body.imageId)) return NextResponse.json({ error: "Invalid imageId" }, { status: 400 });
+  const sid = request.cookies.get("vocab_sid")?.value || randomUUID();
+  for (const [id, job] of jobs) if (Date.now() - job.createdAt > TTL && job.status !== "running") jobs.delete(id);
+  let job = [...jobs.values()].find(j => j.owner === sid && j.imageId === body.imageId && j.status !== "failed");
+  if (!job) {
+    if ([...jobs.values()].filter(j => j.status === "running").length >= 3) return NextResponse.json({ error: "AI đang xử lý 3 tác vụ. Thử lại sau ít phút." }, { status: 429 });
+    job = { id: randomUUID(), owner: sid, imageId: body.imageId, status: "running", createdAt: Date.now() };
+    jobs.set(job.id, job);
+    const task = job;
+    after(async () => {
+      try {
+        const res = await analyzeImage(request, sid);
+        task.result = await res.json();
+        task.status = res.ok ? "completed" : "failed";
+      } catch (e) {
+        task.status = "failed";
+        task.result = { error: `${e.name}: ${e.message}`, stage: "background-task" };
+        console.error("[vocab-job]", task.id, e.name, e.message);
+      }
+    });
+  }
+  const res = NextResponse.json({ jobId: job.id, status: job.status }, { status: 202 });
+  res.cookies.set("vocab_sid", sid, { maxAge: 86400, path: "/", sameSite: "lax", httpOnly: true });
+  res.headers.set("Cache-Control", "no-store");
+  return res;
+}
+export async function GET(request) {
+  const id = new URL(request.url).searchParams.get("jobId");
+  const job = jobs.get(id);
+  if (!job || job.owner !== request.cookies.get("vocab_sid")?.value) return NextResponse.json({ error: "Tác vụ không tồn tại, hết hạn hoặc server đã khởi động lại. Chọn ảnh và phân tích lại." }, { status: 404 });
+  return NextResponse.json({ jobId: id, status: job.status, elapsedMs: Date.now() - job.createdAt, ...(job.status !== "running" ? job.result : {}) }, { headers: { "Cache-Control": "no-store" } });
 }

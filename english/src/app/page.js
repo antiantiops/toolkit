@@ -235,25 +235,41 @@ export default function Home() {
   const analyze = async (targetArg = null) => {
     const idToAnalyze = typeof targetArg === "string" ? targetArg : vImageId;
     const fileToAnalyze = targetArg instanceof File || targetArg instanceof Blob ? targetArg : image;
-    if (!idToAnalyze && !fileToAnalyze) return;
+    if (!idToAnalyze && !fileToAnalyze && !sessionStorage.getItem("vocab-pending-job")) return;
     setLoading(true);
     setError(null);
     try {
-      let res;
-      if (idToAnalyze) {
-        res = await fetchWithRetry("/api/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageId: idToAnalyze }),
-          timeout: 120000,
-        }, 2, 1500);
-      } else {
-        const formData = new FormData();
-        formData.append("image", fileToAnalyze);
-        // ponytail: 120s timeout covers slow cellular/international links. Add progress bar if model time grows.
-        res = await fetchWithRetry("/api/analyze", { method: "POST", body: formData, timeout: 120000 }, 2, 1500);
+      let jobId = sessionStorage.getItem("vocab-pending-job");
+      if (!jobId) {
+        let imageId = idToAnalyze;
+        if (!imageId) {
+          const fd = new FormData(); fd.append("file", fileToAnalyze);
+          const uploaded = await parseApiResponse(await fetchWithRetry("/api/upload", { method: "POST", body: fd, timeout: 90000 }, 0));
+          imageId = uploaded.id;
+          setVImageId(imageId);
+        }
+        const started = await parseApiResponse(await fetchWithRetry("/api/analyze", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageId }), timeout: 15000,
+        }, 0));
+        jobId = started.jobId;
+        if (!jobId) throw new Error("Server không trả jobId");
+        sessionStorage.setItem("vocab-pending-job", jobId);
       }
-      const data = await parseApiResponse(res);
+      let data;
+      const deadline = Date.now() + 5 * 60 * 1000;
+      while (Date.now() < deadline) {
+        const statusRes = await fetchWithRetry(`/api/analyze?jobId=${encodeURIComponent(jobId)}`, { timeout: 15000, cache: "no-store" }, 2, 1500);
+        if (statusRes.status === 404) sessionStorage.removeItem("vocab-pending-job");
+        data = await parseApiResponse(statusRes);
+        if (data.status === "failed") {
+          sessionStorage.removeItem("vocab-pending-job");
+          throw new Error(`${data.error}\nRequest ID: ${data.requestId || jobId}\nStage: ${data.stage || "AI"}`);
+        }
+        if (data.status === "completed") { sessionStorage.removeItem("vocab-pending-job"); break; }
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+      if (data?.status !== "completed") throw new Error(`Tác vụ vẫn đang chạy. Tải lại trang để tiếp tục. Job ID: ${jobId}`);
       setWords(data.words || []);
       if (data.preview) setPreview(data.preview);
       setPractice(false);
@@ -266,6 +282,10 @@ export default function Home() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (sessionStorage.getItem("vocab-pending-job")) analyze();
+  }, []);
 
   // --- Grammar handlers ---
   const handleGFile = useCallback((file) => {
@@ -372,7 +392,7 @@ export default function Home() {
   const analyzeGrammar = async (targetArg = null) => {
     const idToAnalyze = typeof targetArg === "string" ? targetArg : gImageId;
     const fileToAnalyze = targetArg instanceof File || targetArg instanceof Blob ? targetArg : gImage;
-    if (!idToAnalyze && !fileToAnalyze) return;
+    if (!idToAnalyze && !fileToAnalyze && !sessionStorage.getItem("vocab-pending-job")) return;
     setGLoading(true);
     setGError(null);
     try {
