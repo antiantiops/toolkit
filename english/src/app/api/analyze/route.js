@@ -35,6 +35,8 @@ export async function POST(request) {
   const requestId = randomUUID();
   let stage = "read-image";
   const started = Date.now();
+  const log = (event, details = {}) => console.info("[vocab-analyze]", JSON.stringify({ requestId, event, stage, elapsedMs: Date.now() - started, ...details }));
+  log("request-start");
   const fail = (error, status, details = {}) => {
     // Never log image data, cookies, auth headers or complete upstream responses.
     const safe = String(error).replace(/Bearer\s+\S+/gi, "Bearer [redacted]");
@@ -67,6 +69,7 @@ export async function POST(request) {
         mime = file.type || "image/jpeg";
       }
     }
+    log("image-loaded", { imageBytes: Math.floor(base64.length * 3 / 4), mime });
     const dataUrl = `data:${mime};base64,${base64}`;
 
     const headers = { "Content-Type": "application/json" };
@@ -74,6 +77,7 @@ export async function POST(request) {
 
     // ponytail: 120s timeout covers slow upstream AI processing on high-res images.
     stage = "ai-request";
+    log("ai-request", { model: MODEL });
     const res = await fetch(`${NINEROUTER_URL}/v1/chat/completions`, {
       method: "POST",
       headers,
@@ -93,6 +97,7 @@ export async function POST(request) {
       }),
     });
 
+    log("ai-response", { upstreamStatus: res.status });
     if (!res.ok) {
       const errText = await res.text();
       let upstream;
@@ -126,7 +131,7 @@ export async function POST(request) {
     // Cache words and preview on server for 24 hours
     saveSession(sid, { words, preview: dataUrl });
 
-    const response = NextResponse.json({ words, preview: dataUrl });
+    const response = NextResponse.json({ words, requestId });
     if (isNewSid) {
       response.cookies.set("vocab_sid", sid, {
         maxAge: 86400,
@@ -136,6 +141,8 @@ export async function POST(request) {
       });
     }
 
+    log("request-complete", { words: words.length, responseBytes: Buffer.byteLength(JSON.stringify({ words, requestId })) });
+    response.headers.set("X-Request-ID", requestId);
     return response;
   } catch (e) {
     return fail(`${e.name}: ${e.message}${e.cause?.code ? `; cause=${e.cause.code}` : ""}`, stage.startsWith("ai-") ? 502 : 500);
