@@ -1,5 +1,5 @@
 "use client";
-import { fetchWithRetry } from "./fetch-helper";
+import { fetchWithRetry, parseApiResponse, formatErrorMessage } from "./fetch-helper";
 import { useState, useRef, useCallback, useEffect } from "react";
 import ImageCrop from "./ImageCrop";
 import LessonChat from "./LessonChat";
@@ -50,29 +50,6 @@ function SpeakBtn({ text, lang = "en-US", className = "", children = "🔊", ...
 
 const SpeakViBtn = ({ text }) => <SpeakBtn text={text} lang="vi-VN" className="ml-2 mt-1 inline-flex items-center rounded-md bg-slate-800 px-2 py-1 text-xs text-slate-300 hover:bg-slate-700 hover:text-white" title="Đọc tiếng Việt" aria-label="Đọc tiếng Việt" />;
 
-async function parseApiResponse(res) {
-  const text = await res.text().catch(() => "");
-  let data = null;
-  try { data = JSON.parse(text); } catch {}
-  if (!res.ok) {
-    const msg = data?.error || data?.message || (text ? `HTTP ${res.status}: ${text.slice(0, 200)}` : `Lỗi HTTP ${res.status}`);
-    throw new Error(msg);
-  }
-  return data || {};
-}
-
-function formatErrorMessage(e) {
-  if (!e) return "";
-  const msg = e.message || String(e);
-  if (msg === "Failed to fetch" || e.name === "TypeError") {
-    return "Mất kết nối máy chủ (Failed to fetch).\n• Hết hạn phiên đăng nhập Google → Bấm 'Tải lại trang' để đăng nhập lại.\n• Mạng gián đoạn hoặc proxy ngắt kết nối giữa chừng.\n• Ảnh tải lên quá nặng làm gián đoạn đường truyền.";
-  }
-  if (e.name === "TimeoutError" || e.name === "AbortError" || /timeout|aborted/i.test(msg)) {
-    return "Quá thời gian xử lý (Timeout >120s).\nAI phản hồi chậm hoặc ảnh quá lớn. Hãy thử cắt gọn vùng chữ hoặc thử lại.";
-  }
-  return msg;
-}
-
 // ponytail: basic error banner with refresh shortcut for auth/connection drops. Add Sentry when error tracking is set up.
 function ErrorBanner({ message, onDismiss }) {
   if (!message) return null;
@@ -84,7 +61,7 @@ function ErrorBanner({ message, onDismiss }) {
           <span className="text-2xl shrink-0 leading-none">⚠️</span>
           <div className="min-w-0 flex-1">
             <div className="font-bold text-red-100 text-sm sm:text-base mb-1">Có lỗi xảy ra khi xử lý:</div>
-            <div className="text-xs sm:text-sm text-red-200/90 whitespace-pre-line leading-relaxed">{message}</div>
+            <div className="text-xs sm:text-sm text-red-200/90 whitespace-pre-line break-words leading-relaxed">{message}</div>
             {isAuthOrNetwork && (
               <div className="mt-3 flex items-center gap-2">
                 <button

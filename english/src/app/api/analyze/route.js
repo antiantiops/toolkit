@@ -32,6 +32,15 @@ Respond ONLY with a valid JSON array, no markdown fences, no explanation:
 [{"word":"sand","ipa":"/sænd/","meaning":"cát","partOfSpeech":"noun","definition":"A loose substance made of very small pieces of rock.","definitionVietnamese":"Một chất rời gồm những mảnh đá rất nhỏ.","easyReading":"🇬🇧 UK: “xand” • 🇺🇸 US: “sænd”. Âm /s/ rõ ở đầu và /d/ ở cuối.","example":"The children play in the sand.","exampleVietnamese":"Bọn trẻ chơi trong cát.","synonyms":"","synonymsInBook":false,"antonyms":"","antonymsInBook":false,"contrastTip":"","note":"Không đếm được khi nói chung về cát."}]`;
 
 export async function POST(request) {
+  const requestId = randomUUID();
+  let stage = "read-image";
+  const started = Date.now();
+  const fail = (error, status, details = {}) => {
+    // Never log image data, cookies, auth headers or complete upstream responses.
+    const safe = String(error).replace(/Bearer\s+\S+/gi, "Bearer [redacted]");
+    console.error("[vocab-analyze]", JSON.stringify({ requestId, stage, elapsedMs: Date.now() - started, error: safe, ...details }));
+    return NextResponse.json({ error: safe, requestId, stage }, { status });
+  };
   try {
     let base64, mime;
     const contentType = request.headers.get("content-type") || "";
@@ -39,7 +48,7 @@ export async function POST(request) {
       const body = await request.json();
       const id = body.imageId || body.id;
       const item = getUploadedFile(id);
-      if (!item) return NextResponse.json({ error: "Ảnh không tồn tại hoặc đã hết hạn trên server" }, { status: 400 });
+      if (!item) return fail("Ảnh không tồn tại hoặc đã hết hạn trên server", 400);
       base64 = item.buffer.toString("base64");
       mime = item.mime;
     } else {
@@ -47,12 +56,12 @@ export async function POST(request) {
       const id = formData.get("imageId") || formData.get("id");
       if (id) {
         const item = getUploadedFile(id);
-        if (!item) return NextResponse.json({ error: "Ảnh không tồn tại hoặc đã hết hạn trên server" }, { status: 400 });
+        if (!item) return fail("Ảnh không tồn tại hoặc đã hết hạn trên server", 400);
         base64 = item.buffer.toString("base64");
         mime = item.mime;
       } else {
         const file = formData.get("image") || formData.get("file");
-        if (!file) return NextResponse.json({ error: "No image uploaded" }, { status: 400 });
+        if (!file) return fail("No image uploaded", 400);
         const bytes = await file.arrayBuffer();
         base64 = Buffer.from(bytes).toString("base64");
         mime = file.type || "image/jpeg";
@@ -64,6 +73,7 @@ export async function POST(request) {
     if (NINEROUTER_KEY) headers["Authorization"] = `Bearer ${NINEROUTER_KEY}`;
 
     // ponytail: 120s timeout covers slow upstream AI processing on high-res images.
+    stage = "ai-request";
     const res = await fetch(`${NINEROUTER_URL}/v1/chat/completions`, {
       method: "POST",
       headers,
@@ -85,18 +95,28 @@ export async function POST(request) {
 
     if (!res.ok) {
       const errText = await res.text();
-      return NextResponse.json({ error: `9router error: ${res.status} ${errText.slice(0, 200)}` }, { status: 502 });
+      let upstream;
+      try { upstream = JSON.parse(errText); } catch {}
+      const message = upstream?.error?.message || (typeof upstream?.error === "string" ? upstream.error : upstream?.message);
+      return fail(`9router HTTP ${res.status}: ${message ? String(message).slice(0, 1000) : "Upstream returned non-JSON/unrecognized error body"}`, 502, { upstreamStatus: res.status, model: MODEL });
     }
 
+    stage = "ai-response";
     const data = await res.json();
     const content = data.choices?.[0]?.message?.content || "";
 
     const jsonMatch = content.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
-      return NextResponse.json({ error: "AI response not valid JSON", raw: content.slice(0, 300) }, { status: 502 });
+      return fail(`AI response không có JSON array; finish_reason=${data.choices?.[0]?.finish_reason || "unknown"}; contentLength=${content.length}`, 502, { model: MODEL });
     }
 
-    const words = JSON.parse(jsonMatch[0]);
+    stage = "ai-json-parse";
+    let words;
+    try { words = JSON.parse(jsonMatch[0]); } catch (e) {
+      return fail(`AI JSON parse: ${e.message}`, 502, { finishReason: data.choices?.[0]?.finish_reason, contentLength: content.length });
+    }
+    if (!Array.isArray(words) || !words.length || words.some(w => !w || typeof w.word !== "string")) return fail("AI trả danh sách từ rỗng hoặc sai schema", 502);
+    stage = "save-session";
 
     // Cookie session management:
     let sid = request.cookies.get("vocab_sid")?.value;
@@ -118,6 +138,6 @@ export async function POST(request) {
 
     return response;
   } catch (e) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return fail(`${e.name}: ${e.message}${e.cause?.code ? `; cause=${e.cause.code}` : ""}`, stage.startsWith("ai-") ? 502 : 500);
   }
 }

@@ -26,6 +26,7 @@ export async function fetchWithRetry(url, options = {}, retries = 2, delay = 100
       return res;
     } catch (err) {
       clearTimeout(timer);
+      err.message = `${err.message} [${options.method || "GET"} ${url}; attempt ${attempt + 1}/${retries + 1}; timeout ${timeoutMs}ms]`;
       lastErr = err;
       if (options.signal?.aborted) throw err;
 
@@ -40,29 +41,23 @@ export async function fetchWithRetry(url, options = {}, retries = 2, delay = 100
 }
 
 export async function parseApiResponse(res) {
-  const text = await res.text().catch(() => "");
-  let data = null;
-  try {
-    data = JSON.parse(text);
-  } catch {}
-  if (!res.ok) {
-    const msg =
-      data?.error ||
-      data?.message ||
-      (text ? `HTTP ${res.status}: ${text.slice(0, 200)}` : `Lỗi HTTP ${res.status}`);
-    throw new Error(msg);
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch {
+    throw new Error(`HTTP ${res.status}: response không phải JSON (${res.headers.get("content-type") || "unknown"}). ${res.redirected ? "Request bị redirect; kiểm tra phiên đăng nhập. " : ""}${text.slice(0, 500)}`);
   }
-  return data || {};
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${data?.error || data?.message || "API error"}${data?.requestId ? `\nRequest ID: ${data.requestId}` : ""}${data?.stage ? `\nStage: ${data.stage}` : ""}`);
+  }
+  if (!data || typeof data !== "object") throw new Error(`HTTP ${res.status}: JSON response rỗng hoặc sai kiểu`);
+  return data;
 }
 
 export function formatErrorMessage(e) {
   if (!e) return "";
-  const msg = e.message || String(e);
-  if (msg === "Failed to fetch" || e.name === "TypeError") {
-    return "Mất kết nối máy chủ (Failed to fetch).\n• Mạng chậm hoặc chập chờn (hệ thống đã tự thử lại 2 lần).\n• Hoặc hết hạn phiên Google → Bấm 'Tải lại trang'.";
-  }
-  if (e.name === "TimeoutError" || e.name === "AbortError" || /timeout|aborted/i.test(msg)) {
-    return "Quá thời gian xử lý (Timeout >120s).\nĐường truyền quốc tế bị nghẽn hoặc ảnh quá lớn. Hãy bấm thử lại.";
-  }
-  return msg;
+  const raw = `${e.name || "Error"}: ${e.message || String(e)}`;
+  console.error("[client-api-error]", e);
+  return raw + (/Failed to fetch|NetworkError/.test(raw)
+    ? "\nTrình duyệt không cung cấp HTTP response. Chưa xác định được lỗi mạng, proxy hay đăng nhập."
+    : "");
 }
