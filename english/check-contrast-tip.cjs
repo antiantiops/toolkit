@@ -17,3 +17,8 @@ assert.ok(page.includes('data-testid="contrast-example"'));
 assert.ok(page.includes('renderContrastTip(w.contrastTip, w.contrastExamples)'));
 assert.ok(page.includes('renderContrastTip(lookup.contrastTip, lookup.contrastExamples)'));
 console.log('PASS: bilingual comparison examples in cards and lookup');
+
+assert.ok(page.includes('<details data-testid="contrast-example"'));
+assert.ok(page.includes('<span>Xem ví dụ</span>'));
+assert.ok(!page.includes('<details open data-testid="contrast-example"'));
+console.log('PASS: comparison examples collapsed by default with native details');

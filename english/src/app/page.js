@@ -622,7 +622,12 @@ export default function Home() {
                         : {desc}
                       </span>
                       {example?.english && example?.vietnamese && (
-                        <div data-testid="contrast-example" className="mt-2 rounded-xl border border-slate-700/60 bg-slate-950/60 p-3 shadow-sm">
+                        <details data-testid="contrast-example" className="group/example mt-2 rounded-xl border border-slate-700/60 bg-slate-950/60 shadow-sm">
+                          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-sky-200 hover:bg-slate-800/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400 [&::-webkit-details-marker]:hidden">
+                            <span>Xem ví dụ</span>
+                            <span aria-hidden="true" className="transition-transform group-open/example:rotate-180">⌄</span>
+                          </summary>
+                          <div className="border-t border-slate-700/50 p-3">
                           <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                             <span>Ví dụ phân biệt</span>
                             <div className="flex shrink-0 items-center gap-1">
@@ -632,7 +637,8 @@ export default function Home() {
                           </div>
                           <div className="mt-1 break-words font-medium text-sky-100">{clickableText(example.english)}</div>
                           <div className="mt-2 border-t border-slate-700/50 pt-2 text-sm leading-relaxed text-slate-300">{example.vietnamese}</div>
-                        </div>
+                          </div>
+                        </details>
                       )}
                     </li>
                   );
