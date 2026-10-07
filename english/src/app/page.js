@@ -169,12 +169,46 @@ export default function Home() {
   const wFileRef1 = useRef(null);
   const wFileRef2 = useRef(null);
 
+  const [vImageId, setVImageId] = useState(null);
+  const [gImageId, setGImageId] = useState(null);
   const [confirmAnalyze, setConfirmAnalyze] = useState(null);
   const [cropPending, setCropPending] = useState(null);
   const selectImage = (file, target) => {
     if (!file || !file.type.startsWith("image/")) return;
     if (file.size > 25 * 1024 * 1024) { alert("Ảnh quá lớn. Chọn ảnh dưới 25 MB."); return; }
     setCropPending({ file, target });
+  };
+
+  const startConfirmUpload = async (file, target) => {
+    setConfirmAnalyze({
+      file,
+      target,
+      loading: true,
+      imageId: null,
+      error: null,
+      size: file.size,
+    });
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetchWithRetry("/api/upload", { method: "POST", body: fd, timeout: 90000 }, 2, 1000);
+      const data = await parseApiResponse(res);
+      if (!data.id) throw new Error(data.error || "Không nhận được mã ảnh tải lên");
+      if (target === "vocab") setVImageId(data.id);
+      if (target === "grammar") setGImageId(data.id);
+      setConfirmAnalyze((prev) => (prev && prev.file === file ? {
+        ...prev,
+        loading: false,
+        imageId: data.id,
+        size: data.size || file.size,
+      } : prev));
+    } catch (e) {
+      setConfirmAnalyze((prev) => (prev && prev.file === file ? {
+        ...prev,
+        loading: false,
+        error: formatErrorMessage(e),
+      } : prev));
+    }
   };
 
   // --- Vocab handlers ---
@@ -198,6 +232,7 @@ export default function Home() {
     setWords([]);
     setPreview(null);
     setImage(null);
+    setVImageId(null);
     setPractice(false);
     setSubmitted(false);
     setMatchAnswers({});
@@ -208,6 +243,7 @@ export default function Home() {
     if (!file || !file.type.startsWith("image/")) return;
     setPreview(URL.createObjectURL(file));
     setImage(file);
+    setVImageId(null);
     setWords([]);
     setGroupQuestions([]);
     setGeneratedFills([]);
@@ -219,18 +255,30 @@ export default function Home() {
     selectImage(e.dataTransfer.files[0], "vocab");
   }, [handleFile]);
 
-  const analyze = async (targetFile = null) => {
-    const fileToAnalyze = targetFile instanceof File || targetFile instanceof Blob ? targetFile : image;
-    if (!fileToAnalyze) return;
+  const analyze = async (targetArg = null) => {
+    const idToAnalyze = typeof targetArg === "string" ? targetArg : vImageId;
+    const fileToAnalyze = targetArg instanceof File || targetArg instanceof Blob ? targetArg : image;
+    if (!idToAnalyze && !fileToAnalyze) return;
     setLoading(true);
     setError(null);
     try {
-      const formData = new FormData();
-      formData.append("image", fileToAnalyze);
-      // ponytail: 120s timeout covers slow cellular/international links. Add progress bar if model time grows.
-      const res = await fetchWithRetry("/api/analyze", { method: "POST", body: formData, timeout: 120000 }, 2, 1500);
+      let res;
+      if (idToAnalyze) {
+        res = await fetchWithRetry("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageId: idToAnalyze }),
+          timeout: 120000,
+        }, 2, 1500);
+      } else {
+        const formData = new FormData();
+        formData.append("image", fileToAnalyze);
+        // ponytail: 120s timeout covers slow cellular/international links. Add progress bar if model time grows.
+        res = await fetchWithRetry("/api/analyze", { method: "POST", body: formData, timeout: 120000 }, 2, 1500);
+      }
       const data = await parseApiResponse(res);
       setWords(data.words || []);
+      if (data.preview) setPreview(data.preview);
       setPractice(false);
       setSubmitted(false);
       setMatchAnswers({});
@@ -247,6 +295,7 @@ export default function Home() {
     if (!file || !file.type.startsWith("image/")) return;
     setGPreview(URL.createObjectURL(file));
     setGImage(file);
+    setGImageId(null);
     setGrammar(null);
     setGPracticeData(null);
     setGError(null);
@@ -343,15 +392,26 @@ export default function Home() {
     }
   };
 
-  const analyzeGrammar = async (targetFile = null) => {
-    const fileToAnalyze = targetFile instanceof File || targetFile instanceof Blob ? targetFile : gImage;
-    if (!fileToAnalyze) return;
+  const analyzeGrammar = async (targetArg = null) => {
+    const idToAnalyze = typeof targetArg === "string" ? targetArg : gImageId;
+    const fileToAnalyze = targetArg instanceof File || targetArg instanceof Blob ? targetArg : gImage;
+    if (!idToAnalyze && !fileToAnalyze) return;
     setGLoading(true);
     setGError(null);
     try {
-      const formData = new FormData();
-      formData.append("image", fileToAnalyze);
-      const res = await fetchWithRetry("/api/grammar", { method: "POST", body: formData, timeout: 120000 }, 2, 1500);
+      let res;
+      if (idToAnalyze) {
+        res = await fetchWithRetry("/api/grammar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageId: idToAnalyze }),
+          timeout: 120000,
+        }, 2, 1500);
+      } else {
+        const formData = new FormData();
+        formData.append("image", fileToAnalyze);
+        res = await fetchWithRetry("/api/grammar", { method: "POST", body: formData, timeout: 120000 }, 2, 1500);
+      }
       const data = await parseApiResponse(res);
       setGrammar(data.grammar);
       setGPractice(false);
@@ -501,53 +561,85 @@ export default function Home() {
         if (target === "quick") lookupText(file);
         else if (target === "grammar") {
           handleGFile(file);
-          setConfirmAnalyze({ file, target: "grammar" });
+          startConfirmUpload(file, "grammar");
         } else if (target === "writing1") {
           handleWFile1(file);
         } else if (target === "writing2") {
           handleWFile2(file);
         } else {
           handleFile(file);
-          setConfirmAnalyze({ file, target: "vocab" });
+          startConfirmUpload(file, "vocab");
         }
       }} />}
 
       {confirmAnalyze && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setConfirmAnalyze(null)} onKeyDown={e => { if (e.key === "Escape") setConfirmAnalyze(null); }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => !confirmAnalyze.loading && setConfirmAnalyze(null)} onKeyDown={e => { if (e.key === "Escape" && !confirmAnalyze.loading) setConfirmAnalyze(null); }}>
           <div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 p-6 text-center shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600/20 text-3xl">
-              🔍
+              {confirmAnalyze.loading ? "⏳" : confirmAnalyze.error ? "⚠️" : "🔍"}
             </div>
-            <h3 className="text-lg font-bold text-white mb-2">Tiến hành phân tích ảnh này?</h3>
-            <p className="text-sm text-slate-400 mb-6 leading-relaxed">
-              {confirmAnalyze.target === "grammar"
-                ? "Bắt đầu phân tích cấu trúc ngữ pháp từ ảnh đã chọn."
-                : confirmAnalyze.target === "writing"
-                ? (confirmAnalyze.file1 && confirmAnalyze.file2
-                    ? "Bắt đầu phân tích trọn bộ Unit (2 ảnh: Bài mẫu + Bài tập Self-Writing)."
-                    : "Bắt đầu phân tích trang Writing đã chọn.")
-                : "Bắt đầu phân tích từ vựng và tạo bài luyện tập từ ảnh đã chọn."}
-            </p>
+            <h3 className="text-lg font-bold text-white mb-2">
+              {confirmAnalyze.loading ? "Đang tải ảnh lên server..." : confirmAnalyze.error ? "Tải ảnh không thành công" : "Ảnh đã sẵn sàng!"}
+            </h3>
+            <div className="text-sm text-slate-400 mb-6 leading-relaxed">
+              {confirmAnalyze.loading ? (
+                <div className="flex items-center justify-center gap-2 text-amber-300">
+                  <span className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                  <span>Đang tải lên server ({((confirmAnalyze.size || 0) / (1024 * 1024)).toFixed(1)} MB)...</span>
+                </div>
+              ) : confirmAnalyze.error ? (
+                <span className="text-red-300 text-xs block bg-red-950/60 border border-red-800/60 rounded-lg p-2.5">
+                  {confirmAnalyze.error}
+                </span>
+              ) : (
+                <span className="text-emerald-300 text-xs block font-medium">
+                  ✓ Đã lưu ảnh trên server ({((confirmAnalyze.size || 0) / (1024 * 1024)).toFixed(1)} MB). Nhấn bên dưới để AI phân tích.
+                </span>
+              )}
+            </div>
             <div className="flex gap-3">
-              <button type="button" onClick={() => setConfirmAnalyze(null)} className="flex-1 rounded-xl bg-slate-800 py-3 text-sm font-semibold text-slate-300 hover:bg-slate-700 transition-colors">
-                Để sau
-              </button>
               <button
                 type="button"
-                autoFocus
-                onClick={() => {
-                  const { file, target } = confirmAnalyze;
-                  setConfirmAnalyze(null);
-                  if (target === "grammar") analyzeGrammar(file);
-                  else if (target === "writing") analyzeWriting(confirmAnalyze.file1, confirmAnalyze.file2);
-                  else analyze(file);
-                }}
-                className={`flex-1 rounded-xl py-3 text-sm font-semibold text-white shadow-lg transition-colors ${
-                  confirmAnalyze.target === "grammar" ? "bg-purple-600 hover:bg-purple-500" : confirmAnalyze.target === "writing" ? "bg-emerald-600 hover:bg-emerald-500" : "bg-blue-600 hover:bg-blue-500"
-                }`}
+                disabled={confirmAnalyze.loading}
+                onClick={() => setConfirmAnalyze(null)}
+                className="flex-1 rounded-xl bg-slate-800 py-3 text-sm font-semibold text-slate-300 hover:bg-slate-700 disabled:opacity-40 transition-colors"
               >
-                OK, phân tích
+                Để sau
               </button>
+              {confirmAnalyze.error ? (
+                <button
+                  type="button"
+                  onClick={() => startConfirmUpload(confirmAnalyze.file, confirmAnalyze.target)}
+                  className="flex-1 rounded-xl bg-amber-600 hover:bg-amber-500 py-3 text-sm font-semibold text-white shadow-lg transition-colors"
+                >
+                  Thử lại
+                </button>
+              ) : confirmAnalyze.loading ? (
+                <button
+                  type="button"
+                  disabled
+                  className="flex-1 rounded-xl bg-slate-800/80 border border-slate-700 py-3 text-sm font-semibold text-slate-400 cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <span className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                  Đang tải...
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  autoFocus
+                  onClick={() => {
+                    const { imageId, file, target } = confirmAnalyze;
+                    setConfirmAnalyze(null);
+                    if (target === "grammar") analyzeGrammar(imageId || file);
+                    else analyze(imageId || file);
+                  }}
+                  className={`flex-1 rounded-xl py-3 text-sm font-semibold text-white shadow-lg transition-colors ${
+                    confirmAnalyze.target === "grammar" ? "bg-purple-600 hover:bg-purple-500" : "bg-blue-600 hover:bg-blue-500"
+                  }`}
+                >
+                  OK, phân tích
+                </button>
+              )}
             </div>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getUploadedFile } from "../upload/storage";
 
 const NINEROUTER_URL = process.env.NINEROUTER_URL || "http://192.168.101.36:20128";
 const NINEROUTER_KEY = process.env.NINEROUTER_KEY || "";
@@ -28,13 +29,31 @@ Rules: preserve facts/examples from image. Write at least 2 rule steps when topi
 
 export async function POST(request) {
   try {
-    const formData = await request.formData();
-    const file = formData.get("image");
-    if (!file) return NextResponse.json({ error: "No image uploaded" }, { status: 400 });
-
-    const bytes = await file.arrayBuffer();
-    const base64 = Buffer.from(bytes).toString("base64");
-    const mime = file.type || "image/jpeg";
+    let base64, mime;
+    const contentType = request.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      const body = await request.json();
+      const id = body.imageId || body.id;
+      const item = getUploadedFile(id);
+      if (!item) return NextResponse.json({ error: "Ảnh không tồn tại hoặc đã hết hạn trên server" }, { status: 400 });
+      base64 = item.buffer.toString("base64");
+      mime = item.mime;
+    } else {
+      const formData = await request.formData();
+      const id = formData.get("imageId") || formData.get("id");
+      if (id) {
+        const item = getUploadedFile(id);
+        if (!item) return NextResponse.json({ error: "Ảnh không tồn tại hoặc đã hết hạn trên server" }, { status: 400 });
+        base64 = item.buffer.toString("base64");
+        mime = item.mime;
+      } else {
+        const file = formData.get("image") || formData.get("file");
+        if (!file) return NextResponse.json({ error: "No image uploaded" }, { status: 400 });
+        const bytes = await file.arrayBuffer();
+        base64 = Buffer.from(bytes).toString("base64");
+        mime = file.type || "image/jpeg";
+      }
+    }
     const dataUrl = `data:${mime};base64,${base64}`;
 
     const headers = { "Content-Type": "application/json" };
