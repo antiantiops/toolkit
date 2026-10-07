@@ -560,7 +560,7 @@ export default function Home() {
       : part
   )}</span>;
 
-  const renderContrastTip = (raw = "") => {
+  const renderContrastTip = (raw = "", examples = []) => {
     if (!raw || typeof raw !== "string") return null;
     const sections = [];
     const lines = raw.split(/\n/).map(l => l.trim()).filter(Boolean);
@@ -607,6 +607,7 @@ export default function Home() {
                   const word = m[2].trim();
                   const vi = m[4]?.trim() || "";
                   const desc = m[5]?.trim() || "";
+                  const example = Array.isArray(examples) ? examples.find(x => typeof x?.word === "string" && x.word.toLowerCase() === word.toLowerCase()) : null;
                   return (
                     <li key={j} className="leading-relaxed">
                       <span className="font-bold text-sky-300 hover:text-sky-200 underline decoration-dotted underline-offset-4 cursor-pointer">
@@ -620,6 +621,19 @@ export default function Home() {
                       <span className="text-slate-200">
                         : {desc}
                       </span>
+                      {example?.english && example?.vietnamese && (
+                        <div data-testid="contrast-example" className="mt-2 rounded-xl border border-slate-700/60 bg-slate-950/60 p-3 shadow-sm">
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                            <span>Ví dụ phân biệt</span>
+                            <div className="flex shrink-0 items-center gap-1">
+                              <CopyBtn text={example.english} />
+                              <SpeakBtn text={example.english} className="rounded-md bg-slate-800 px-2 py-1 text-xs text-sky-200 hover:bg-slate-700">Nghe</SpeakBtn>
+                            </div>
+                          </div>
+                          <div className="mt-1 break-words font-medium text-sky-100">{clickableText(example.english)}</div>
+                          <div className="mt-2 border-t border-slate-700/50 pt-2 text-sm leading-relaxed text-slate-300">{example.vietnamese}</div>
+                        </div>
+                      )}
                     </li>
                   );
                 }
@@ -1119,7 +1133,7 @@ export default function Home() {
                       <span className="text-slate-400 font-medium">Trái nghĩa:</span>{!w.antonymsInBook && <AiTag />} {renderAnnotatedWords(w.antonyms)}<CopyBtn text={w.antonyms} />
                     </div>
                   )}
-                  {w.contrastTip && <div data-testid="vocab-contrast-tip" className="mt-3 rounded-lg border border-amber-800/60 bg-amber-950/30 p-3 text-sm"><div className="font-semibold text-amber-300">Mẹo nhớ cực ngắn<AiTag /></div>{renderContrastTip(w.contrastTip)}</div>}
+                  {w.contrastTip && <div data-testid="vocab-contrast-tip" className="mt-3 rounded-lg border border-amber-800/60 bg-amber-950/30 p-3 text-sm"><div className="font-semibold text-amber-300">Mẹo nhớ cực ngắn<AiTag /></div>{renderContrastTip(w.contrastTip, w.contrastExamples)}</div>}
                   {w.collocations?.length > 0 && <div className="mt-3 rounded-lg border border-teal-800/70 bg-teal-950/40 p-3"><div className="text-xs font-semibold uppercase tracking-wide text-teal-300">Collocation</div>{w.collocations.map((c, ci) => <div key={ci} className="mt-2 text-sm"><div className="font-medium text-teal-100">{clickableText(c.phrase)}<CopyBtn text={c.phrase} /> <SpeakBtn text={c.phrase} className="text-xs text-teal-300 hover:text-white">🔊</SpeakBtn></div><div className="mt-1 text-teal-200/70">{c.meaning}{c.note && ` — ${c.note}`}</div></div>)}</div>}
                   {w.note && <div className="text-sm text-amber-400 mt-2">💡 {w.note}</div>}
                   <SpeakBtn text={w.example} className="mt-3 text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">🔊 Nghe ví dụ</SpeakBtn>
@@ -1535,7 +1549,7 @@ export default function Home() {
               {lookup.usage && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Cách dùng: </span>{lookup.usage}</div>}
               {lookup.synonyms && !lookup.contrastTip && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Đồng nghĩa: </span><AiTag /> {renderAnnotatedWords(lookup.synonyms)}</div>}
               {lookup.antonyms && !lookup.contrastTip && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Trái nghĩa: </span><AiTag /> {renderAnnotatedWords(lookup.antonyms)}</div>}
-              {lookup.contrastTip && <div data-testid="lookup-contrast-tip" className="mt-3 rounded-lg border border-amber-800/60 bg-amber-950/30 p-3 text-sm"><div className="font-semibold text-amber-300">Mẹo nhớ cực ngắn<AiTag /></div>{renderContrastTip(lookup.contrastTip)}</div>}
+              {lookup.contrastTip && <div data-testid="lookup-contrast-tip" className="mt-3 rounded-lg border border-amber-800/60 bg-amber-950/30 p-3 text-sm"><div className="font-semibold text-amber-300">Mẹo nhớ cực ngắn<AiTag /></div>{renderContrastTip(lookup.contrastTip, lookup.contrastExamples)}</div>}
               {lookup.easyReading && <div className="mt-4 rounded-xl border border-sky-900 bg-sky-950/50 p-3 text-sm leading-relaxed text-sky-100"><span className="font-semibold text-sky-300">Dễ đọc: </span>{lookup.easyReading}</div>}
               <SpeakBtn text={lookup.word} className="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-500">🔊 Nghe từ</SpeakBtn>
             </>}

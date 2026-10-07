@@ -11,3 +11,9 @@ for (const file of ['../lib/vocabulary/prompts.js', 'api/word/route.js']) {
   assert.ok(read(file).includes('NEVER introduce extra comparison words'));
   assert.ok(read(file).includes('EVERY word already listed'));
 }
+
+for (const file of ['../lib/vocabulary/prompts.js', 'api/word/route.js']) assert.ok(read(file).includes('contrastExamples'), file);
+assert.ok(page.includes('data-testid="contrast-example"'));
+assert.ok(page.includes('renderContrastTip(w.contrastTip, w.contrastExamples)'));
+assert.ok(page.includes('renderContrastTip(lookup.contrastTip, lookup.contrastExamples)'));
+console.log('PASS: bilingual comparison examples in cards and lookup');
