@@ -524,6 +524,82 @@ export default function Home() {
       : part
   )}</span>;
 
+  const renderContrastTip = (raw = "") => {
+    if (!raw || typeof raw !== "string") return null;
+    const sections = [];
+    const lines = raw.split(/\n/).map(l => l.trim()).filter(Boolean);
+    for (const line of lines) {
+      const cleanHeader = line.replace(/^\*{1,3}|[\*#:]+$/g, "").replace(/^[-•*#\d.]+\s*/, "").trim();
+      const headingMatch = cleanHeader.match(/^(Đồng nghĩa|Trái nghĩa)(?:\s*\([^)]*\))?\s*[:：]?\s*(.*)$/i);
+      if (headingMatch) {
+        const isOpposite = /^Trái/i.test(headingMatch[1]);
+        const title = headingMatch[1];
+        const rest = headingMatch[2]?.trim();
+        const s = { title, opposite: isOpposite, items: [] };
+        sections.push(s);
+        if (rest) s.items.push(rest);
+      } else {
+        if (!sections.length) {
+          sections.push({ title: "Phân biệt sắc thái", opposite: false, items: [] });
+        }
+        sections[sections.length - 1].items.push(line);
+      }
+    }
+
+    return (
+      <div data-testid="contrast-sections" className="mt-3 space-y-3">
+        {sections.map((sec, i) => (
+          <div
+            key={i}
+            className={`rounded-xl border p-3.5 transition-colors ${
+              sec.opposite
+                ? "border-rose-700/60 bg-rose-950/40 text-rose-100"
+                : "border-emerald-700/60 bg-emerald-950/40 text-emerald-100"
+            }`}
+          >
+            <div className="flex items-center gap-2 mb-2.5 font-bold text-sm tracking-wide">
+              <span>{sec.opposite ? "⚡" : "🔗"}</span>
+              <span className={sec.opposite ? "text-rose-300" : "text-emerald-300"}>
+                {sec.title}
+              </span>
+            </div>
+            <ul className="space-y-2 text-sm leading-relaxed">
+              {sec.items.map((item, j) => {
+                const clean = item.replace(/^[-•*#\d.]+\s*/, "").trim();
+                const m = clean.match(/^(\*{0,2})([A-Za-z][A-Za-z\s'’\-]*?)(\*{0,2})\s*(?:\(([^)]+)\))?\s*[:=–—]\s*(.*)$/);
+                if (m) {
+                  const word = m[2].trim();
+                  const vi = m[4]?.trim() || "";
+                  const desc = m[5]?.trim() || "";
+                  return (
+                    <li key={j} className="leading-relaxed">
+                      <span className="font-bold text-sky-300 hover:text-sky-200 underline decoration-dotted underline-offset-4 cursor-pointer">
+                        {clickableText(word)}
+                      </span>
+                      {vi && (
+                        <span className="text-amber-300 font-normal ml-1">
+                          ({vi})
+                        </span>
+                      )}
+                      <span className="text-slate-200">
+                        : {desc}
+                      </span>
+                    </li>
+                  );
+                }
+                return (
+                  <li key={j} className="text-slate-200 leading-relaxed">
+                    {item}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   const renderAnnotatedWords = (raw = "") => {
     if (!raw || typeof raw !== "string") return null;
     const items = [];
@@ -997,17 +1073,17 @@ export default function Home() {
                     {w.exampleVietnamese && <div className="text-slate-400 italic mt-1">{w.exampleVietnamese}</div>}
                   </div>
                   {w.pending && <div className="text-sm text-blue-300">Đang bổ sung nghĩa và mẹo dùng...</div>}
-                  {w.synonyms && (
+                  {w.synonyms && !w.contrastTip && (
                     <div className="text-sm text-slate-300">
                       <span className="text-slate-400 font-medium">Đồng nghĩa:</span>{!w.synonymsInBook && <AiTag />} {renderAnnotatedWords(w.synonyms)}<CopyBtn text={w.synonyms} />
                     </div>
                   )}
-                  {w.antonyms && (
+                  {w.antonyms && !w.contrastTip && (
                     <div className="text-sm text-slate-300">
                       <span className="text-slate-400 font-medium">Trái nghĩa:</span>{!w.antonymsInBook && <AiTag />} {renderAnnotatedWords(w.antonyms)}<CopyBtn text={w.antonyms} />
                     </div>
                   )}
-                  {w.contrastTip && <div data-testid="vocab-contrast-tip" className="mt-3 rounded-lg border border-amber-800/60 bg-amber-950/30 p-3 text-sm"><div className="font-semibold text-amber-300">Mẹo nhớ cực ngắn<AiTag /></div><p className="mt-1 whitespace-pre-line text-amber-100">{w.contrastTip}</p></div>}
+                  {w.contrastTip && <div data-testid="vocab-contrast-tip" className="mt-3 rounded-lg border border-amber-800/60 bg-amber-950/30 p-3 text-sm"><div className="font-semibold text-amber-300">Mẹo nhớ cực ngắn<AiTag /></div>{renderContrastTip(w.contrastTip)}</div>}
                   {w.collocations?.length > 0 && <div className="mt-3 rounded-lg border border-teal-800/70 bg-teal-950/40 p-3"><div className="text-xs font-semibold uppercase tracking-wide text-teal-300">Collocation</div>{w.collocations.map((c, ci) => <div key={ci} className="mt-2 text-sm"><div className="font-medium text-teal-100">{clickableText(c.phrase)}<CopyBtn text={c.phrase} /> <SpeakBtn text={c.phrase} className="text-xs text-teal-300 hover:text-white">🔊</SpeakBtn></div><div className="mt-1 text-teal-200/70">{c.meaning}{c.note && ` — ${c.note}`}</div></div>)}</div>}
                   {w.note && <div className="text-sm text-amber-400 mt-2">💡 {w.note}</div>}
                   <SpeakBtn text={w.example} className="mt-3 text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">🔊 Nghe ví dụ</SpeakBtn>
@@ -1421,9 +1497,9 @@ export default function Home() {
               {lookup.partOfSpeech && <div className="mt-2"><span className="inline-block max-w-full rounded-lg border border-amber-500/40 bg-amber-950/50 px-2.5 py-1 text-xs font-semibold leading-relaxed text-amber-200">{lookup.partOfSpeech}</span></div>}
               <div className="mt-4 text-lg font-medium text-white">{lookup.meaning}</div>
               {lookup.usage && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Cách dùng: </span>{lookup.usage}</div>}
-              {lookup.synonyms && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Đồng nghĩa: </span><AiTag /> {renderAnnotatedWords(lookup.synonyms)}</div>}
-              {lookup.antonyms && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Trái nghĩa: </span><AiTag /> {renderAnnotatedWords(lookup.antonyms)}</div>}
-              {lookup.contrastTip && <div data-testid="lookup-contrast-tip" className="mt-3 rounded-lg border border-amber-800/60 bg-amber-950/30 p-3 text-sm"><div className="font-semibold text-amber-300">Mẹo nhớ cực ngắn<AiTag /></div><p className="mt-1 whitespace-pre-line text-amber-100">{lookup.contrastTip}</p></div>}
+              {lookup.synonyms && !lookup.contrastTip && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Đồng nghĩa: </span><AiTag /> {renderAnnotatedWords(lookup.synonyms)}</div>}
+              {lookup.antonyms && !lookup.contrastTip && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Trái nghĩa: </span><AiTag /> {renderAnnotatedWords(lookup.antonyms)}</div>}
+              {lookup.contrastTip && <div data-testid="lookup-contrast-tip" className="mt-3 rounded-lg border border-amber-800/60 bg-amber-950/30 p-3 text-sm"><div className="font-semibold text-amber-300">Mẹo nhớ cực ngắn<AiTag /></div>{renderContrastTip(lookup.contrastTip)}</div>}
               {lookup.easyReading && <div className="mt-4 rounded-xl border border-sky-900 bg-sky-950/50 p-3 text-sm leading-relaxed text-sky-100"><span className="font-semibold text-sky-300">Dễ đọc: </span>{lookup.easyReading}</div>}
               <SpeakBtn text={lookup.word} className="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-500">🔊 Nghe từ</SpeakBtn>
             </>}
