@@ -61,3 +61,31 @@ export function formatErrorMessage(e) {
     ? "\nTrình duyệt không cung cấp HTTP response. Chưa xác định được lỗi mạng, proxy hay đăng nhập."
     : "");
 }
+
+// Shared short-request polling; failed parts retain their job ID for explicit retry.
+export async function pollLesson(mode, payload, onProgress) {
+  const key = `${mode}-pending-job`;
+  let jobId = sessionStorage.getItem(key);
+  if (!jobId) {
+    const started = await parseApiResponse(await fetchWithRetry(`/api/${mode}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), timeout: 15000 }, 0));
+    jobId = started.jobId;
+    if (!jobId) throw new Error('Missing jobId');
+    sessionStorage.setItem(key, jobId);
+  }
+  const deadline = Date.now() + 10 * 60 * 1000;
+  while (Date.now() < deadline) {
+    const res = await fetchWithRetry(`/api/${mode}?jobId=${encodeURIComponent(jobId)}`, { timeout: 15000, cache: 'no-store' }, 2);
+    if (res.status === 404) sessionStorage.removeItem(key);
+    const data = await parseApiResponse(res);
+    onProgress(data);
+    if (data.status === 'completed') { sessionStorage.removeItem(key); return data; }
+    if (['failed', 'partial'].includes(data.status)) {
+      sessionStorage.removeItem(key);
+      const error = new Error(`${data.error}\nJob ID: ${jobId}\nStage: ${data.stage}`);
+      error.jobId = jobId;
+      throw error;
+    }
+    await new Promise(resolve => setTimeout(resolve, 3000));
+  }
+  throw new Error(`Task still running; reload to resume. Job ID: ${jobId}`);
+}

@@ -35,3 +35,16 @@ node english/check-errors.cjs
 node english/check-contrast-tip.cjs
 ```
 Build in `/root/.openclaw/workspace/vocab-app-next`: copy ALL `english/src/.` (includes lib), then `npm run build`. Wait for exit 0. Deploy standalone AND static together, preserve hidden `.next`, mirror static into standalone; back up before restart. Verify live referenced page chunk and real POST/GET flow. ESLint currently absent; build success is not lint success.
+
+## Shared Grammar / Writing architecture
+Shared AI transport now lives in `src/lib/lessons/ai.js`; vocabulary/ai.js re-exports it for compatibility. Supports JSON arrays and objects with timeout and redacted lifecycle logs.
+
+`src/lib/lessons/routes.js` exports lessonRoutes(mode), used by thin grammar/writing route handlers. POST accepts grammar `{imageId}`, writing `{image1Id,image2Id}`, or retry `{jobId,retry:true}`. GET accepts jobId. Jobs are owner-cookie scoped, deduplicated per ordered image list, process-local with 2h inactive TTL. Short 202 response; Next after() executes pipeline.
+
+`src/lib/lessons/pipeline.js`: extract original pages once into factual JSON, then generate two independent text-only sections concurrently. Grammar: core lesson/rules and comparison/practice summary. Writing: model/structure and assignment/reusable guidance; dual-page model and task generated separately. Reuse extracted source and successful parts on explicit retry. Completed output preserves existing grammar/writing component schemas. Incomplete output is not rendered as a complete lesson; progress and retry are shown.
+
+Prompts: grammar-prompts.js and writing-prompts.js preserve previous pedagogy/schema. Never supply textbook prose as instructions; preserve assignment names, numbers, word count and printed word bank. No generated completed answer for self-writing assignments.
+
+Client: fetch-helper.js pollLesson shared by Grammar/Writing. Poll every 3s, 15s request timeout, 10min polling deadline, sessionStorage resume per mode. POST is not auto-retried. page.js renders progress and retries. Vocabulary keeps incremental word-card polling.
+
+Tests: `node english/check-lessons.mjs` checks both modes, extraction reuse, failed-part-only retry. Full browser/OIDC and real grammar/writing image outputs still require live validation. Jobs and partial results lost on server restart; no new durable queue dependency. Admission control is per pipeline family, not global across Vocabulary and Grammar/Writing.

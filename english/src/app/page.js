@@ -1,5 +1,5 @@
 "use client";
-import { fetchWithRetry, parseApiResponse, formatErrorMessage } from "./fetch-helper";
+import { fetchWithRetry, parseApiResponse, formatErrorMessage, pollLesson } from "./fetch-helper";
 import { useState, useRef, useCallback, useEffect } from "react";
 import ImageCrop from "./ImageCrop";
 import LessonChat from "./LessonChat";
@@ -146,6 +146,10 @@ export default function Home() {
   const wFileRef1 = useRef(null);
   const wFileRef2 = useRef(null);
 
+  const [gJob, setGJob] = useState(null);
+  const [wJob, setWJob] = useState(null);
+  const [gRetry, setGRetry] = useState(null);
+  const [wRetry, setWRetry] = useState(null);
   const [vProgress, setVProgress] = useState(null);
   const [vRetryJob, setVRetryJob] = useState(null);
   const [vImageId, setVImageId] = useState(null);
@@ -381,22 +385,18 @@ export default function Home() {
     (!wImage2 || Boolean(wUpload2.id));
 
   const analyzeWriting = async () => {
-    if (!canAnalyzeWriting) return;
+    if (!canAnalyzeWriting && !wRetry && !sessionStorage.getItem("writing-pending-job")) return;
     setWLoading(true);
     setWError(null);
     try {
       const payload = {};
       if (wUpload1.id) payload.image1Id = wUpload1.id;
       if (wUpload2.id) payload.image2Id = wUpload2.id;
-      const res = await fetchWithRetry("/api/writing", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        timeout: 120000,
-      }, 2, 1500);
-      const data = await parseApiResponse(res);
+      const data = await pollLesson("writing", wRetry ? {jobId: wRetry, retry: true} : payload, setWJob);
+      setWRetry(null);
       setWriting(data.writing);
     } catch (e) {
+      if (e.jobId) setWRetry(e.jobId);
       setWError(formatErrorMessage(e));
     } finally {
       setWLoading(false);
@@ -406,34 +406,34 @@ export default function Home() {
   const analyzeGrammar = async (targetArg = null) => {
     const idToAnalyze = typeof targetArg === "string" ? targetArg : gImageId;
     const fileToAnalyze = targetArg instanceof File || targetArg instanceof Blob ? targetArg : gImage;
-    if (!idToAnalyze && !fileToAnalyze) return;
+    if (!idToAnalyze && !fileToAnalyze && !gRetry && !sessionStorage.getItem("grammar-pending-job")) return;
     setGLoading(true);
     setGError(null);
     try {
-      let res;
-      if (idToAnalyze) {
-        res = await fetchWithRetry("/api/grammar", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageId: idToAnalyze }),
-          timeout: 120000,
-        }, 2, 1500);
-      } else {
-        const formData = new FormData();
-        formData.append("image", fileToAnalyze);
-        res = await fetchWithRetry("/api/grammar", { method: "POST", body: formData, timeout: 120000 }, 2, 1500);
+      let imageId = idToAnalyze;
+      if (!imageId && !gRetry && !sessionStorage.getItem("grammar-pending-job")) {
+        const fd = new FormData(); fd.append("file", fileToAnalyze);
+        const uploaded = await parseApiResponse(await fetchWithRetry("/api/upload", {method: "POST", body: fd, timeout: 90000}, 0));
+        imageId = uploaded.id; setGImageId(imageId);
       }
-      const data = await parseApiResponse(res);
+      const data = await pollLesson("grammar", gRetry ? {jobId: gRetry, retry: true} : {imageId}, setGJob);
+      setGRetry(null);
       setGrammar(data.grammar);
       setGPractice(false);
       setGSubmitted(false);
       setGPracticeData(null);
     } catch (e) {
+      if (e.jobId) setGRetry(e.jobId);
       setGError(formatErrorMessage(e));
     } finally {
       setGLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (sessionStorage.getItem("grammar-pending-job")) analyzeGrammar();
+    if (sessionStorage.getItem("writing-pending-job")) analyzeWriting();
+  }, []);
 
   const createGrammarPractice = async () => {
     setGPracticeLoading(true);
@@ -1038,6 +1038,8 @@ export default function Home() {
         </div>
 
         {/* Error notification */}
+        {gJob && <p role="status" className="mb-3 text-sm text-blue-200">{gJob.stage === "extract" ? "Đang đọc ảnh..." : `Đã xử lý ${gJob.progress?.completed || 0}/2 phần`}</p>}
+        {gRetry && !gLoading && <button onClick={() => analyzeGrammar()} className="mb-3 rounded-lg bg-amber-600 px-4 py-2">Thử lại phần lỗi</button>}
         <ErrorBanner message={gError} onDismiss={() => setGError(null)} />
 
         {/* Grammar cards */}
@@ -1399,6 +1401,8 @@ export default function Home() {
         </div>
 
         {/* Error notification */}
+        {wJob && <p role="status" className="mb-3 text-sm text-blue-200">{wJob.stage === "extract" ? "Đang đọc ảnh..." : `Đã xử lý ${wJob.progress?.completed || 0}/2 phần`}</p>}
+        {wRetry && !wLoading && <button onClick={() => analyzeWriting()} className="mb-3 rounded-lg bg-amber-600 px-4 py-2">Thử lại phần lỗi</button>}
         <ErrorBanner message={wError} onDismiss={() => setWError(null)} />
         {writing && <Writing writing={writing} SpeakBtn={SpeakBtn} CopyBtn={CopyBtn} />}
       </>}
