@@ -609,34 +609,27 @@ export default function Home() {
                   const desc = m[5]?.trim() || "";
                   const example = Array.isArray(examples) ? examples.find(x => typeof x?.word === "string" && x.word.toLowerCase() === word.toLowerCase()) : null;
                   return (
-                    <li key={j} className="leading-relaxed">
-                      <span className="font-bold text-sky-300 hover:text-sky-200 underline decoration-dotted underline-offset-4 cursor-pointer">
-                        {clickableText(word)}
-                      </span>
-                      {vi && (
-                        <span className="text-amber-300 font-normal ml-1">
-                          ({vi})
+                    <li key={j} className="relative py-1 leading-relaxed">
+                      <div className="min-h-9 pr-24">
+                        <span className="font-bold text-sky-300 hover:text-sky-200 underline decoration-dotted underline-offset-4 cursor-pointer">
+                          {clickableText(word)}
                         </span>
-                      )}
-                      <span className="text-slate-200">
-                        : {desc}
-                      </span>
+                        {vi && <span className="ml-1 font-normal text-amber-300">({vi})</span>}
+                      </div>
+                      <p className="text-sm leading-relaxed text-slate-200">{desc}</p>
                       {example?.english && example?.vietnamese && (
-                        <details data-testid="contrast-example" className="group/example mt-2 rounded-xl border border-slate-700/60 bg-slate-950/60 shadow-sm">
-                          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-sky-200 hover:bg-slate-800/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400 [&::-webkit-details-marker]:hidden">
-                            <span>Xem ví dụ</span>
-                            <span aria-hidden="true" className="transition-transform group-open/example:rotate-180">⌄</span>
+                        <details data-testid="contrast-example" className="group/example">
+                          <summary aria-label={`Ví dụ cho ${word}`} className="absolute right-0 top-0 flex min-h-9 cursor-pointer list-none items-center gap-1.5 rounded-md px-2 text-xs font-medium text-slate-400 hover:text-sky-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400 [&::-webkit-details-marker]:hidden">
+                            <span>Ví dụ</span>
+                            <span aria-hidden="true" className="transition-transform motion-reduce:transition-none group-open/example:rotate-180">⌄</span>
                           </summary>
-                          <div className="border-t border-slate-700/50 p-3">
-                          <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                            <span>Ví dụ phân biệt</span>
-                            <div className="flex shrink-0 items-center gap-1">
+                          <div data-testid="contrast-example-body" className={`mt-3 border-l-2 pl-3 ${sec.opposite ? "border-rose-500/50" : "border-emerald-500/50"}`}>
+                            <div className="mb-1 flex justify-end gap-1">
                               <CopyBtn text={example.english} />
-                              <SpeakBtn text={example.english} className="rounded-md bg-slate-800 px-2 py-1 text-xs text-sky-200 hover:bg-slate-700">Nghe</SpeakBtn>
+                              <SpeakBtn text={example.english} className="rounded-md px-2 py-1 text-xs text-sky-200 hover:bg-slate-800">Nghe</SpeakBtn>
                             </div>
-                          </div>
-                          <div className="mt-1 break-words font-medium text-sky-100">{clickableText(example.english)}</div>
-                          <div className="mt-2 border-t border-slate-700/50 pt-2 text-sm leading-relaxed text-slate-300">{example.vietnamese}</div>
+                            <div className="break-words text-sm font-medium text-sky-100">{clickableText(example.english)}</div>
+                            <div className="mt-1.5 text-sm leading-relaxed text-slate-400">{example.vietnamese}</div>
                           </div>
                         </details>
                       )}
