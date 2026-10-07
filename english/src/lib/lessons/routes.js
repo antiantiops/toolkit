@@ -1,6 +1,7 @@
 import { NextResponse, after } from 'next/server';
 import { randomUUID } from 'crypto';
 import { getUploadedFile } from '../../app/api/upload/storage';
+import { saveSession } from '../../app/api/session/storage';
 import { callJson } from './ai.js';
 import { runLesson } from './pipeline.js';
 const jobs = globalThis.lessonJobs ||= new Map();
@@ -8,7 +9,10 @@ const reply = (data, status = 200) => NextResponse.json(data, { status, headers:
 export function lessonRoutes(mode) {
   const schedule = job => {
     job.status = 'running';
-    after(() => runLesson(job, callJson));
+    after(async () => {
+      await runLesson(job, callJson);
+      if (job.status === 'completed') saveSession(job.owner, { [mode]: job.result, ...mode === 'writing' ? { wPreview1: job.images[0], wPreview2: job.images[1] || null, modelDraft: null } : { gPreview: job.images[0] } });
+    });
   };
   return {
     async POST(request) {

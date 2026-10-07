@@ -14,10 +14,12 @@ function getFilePath(sid) {
   return path.join(CACHE_DIR, `${clean}.json`);
 }
 
-export function saveSession(sid, data) {
-  if (!sid) return;
+export function saveSession(sid, patch) {
+  if (!sid || !patch) return;
   ensureDir();
   const file = getFilePath(sid);
+  const existing = loadSession(sid) || {};
+  const data = { ...existing, ...patch };
   // ponytail: local disk JSON cache. Upgrade to Redis when multi-instance horizontal scale.
   fs.writeFileSync(file, JSON.stringify({ savedAt: Date.now(), data }), "utf8");
 }
@@ -38,10 +40,28 @@ export function loadSession(sid) {
   }
 }
 
-export function deleteSession(sid) {
+export function deleteSession(sid, type) {
   if (!sid) return;
   const file = getFilePath(sid);
-  if (fs.existsSync(file)) {
+  if (!fs.existsSync(file)) return;
+  if (!type) {
     try { fs.unlinkSync(file); } catch {}
+    return;
   }
+  try {
+    const existing = loadSession(sid) || {};
+    if (type === "vocab") {
+      delete existing.words;
+      delete existing.preview;
+    } else if (type === "grammar") {
+      delete existing.grammar;
+      delete existing.gPreview;
+    } else if (type === "writing") {
+      delete existing.writing;
+      delete existing.wPreview1;
+      delete existing.wPreview2;
+      delete existing.modelDraft;
+    }
+    fs.writeFileSync(file, JSON.stringify({ savedAt: Date.now(), data: existing }), "utf8");
+  } catch {}
 }

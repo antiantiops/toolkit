@@ -141,6 +141,7 @@ export default function Home() {
   const [wUpload1, setWUpload1] = useState({ loading: false, id: null, size: 0, error: null });
   const [wUpload2, setWUpload2] = useState({ loading: false, id: null, size: 0, error: null });
   const [writing, setWriting] = useState(null);
+  const [wModelDraft, setWModelDraft] = useState(null);
   const [wLoading, setWLoading] = useState(false);
   const [wError, setWError] = useState(null);
   const wFileRef1 = useRef(null);
@@ -200,17 +201,28 @@ export default function Home() {
     fetch("/api/session")
       .then((res) => res.json())
       .then((res) => {
-        if (res.session?.words?.length) {
-          setWords(res.session.words);
-          if (res.session.preview) setPreview(res.session.preview);
+        const cached = res.session;
+        if (cached?.words?.length) {
+          setWords(cached.words);
+          if (cached.preview) setPreview(cached.preview);
+        }
+        if (cached?.grammar) {
+          setGrammar(cached.grammar);
+          if (cached.gPreview) setGPreview(cached.gPreview);
+        }
+        if (cached?.writing) {
+          setWriting(cached.writing);
+          if (cached.wPreview1) setWPreview1(cached.wPreview1);
+          if (cached.wPreview2) setWPreview2(cached.wPreview2);
+          if (cached.modelDraft) setWModelDraft(cached.modelDraft);
         }
       })
       .catch(() => {});
   }, []);
 
-  const clearCachedLesson = async () => {
+  const clearCachedLesson = async (type = "vocab") => {
     try {
-      await fetch("/api/session", { method: "DELETE" });
+      await fetch(`/api/session?type=${type}`, { method: "DELETE" });
     } catch {}
     setWords([]);
     setPreview(null);
@@ -222,6 +234,26 @@ export default function Home() {
     setSubmitted(false);
     setMatchAnswers({});
     setFillAnswers({});
+    if (type === "grammar") {
+      setGrammar(null);
+      setGPreview(null);
+      setGImage(null);
+      setGImageId(null);
+      setGRetry(null);
+      setGPractice(false);
+      setGPracticeData(null);
+    }
+    if (type === "writing") {
+      setWriting(null);
+      setWModelDraft(null);
+      setWPreview1(null);
+      setWPreview2(null);
+      setWImage1(null);
+      setWImage2(null);
+      setWUpload1({ loading: false, id: null, size: 0, error: null });
+      setWUpload2({ loading: false, id: null, size: 0, error: null });
+      setWRetry(null);
+    }
   };
 
   const handleFile = useCallback((file) => {
@@ -343,6 +375,7 @@ export default function Home() {
     setWImage1(file);
     setWSkipSlot1(false);
     setWriting(null);
+    setWModelDraft(null);
     setWError(null);
     uploadWritingFile(file, 1);
   }, []);
@@ -352,6 +385,7 @@ export default function Home() {
     setWPreview2(URL.createObjectURL(file));
     setWImage2(file);
     setWriting(null);
+    setWModelDraft(null);
     setWError(null);
     uploadWritingFile(file, 2);
   }, []);
@@ -364,6 +398,7 @@ export default function Home() {
     setWPreview1(null);
     setWUpload1({ loading: false, id: null, size: 0, error: null });
     setWriting(null);
+    setWModelDraft(null);
   };
 
   const removeWImage2 = () => {
@@ -374,6 +409,7 @@ export default function Home() {
     setWPreview2(null);
     setWUpload2({ loading: false, id: null, size: 0, error: null });
     setWriting(null);
+    setWModelDraft(null);
   };
 
   const isSlot2Locked = !wSkipSlot1 && (!wUpload1.id || wUpload1.loading);
@@ -1480,7 +1516,7 @@ export default function Home() {
         {wJob && <p role="status" className="mb-3 text-sm text-blue-200">{wJob.stage === "extract" ? "Đang đọc ảnh..." : `Đã xử lý ${wJob.progress?.completed || 0}/2 phần`}</p>}
         {wRetry && !wLoading && <button onClick={() => analyzeWriting()} className="mb-3 rounded-lg bg-amber-600 px-4 py-2">Thử lại phần lỗi</button>}
         <ErrorBanner message={wError} onDismiss={() => setWError(null)} />
-        {writing && <Writing writing={writing} SpeakBtn={SpeakBtn} CopyBtn={CopyBtn} />}
+        {writing && <Writing writing={writing} cachedModelDraft={wModelDraft} onModelDraft={setWModelDraft} SpeakBtn={SpeakBtn} CopyBtn={CopyBtn} />}
       </>}
 
       {/* Lookup modal */}

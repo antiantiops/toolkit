@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { saveSession } from "../session/storage";
 
 const NINEROUTER_URL = process.env.NINEROUTER_URL || "http://192.168.101.36:20128";
 const NINEROUTER_KEY = process.env.NINEROUTER_KEY || "";
@@ -7,6 +8,7 @@ const MODEL = process.env.NINEROUTER_MODEL || "ag/gemini-3.8-flash-high";
 export async function POST(request) {
   try {
     const { task, title } = await request.json();
+    const sid = request.cookies.get("vocab_sid")?.value;
     if (!task) {
       return NextResponse.json({ error: "Thiếu dữ liệu bài tập" }, { status: 400 });
     }
@@ -113,6 +115,7 @@ Return ONLY valid JSON matching this exact structure:
     }
 
     const modelDraft = JSON.parse(match[0]);
+    if (sid) saveSession(sid, { modelDraft });
     return NextResponse.json({ modelDraft });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

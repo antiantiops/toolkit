@@ -10,8 +10,9 @@ export async function GET(request) {
 
 export async function DELETE(request) {
   const sid = request.cookies.get("vocab_sid")?.value;
-  if (sid) deleteSession(sid);
+  const type = new URL(request.url).searchParams.get("type");
+  if (sid) deleteSession(sid, type);
   const res = NextResponse.json({ ok: true });
-  res.cookies.delete("vocab_sid");
+  if (!type) res.cookies.delete("vocab_sid");
   return res;
 }

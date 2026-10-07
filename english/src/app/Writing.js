@@ -23,8 +23,8 @@ const frame = (t = "") =>
     )
   );
 
-export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
-  const [modelDraft, setModelDraft] = useState(null);
+export default function Writing({ writing: w, cachedModelDraft, onModelDraft, SpeakBtn, CopyBtn }) {
+  const [modelDraft, setModelDraft] = useState(cachedModelDraft || null);
   const [loadingModel, setLoadingModel] = useState(false);
   const [modelErr, setModelErr] = useState(null);
   const [selectedPhrase, setSelectedPhrase] = useState(null);
@@ -89,6 +89,7 @@ export default function Writing({ writing: w, SpeakBtn, CopyBtn }) {
       }, 2, 1000);
       const d = await parseApiResponse(res);
       setModelDraft(d.modelDraft);
+      onModelDraft?.(d.modelDraft);
     } catch (e) {
       setModelErr(formatErrorMessage(e));
     } finally {
