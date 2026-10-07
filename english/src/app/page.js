@@ -146,6 +146,8 @@ export default function Home() {
   const wFileRef1 = useRef(null);
   const wFileRef2 = useRef(null);
 
+  const [vProgress, setVProgress] = useState(null);
+  const [vRetryJob, setVRetryJob] = useState(null);
   const [vImageId, setVImageId] = useState(null);
   const [gImageId, setGImageId] = useState(null);
   const [confirmAnalyze, setConfirmAnalyze] = useState(null);
@@ -210,6 +212,8 @@ export default function Home() {
     setPreview(null);
     setImage(null);
     setVImageId(null);
+    setVRetryJob(null);
+    setVProgress(null);
     setPractice(false);
     setSubmitted(false);
     setMatchAnswers({});
@@ -221,6 +225,8 @@ export default function Home() {
     setPreview(URL.createObjectURL(file));
     setImage(file);
     setVImageId(null);
+    setVRetryJob(null);
+    setVProgress(null);
     setWords([]);
     setGroupQuestions([]);
     setGeneratedFills([]);
@@ -235,11 +241,16 @@ export default function Home() {
   const analyze = async (targetArg = null) => {
     const idToAnalyze = typeof targetArg === "string" ? targetArg : vImageId;
     const fileToAnalyze = targetArg instanceof File || targetArg instanceof Blob ? targetArg : image;
-    if (!idToAnalyze && !fileToAnalyze && !sessionStorage.getItem("vocab-pending-job")) return;
+    if (!vRetryJob && !idToAnalyze && !fileToAnalyze && !sessionStorage.getItem("vocab-pending-job")) return;
     setLoading(true);
     setError(null);
     try {
       let jobId = sessionStorage.getItem("vocab-pending-job");
+      if (vRetryJob && !jobId) {
+        const retry = await parseApiResponse(await fetchWithRetry("/api/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jobId: vRetryJob, retry: true }), timeout: 15000 }, 0));
+        jobId = retry.jobId;
+        sessionStorage.setItem("vocab-pending-job", jobId);
+      }
       if (!jobId) {
         let imageId = idToAnalyze;
         if (!imageId) {
@@ -257,16 +268,19 @@ export default function Home() {
         sessionStorage.setItem("vocab-pending-job", jobId);
       }
       let data;
-      const deadline = Date.now() + 5 * 60 * 1000;
+      const deadline = Date.now() + 15 * 60 * 1000;
       while (Date.now() < deadline) {
         const statusRes = await fetchWithRetry(`/api/analyze?jobId=${encodeURIComponent(jobId)}`, { timeout: 15000, cache: "no-store" }, 2, 1500);
         if (statusRes.status === 404) sessionStorage.removeItem("vocab-pending-job");
         data = await parseApiResponse(statusRes);
-        if (data.status === "failed") {
+        setVProgress({ ...data.progress, stage: data.stage });
+        if (data.words?.length) setWords(data.words);
+        if (data.status === "failed" || data.status === "partial") {
+          setVRetryJob(jobId);
           sessionStorage.removeItem("vocab-pending-job");
-          throw new Error(`${data.error}\nRequest ID: ${data.requestId || jobId}\nStage: ${data.stage || "AI"}`);
+          throw new Error(`${data.error || data.failures?.map(f => `Nhóm ${f.offset / 3 + 1}: ${f.error}`).join("\n")}\nRequest ID: ${data.requestId || jobId}\nStage: ${data.stage || "AI"}`);
         }
-        if (data.status === "completed") { sessionStorage.removeItem("vocab-pending-job"); break; }
+        if (data.status === "completed") { setVRetryJob(null); sessionStorage.removeItem("vocab-pending-job"); break; }
         await new Promise(resolve => setTimeout(resolve, 3000));
       }
       if (data?.status !== "completed") throw new Error(`Tác vụ vẫn đang chạy. Tải lại trang để tiếp tục. Job ID: ${jobId}`);
@@ -392,7 +406,7 @@ export default function Home() {
   const analyzeGrammar = async (targetArg = null) => {
     const idToAnalyze = typeof targetArg === "string" ? targetArg : gImageId;
     const fileToAnalyze = targetArg instanceof File || targetArg instanceof Blob ? targetArg : gImage;
-    if (!idToAnalyze && !fileToAnalyze && !sessionStorage.getItem("vocab-pending-job")) return;
+    if (!idToAnalyze && !fileToAnalyze) return;
     setGLoading(true);
     setGError(null);
     try {
@@ -882,6 +896,8 @@ export default function Home() {
           </button>
         </div>
 
+        {vProgress && <div className="mb-4 text-sm text-blue-200" role="status">{vProgress.total ? `Đã xử lý ${vProgress.completed}/${vProgress.total} từ` : "Đang đọc từ và ngữ cảnh trong ảnh..."}{vProgress.total > 0 && <progress className="mt-2 w-full" value={vProgress.completed} max={vProgress.total} aria-label="Số từ đã xử lý" />}</div>}
+        {vRetryJob && !loading && <button onClick={() => analyze()} className="mb-4 rounded-lg bg-amber-600 px-4 py-2">Thử lại nhóm lỗi</button>}
         {/* Error notification */}
         <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
@@ -899,7 +915,7 @@ export default function Home() {
           </div>
         )}
 
-        {words.length > 0 && !practice && (
+        {words.length > 0 && !words.some(w => w.pending) && !practice && (
           <div className="mb-5 rounded-2xl border border-amber-600/40 bg-amber-950/30 p-4 text-center">
             <div className="text-base font-semibold text-amber-200">Sẵn sàng luyện các từ vừa học?</div>
             <p className="mt-1 text-sm text-amber-100/70">2 dạng: chọn từ lạc nhóm và điền từ.</p>
@@ -980,6 +996,7 @@ export default function Home() {
                     <span className="text-slate-500">Ví dụ:</span> {clickableText(w.example)}<CopyBtn text={w.example} />
                     {w.exampleVietnamese && <div className="text-slate-400 italic mt-1">{w.exampleVietnamese}</div>}
                   </div>
+                  {w.pending && <div className="text-sm text-blue-300">Đang bổ sung nghĩa và mẹo dùng...</div>}
                   {w.synonyms && (
                     <div className="text-sm text-slate-300">
                       <span className="text-slate-400 font-medium">Đồng nghĩa:</span>{!w.synonymsInBook && <AiTag />} {renderAnnotatedWords(w.synonyms)}<CopyBtn text={w.synonyms} />
@@ -999,7 +1016,7 @@ export default function Home() {
             </div>
           ))}
         </div>}
-        {words.length > 0 && !practice && <Listening key={JSON.stringify(words.map(w => w.word))} words={words} />}
+        {words.length > 0 && !words.some(w => w.pending) && !practice && <Listening key={JSON.stringify(words.map(w => w.word))} words={words} />}
       </>}
 
       {/* ============ GRAMMAR MODE ============ */}
