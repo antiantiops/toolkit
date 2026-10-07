@@ -25,10 +25,11 @@ For each word, provide:
 11. antonyms: If the image prints antonyms, copy them and add concise Vietnamese meaning in parentheses for each word, e.g. "disadvantage (nhược điểm)". Otherwise provide 1-2 accurate context-appropriate antonyms with Vietnamese meaning in parentheses, or empty string.
     antonymsInBook: true ONLY if antonyms were printed in the image; false if you generated them yourself.
 12. collocations: 1-3 useful fixed word combinations with this word, especially one from example. Array items: {"phrase":"English phrase","meaning":"Vietnamese meaning","note":"short Vietnamese usage tip"}. Use [] when none.
-13. note: A short learning tip or usage note in Vietnamese, or empty string
+13. contrastTip: A very short Vietnamese memory aid distinguishing the main word from its synonyms and antonyms in this context. Use 2-4 lines "word = sắc thái riêng" (3-8 Vietnamese words per line), then at most one short usage contrast or warning. Explain differences, not repeated translations. Avoid absolute claims about words with multiple senses. Empty string if no meaningful comparison.
+14. note: A short learning tip or usage note in Vietnamese, or empty string
 
 Respond ONLY with a valid JSON array, no markdown fences, no explanation:
-[{"word":"sand","ipa":"/sænd/","meaning":"cát","partOfSpeech":"noun","definition":"A loose substance made of very small pieces of rock.","definitionVietnamese":"Một chất rời gồm những mảnh đá rất nhỏ.","easyReading":"🇬🇧 UK: “xand” • 🇺🇸 US: “sænd”. Âm /s/ rõ ở đầu và /d/ ở cuối.","example":"The children play in the sand.","exampleVietnamese":"Bọn trẻ chơi trong cát.","synonyms":"","synonymsInBook":false,"antonyms":"","antonymsInBook":false,"note":"Không đếm được khi nói chung về cát."}]`;
+[{"word":"sand","ipa":"/sænd/","meaning":"cát","partOfSpeech":"noun","definition":"A loose substance made of very small pieces of rock.","definitionVietnamese":"Một chất rời gồm những mảnh đá rất nhỏ.","easyReading":"🇬🇧 UK: “xand” • 🇺🇸 US: “sænd”. Âm /s/ rõ ở đầu và /d/ ở cuối.","example":"The children play in the sand.","exampleVietnamese":"Bọn trẻ chơi trong cát.","synonyms":"","synonymsInBook":false,"antonyms":"","antonymsInBook":false,"contrastTip":"sand = cát rời; gravel = sỏi nhỏ","note":"Không đếm được khi nói chung về cát."}]`;
 
 export async function POST(request) {
   try {

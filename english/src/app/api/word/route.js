@@ -26,7 +26,8 @@ Return ONLY JSON with string fields:
   "easyReading": "Phiên âm bồi chuẩn theo âm IPA tiếng Anh cho cả 2 giọng Anh - Anh (UK) và Anh - Mỹ (US) (ví dụ: automate -> UK: 'ó-tơ-mệt', US: 'ó-dơ-mệt'; water -> UK: 'oá-tờ', US: 'oá-đờr'). Đánh dấu sắc/huyền theo trọng âm. Format: '🇬🇧 UK: “...” • 🇺🇸 US: “...”. <lưu ý ngắn nếu có>'",
   "usage": "short Vietnamese usage explanation and one English example with Vietnamese translation",
   "synonyms": "1-3 context-appropriate alternatives with Vietnamese meanings in parentheses, e.g. 'feature (đặc tính), property (thuộc tính)'",
-  "antonyms": "1-3 context-appropriate opposites with Vietnamese meanings in parentheses, e.g. 'disadvantage (nhược điểm)', or empty string"
+  "antonyms": "1-3 context-appropriate opposites with Vietnamese meanings in parentheses, e.g. 'disadvantage (nhược điểm)', or empty string",
+  "contrastTip": "Very short Vietnamese memory aid comparing selected word with synonyms/antonyms: 2-4 lines word = sắc thái riêng (3-8 Vietnamese words each), plus at most one short usage contrast or warning. Explain differences rather than repeat translations; match supplied context; avoid absolute claims across all senses. Empty string if no useful contrast."
 }
 If context is empty, use common sense and mention ambiguity if needed.`;
     const res = await fetch(`${NINEROUTER_URL}/v1/chat/completions`, {
@@ -36,7 +37,7 @@ If context is empty, use common sense and mention ambiguity if needed.`;
         model: MODEL,
         stream: false,
         temperature: 0.1,
-        max_tokens: 900,
+        max_tokens: 1200,
         messages: [{ role: "user", content: prompt }],
       }),
     });
