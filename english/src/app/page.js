@@ -121,6 +121,17 @@ export default function Home() {
   const [groupLoading, setGroupLoading] = useState(false);
   const fileRef = useRef(null);
   const quickFileRef = useRef(null);
+  const quickInputRef = useRef(null);
+  const quickSectionRef = useRef(null);
+  useEffect(() => {
+    const keepSearchVisible = () => {
+      if (window.matchMedia("(max-width: 639px)").matches && document.activeElement === quickInputRef.current) {
+        quickSectionRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
+      }
+    };
+    window.visualViewport?.addEventListener("resize", keepSearchVisible);
+    return () => window.visualViewport?.removeEventListener("resize", keepSearchVisible);
+  }, []);
 
   // --- Grammar state ---
   const [gImage, setGImage] = useState(null);
@@ -820,19 +831,19 @@ export default function Home() {
         </div>
       )}
 
-      <h1 className="text-2xl sm:text-3xl font-bold text-center mb-5 sm:mb-8 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+      <h1 className="text-lg sm:text-3xl font-bold text-center mb-2 sm:mb-8 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
         📚 English Learner
       </h1>
 
       {/* Mode tabs */}
-      <div className="flex gap-2 mb-6 justify-center">
-        <button onClick={() => setMode("vocab")} className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors ${mode === "vocab" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>📖 Vocabulary</button>
-        <button onClick={() => setMode("grammar")} className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors ${mode === "grammar" ? "bg-purple-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>📐 Grammar</button>
-        <button onClick={() => setMode("writing")} className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors ${mode === "writing" ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>✍️ Writing</button>
+      <div className="flex gap-2 mb-3 sm:mb-6 justify-center">
+        <button onClick={() => setMode("vocab")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "vocab" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>📖 Vocabulary</button>
+        <button onClick={() => setMode("grammar")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "grammar" ? "bg-purple-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>📐 Grammar</button>
+        <button onClick={() => setMode("writing")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "writing" ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>✍️ Writing</button>
       </div>
 
       {/* Quick lookup */}
-      <section className="mb-6 rounded-2xl border border-slate-700 bg-slate-900 p-4 transition-all duration-300">
+      <section ref={quickSectionRef} data-testid="mobile-search" className="mb-6 scroll-mt-2 rounded-2xl border border-slate-700 bg-slate-900 p-3 sm:p-4 transition-all duration-300">
         {/* Header & Switch Bar */}
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-200">
@@ -888,6 +899,7 @@ export default function Home() {
         <div className="relative flex gap-2">
           <div className="relative min-w-0 flex-1">
             <input
+              ref={quickInputRef}
               role="combobox"
               aria-label="Từ hoặc câu cần tra"
               aria-autocomplete="list"
@@ -895,7 +907,10 @@ export default function Home() {
               aria-controls="word-suggestions"
               aria-activedescendant={suggestOpen && suggestIndex >= 0 ? `word-suggestion-${suggestIndex}` : undefined}
               autoComplete="off"
-              onFocus={() => setSuggestOpen(true)}
+              onFocus={() => {
+                setSuggestOpen(true);
+                if (window.matchMedia("(max-width: 639px)").matches) quickSectionRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
+              }}
               onBlur={() => setSuggestOpen(false)}
               value={quickQuery}
               onChange={(e) => {
@@ -923,7 +938,7 @@ export default function Home() {
               className={quickLoading ? "w-full rounded-lg border bg-slate-950 px-3 py-2.5 text-sm text-white outline-none border-sky-500 ring-2 ring-sky-500/20" : quickDirection === "vi-en" ? "w-full rounded-lg border bg-slate-950 px-3 py-2.5 text-sm text-white outline-none border-purple-600/60 focus:border-purple-400" : "w-full rounded-lg border bg-slate-950 px-3 py-2.5 text-sm text-white outline-none border-slate-600 focus:border-blue-400"}
             />
             {suggestOpen && quickDirection === "en-vi" && suggestions.length > 0 && (
-              <ul id="word-suggestions" role="listbox" className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-xl border border-slate-700 bg-slate-900 p-1 shadow-xl">
+              <ul id="word-suggestions" role="listbox" className="absolute left-0 right-0 top-full z-30 mt-1 max-h-[min(14rem,35dvh)] overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 p-1 shadow-xl">
                 {suggestions.map((word, i) => (
                   <li key={word} id={`word-suggestion-${i}`} role="option" aria-selected={suggestIndex === i}
                     onPointerDown={e => e.preventDefault()} onClick={() => chooseSuggestion(word)}

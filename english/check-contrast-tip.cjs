@@ -47,3 +47,8 @@ assert.ok(page.includes('/api/quick-word'));
 assert.ok(page.includes('lookup-detail-loading'));
 assert.ok(page.includes('Đang bổ sung giải thích, ví dụ…'));
 console.log('PASS: quick meaning renders before detailed lookup');
+
+assert.ok(page.includes('data-testid="mobile-search"'));
+assert.ok(page.includes('window.visualViewport?.addEventListener("resize", keepSearchVisible)'));
+assert.ok(page.includes('max-h-[min(14rem,35dvh)] overflow-y-auto'));
+console.log('PASS: mobile search compact header, keyboard viewport scroll and bounded suggestions');
