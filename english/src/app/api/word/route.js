@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 const NINEROUTER_URL = process.env.NINEROUTER_URL || "http://192.168.101.36:20128";
 const NINEROUTER_KEY = process.env.NINEROUTER_KEY || "";
-const MODEL = process.env.NINEROUTER_MODEL || "ag/gemini-3.8-flash-high";
+const MODEL = process.env.NINEROUTER_LOOKUP_MODEL || "ag/gemini-3.8-flash";
 
 export async function POST(request) {
   try {
