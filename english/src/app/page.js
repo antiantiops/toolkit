@@ -102,6 +102,11 @@ export default function Home() {
   const [error, setError] = useState(null);
   const [lookup, setLookup] = useState(null);
   const [quickQuery, setQuickQuery] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [suggestIndex, setSuggestIndex] = useState(-1);
+  const suggestionCache = useRef(new Map());
+
   const [quickDirection, setQuickDirection] = useState("en-vi"); // "en-vi" | "vi-en"
   const [quickResult, setQuickResult] = useState(null);
   const [quickLoading, setQuickLoading] = useState(false);
@@ -157,6 +162,38 @@ export default function Home() {
   const [gImageId, setGImageId] = useState(null);
   const [confirmAnalyze, setConfirmAnalyze] = useState(null);
   const [cropPending, setCropPending] = useState(null);
+
+  useEffect(() => {
+    setSuggestions([]);
+    setSuggestIndex(-1);
+    const q = quickQuery.trim().toLowerCase();
+    if (quickDirection !== "en-vi" || !/^[a-z]{2,40}$/.test(q)) return;
+    const local = words.map(x => x.word).filter(x => typeof x === "string" && x.toLowerCase().startsWith(q));
+    if (suggestionCache.current.has(q)) {
+      setSuggestions([...new Set([...local, ...suggestionCache.current.get(q)])].slice(0, 5));
+      return;
+    }
+    setSuggestions(local.slice(0, 5));
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/suggest?q=${encodeURIComponent(q)}`, { signal: controller.signal });
+        const data = await res.json();
+        if (controller.signal.aborted) return;
+        const entries = Array.isArray(data.words) ? data.words.filter(x => typeof x === "string") : [];
+        suggestionCache.current.set(q, entries);
+        setSuggestions([...new Set([...local, ...entries])].slice(0, 5));
+      } catch {}
+    }, 120);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [quickQuery, quickDirection, words]);
+  const chooseSuggestion = word => {
+    setQuickQuery(word);
+    setQuickResult(null);
+    setSuggestOpen(false);
+    setSuggestIndex(-1);
+  };
+
   const selectImage = (file, target) => {
     if (!file || !file.type.startsWith("image/")) return;
     if (file.size > 25 * 1024 * 1024) { alert("Ảnh quá lớn. Chọn ảnh dưới 25 MB."); return; }
@@ -849,12 +886,33 @@ export default function Home() {
         <div className="relative flex gap-2">
           <div className="relative min-w-0 flex-1">
             <input
+              role="combobox"
+              aria-label="Từ hoặc câu cần tra"
+              aria-autocomplete="list"
+              aria-expanded={suggestOpen && suggestions.length > 0}
+              aria-controls="word-suggestions"
+              aria-activedescendant={suggestOpen && suggestIndex >= 0 ? `word-suggestion-${suggestIndex}` : undefined}
+              autoComplete="off"
+              onFocus={() => setSuggestOpen(true)}
+              onBlur={() => setSuggestOpen(false)}
               value={quickQuery}
               onChange={(e) => {
                 setQuickQuery(e.target.value);
+                setSuggestOpen(true);
                 setQuickResult(null);
               }}
-              onKeyDown={(e) => e.key === "Enter" && lookupText()}
+              onKeyDown={e => {
+                if (e.nativeEvent.isComposing) return;
+                if (e.key === "Escape") { setSuggestOpen(false); return; }
+                if (suggestOpen && suggestions.length && ["ArrowDown", "ArrowUp"].includes(e.key)) {
+                  e.preventDefault();
+                  setSuggestIndex(i => (i + (e.key === "ArrowDown" ? 1 : suggestions.length - 1) + suggestions.length) % suggestions.length);
+                } else if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (suggestOpen && suggestIndex >= 0 && suggestions[suggestIndex]) chooseSuggestion(suggestions[suggestIndex]);
+                  else { setSuggestOpen(false); lookupText(); }
+                }
+              }}
               placeholder={
                 quickDirection === "en-vi"
                   ? "Ví dụ: I goed to school yesterday"
@@ -862,6 +920,17 @@ export default function Home() {
               }
               className={quickLoading ? "w-full rounded-lg border bg-slate-950 px-3 py-2.5 text-sm text-white outline-none border-sky-500 ring-2 ring-sky-500/20" : quickDirection === "vi-en" ? "w-full rounded-lg border bg-slate-950 px-3 py-2.5 text-sm text-white outline-none border-purple-600/60 focus:border-purple-400" : "w-full rounded-lg border bg-slate-950 px-3 py-2.5 text-sm text-white outline-none border-slate-600 focus:border-blue-400"}
             />
+            {suggestOpen && quickDirection === "en-vi" && suggestions.length > 0 && (
+              <ul id="word-suggestions" role="listbox" className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-xl border border-slate-700 bg-slate-900 p-1 shadow-xl">
+                {suggestions.map((word, i) => (
+                  <li key={word} id={`word-suggestion-${i}`} role="option" aria-selected={suggestIndex === i}
+                    onPointerDown={e => e.preventDefault()} onClick={() => chooseSuggestion(word)}
+                    className={`cursor-pointer rounded-lg px-3 py-2.5 text-sm ${suggestIndex === i ? "bg-sky-900 text-white" : "text-slate-200 hover:bg-slate-800"}`}>
+                    <span className="font-semibold text-sky-300">{word.slice(0, quickQuery.trim().length)}</span>{word.slice(quickQuery.trim().length)}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <input
