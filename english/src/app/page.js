@@ -543,17 +543,19 @@ export default function Home() {
   };
 
   const lookupWord = async (word, context = "") => {
-    setLookup({ word, loading: true });
+    const body = JSON.stringify({ word, context });
+    setLookup({ word, loading: true, detailLoading: true });
+    const quick = fetch("/api/quick-word", { method: "POST", headers: { "Content-Type": "application/json" }, body })
+      .then(parseApiResponse)
+      .then(data => setLookup(current => current?.word === word ? { ...current, meaning: data.meaning, loading: false, quick: true } : current))
+      .catch(() => {});
     try {
-      const res = await fetch("/api/word", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ word, context }),
-      });
+      const res = await fetch("/api/word", { method: "POST", headers: { "Content-Type": "application/json" }, body });
       const data = await parseApiResponse(res);
-      setLookup({ ...data.word, loading: false });
+      setLookup({ ...data.word, loading: false, detailLoading: false });
     } catch (e) {
-      setLookup({ word, error: formatErrorMessage(e), loading: false });
+      await quick;
+      setLookup(current => current?.word === word && current.meaning ? { ...current, loading: false, detailLoading: false } : { word, error: formatErrorMessage(e), loading: false, detailLoading: false });
     }
   };
 
@@ -1613,11 +1615,12 @@ export default function Home() {
               </div>
               <button onClick={() => setLookup(null)} className="rounded-lg px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-white" aria-label="Đóng">✕</button>
             </div>
-            {lookup.loading ? <div className="mt-5 text-slate-400">Đang tra từ...</div> : lookup.error ? <div className="mt-4 text-red-300">{lookup.error}</div> : <>
+            {lookup.loading && !lookup.meaning ? <div className="mt-5 text-slate-400">Đang tra nghĩa tiếng Việt...</div> : lookup.error ? <div className="mt-4 text-red-300">{lookup.error}</div> : <>
               {lookup.partOfSpeech && <div className="mt-2"><span className="inline-block max-w-full rounded-lg border border-amber-500/40 bg-amber-950/50 px-2.5 py-1 text-xs font-semibold leading-relaxed text-amber-200">{lookup.partOfSpeech}</span></div>}
               <div className="mt-1 text-violet-300 italic">{lookup.ipa}</div>
               {lookup.easyReading && <div className="mt-4 rounded-xl border border-sky-900 bg-sky-950/50 p-3 text-sm leading-relaxed text-sky-100"><span className="font-semibold text-sky-300">Dễ đọc: </span>{lookup.easyReading}</div>}
-              <div className="mt-4 text-lg font-medium text-white">{lookup.meaning}</div>
+              <div data-testid="lookup-meaning" className="mt-4 text-lg font-medium text-white">{lookup.meaning}</div>
+              {lookup.detailLoading && <div data-testid="lookup-detail-loading" className="mt-2 flex items-center gap-2 text-xs text-slate-400"><span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-slate-600 border-t-sky-300" />Đang bổ sung giải thích, ví dụ…</div>}
               {lookup.usage && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Cách dùng: </span>{lookup.usage}</div>}
               {lookup.synonyms && !lookup.contrastTip && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Đồng nghĩa: </span><AiTag /> {renderAnnotatedWords(lookup.synonyms)}</div>}
               {lookup.antonyms && !lookup.contrastTip && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Trái nghĩa: </span><AiTag /> {renderAnnotatedWords(lookup.antonyms)}</div>}

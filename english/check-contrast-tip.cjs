@@ -41,3 +41,9 @@ assert.ok(modal.indexOf('{lookup.ipa}') < modal.indexOf('{lookup.easyReading}'))
 assert.ok(modal.indexOf('{lookup.easyReading}') < modal.indexOf('{lookup.meaning}'));
 assert.ok(!modal.includes('🔊 Nghe từ'));
 console.log('PASS: lookup order word/speaker, part of speech, IPA, easy reading, meaning');
+
+assert.ok(read('api/quick-word/route.js').includes('max_tokens: 80'));
+assert.ok(page.includes('/api/quick-word'));
+assert.ok(page.includes('lookup-detail-loading'));
+assert.ok(page.includes('Đang bổ sung giải thích, ví dụ…'));
+console.log('PASS: quick meaning renders before detailed lookup');
