@@ -21,6 +21,12 @@ export default function ListeningImage() {
   const [lesson, setLesson] = useState(null), [busy, setBusy] = useState(false), [error, setError] = useState(''), [stage, setStage] = useState('');
   const [clips, setClips] = useState([]), [index, setIndex] = useState(0), [speed, setSpeed] = useState(.8), [audioBusy, setAudioBusy] = useState(false), [audioProgress, setAudioProgress] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const lyricsRef = useRef(null);
+  useEffect(() => {
+    const panel = lyricsRef.current, line = panel?.querySelector('[aria-current="true"]');
+    if (!panel || !line) return;
+    panel.scrollTo({ top: line.offsetTop - panel.offsetTop - panel.clientHeight / 2 + line.clientHeight / 2, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+  }, [index, clips.length]);
   const audio = useRef(null), resources = useRef([]), fileInput = useRef(null), version = useRef(0), loaded = useRef(false), resume = useRef(false);
   const release = () => { resources.current.forEach(c => URL.revokeObjectURL(c.url)); resources.current = []; setClips([]); setIndex(0); };
   const analyze = async id => {
@@ -112,7 +118,16 @@ export default function ListeningImage() {
         <p className="text-xs text-slate-400">Thời gian LRC đo từ MP3 ở tốc độ 1×. MP3 nối các câu, có thể có khoảng nghỉ; lời nhúng USLT cần trình nghe hỗ trợ. Phát nền tùy trình duyệt/điện thoại.</p>
       </>}
       <button onClick={() => download(new Blob([lesson.title + '\n\n' + lesson.sentences.map(s => `${s.en}\n${s.vi}`).join('\n\n')], { type: 'text/plain;charset=utf-8' }), 'listening-transcript.txt')} className="text-sm text-teal-200 underline">Tải transcript Anh–Việt</button>
-      <div aria-label="Transcript Listening" className="space-y-2">{lesson.sentences.map((s, i) => <button key={i} disabled={!clips.length} aria-current={clips.length && i === index ? 'true' : undefined} onClick={() => selectSentence(i)} className={`block w-full rounded-xl p-3 text-left disabled:opacity-100 ${clips.length && i === index ? 'border border-teal-400 bg-teal-900/60' : 'bg-slate-900'}`}><span className="block leading-relaxed">{s.en}</span><span className="mt-1 block text-sm text-slate-400">{s.vi}</span></button>)}</div>
+      <div className="overflow-hidden rounded-2xl border border-teal-900/60 bg-gradient-to-b from-teal-950/50 to-slate-950">
+        <div className="flex items-center justify-between px-5 pt-4 text-xs font-semibold uppercase tracking-widest text-teal-300"><span>Transcript</span><span>{clips.length ? `${index + 1} / ${lesson.sentences.length}` : 'Chưa có audio'}</span></div>
+        <div ref={lyricsRef} data-testid="listening-lyrics" aria-label="Transcript Listening" className="relative max-h-[55dvh] min-h-64 overflow-y-auto overscroll-contain px-5 py-24 sm:px-8">
+          {lesson.sentences.map((s, i) => <button key={i} disabled={!clips.length} aria-current={clips.length && i === index ? 'true' : undefined} onClick={() => selectSentence(i)} className={`block w-full py-5 text-left transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 disabled:opacity-100 motion-reduce:transition-none ${clips.length && i === index ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}>
+            <span className="block break-words text-2xl font-bold leading-snug sm:text-3xl">{s.en}</span>
+            <span className={`mt-3 block text-base leading-relaxed ${clips.length && i === index ? 'text-teal-200' : 'text-slate-600'}`}>{s.vi}</span>
+          </button>)}
+        </div>
+        <p className="px-5 pb-4 text-xs text-slate-400">Bấm câu để nghe lại · Tự cuộn theo câu đang phát</p>
+      </div>
     </div>}
     {crop && <ImageCrop file={crop} onCancel={() => setCrop(null)} onApply={file => { setCrop(null); stageFile(file); }} />}
     {confirm && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => { if (!upload?.loading) setConfirm(false); }} onKeyDown={e => { if (e.key === "Escape" && !upload?.loading) setConfirm(false); }}><div onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="listening-upload-title" className="w-full max-w-sm space-y-4 rounded-2xl border border-slate-700 bg-slate-900 p-6"><h3 id="listening-upload-title" className="font-bold">Xác nhận ảnh Listening</h3><p role="status" className="break-words text-sm">{upload?.loading ? `Đang tải lên server (${(upload.size / 1048576).toFixed(1)} MB)…` : upload?.error || `✓ Đã lưu ảnh trên server (${(upload.size / 1048576).toFixed(1)} MB)`}</p><div className="flex gap-3"><button disabled={upload?.loading} onClick={() => setConfirm(false)} className="flex-1 rounded-xl bg-slate-800 p-3 disabled:opacity-50">Để sau</button>{upload?.error ? <button onClick={() => stageFile(upload.file)} className="flex-1 rounded-xl bg-amber-600 p-3">Thử lại</button> : <button autoFocus disabled={!upload?.id || upload?.loading} onClick={() => analyze(upload.id)} className="flex-1 rounded-xl bg-teal-600 p-3 disabled:opacity-50">OK, phân tích</button>}</div></div></div>}
