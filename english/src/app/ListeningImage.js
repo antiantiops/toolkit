@@ -21,6 +21,8 @@ export default function ListeningImage() {
   const [lesson, setLesson] = useState(null), [busy, setBusy] = useState(false), [error, setError] = useState(''), [stage, setStage] = useState('');
   const [clips, setClips] = useState([]), [index, setIndex] = useState(0), [speed, setSpeed] = useState(.8), [audioBusy, setAudioBusy] = useState(false), [audioProgress, setAudioProgress] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [playing, setPlaying] = useState(false), [elapsed, setElapsed] = useState(0);
+  const seekTo = useRef(null);
   const lyricsRef = useRef(null);
   useEffect(() => {
     const panel = lyricsRef.current, line = panel?.querySelector('[aria-current="true"]');
@@ -28,7 +30,7 @@ export default function ListeningImage() {
     panel.scrollTo({ top: panel.scrollTop + line.getBoundingClientRect().top - panel.getBoundingClientRect().top - panel.clientHeight / 2 + line.clientHeight / 2, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
   }, [index, clips.length]);
   const audio = useRef(null), resources = useRef([]), fileInput = useRef(null), version = useRef(0), loaded = useRef(false), resume = useRef(false);
-  const release = () => { resources.current.forEach(c => URL.revokeObjectURL(c.url)); resources.current = []; setClips([]); setIndex(0); };
+  const release = () => { resources.current.forEach(c => URL.revokeObjectURL(c.url)); resources.current = []; setClips([]); setIndex(0); setElapsed(0); setPlaying(false); };
   const analyze = async id => {
     setConfirm(false); setBusy(true); setError('');
     try { const data = await pollLesson('listening-image', id ? { imageId: id } : {}, d => setStage(d.stage)); const current = validateTranscript(data['listening-image']); setLesson(current); await createAudio(current); }
@@ -83,6 +85,17 @@ export default function ListeningImage() {
       download(new Blob([lyricsTag(text), ...bytes], { type: 'audio/mpeg' }), 'listening.mp3');
     } catch (e) { setError(formatErrorMessage(e)); }
   };
+  const total = clips.reduce((n, c) => n + c.duration, 0);
+  const offset = clips.slice(0, index).reduce((n, c) => n + c.duration, 0);
+  const clock = value => `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`;
+  const seek = value => {
+    let start = 0, target = clips.length - 1;
+    for (let i = 0; i < clips.length; i++) { if (value < start + clips[i].duration) { target = i; break; } start += clips[i].duration; }
+    if (target === clips.length - 1 && value >= total) start = total - clips[target].duration;
+    const seconds = Math.max(0, Math.min(value - start, clips[target].duration));
+    if (target === index) { audio.current.currentTime = seconds; setElapsed(seconds); }
+    else { seekTo.current = seconds; resume.current = !audio.current.paused; setElapsed(seconds); setIndex(target); }
+  };
   const selectSentence = i => { resume.current = !!audio.current && !audio.current.paused; if (i === index) { audio.current.currentTime = 0; } else setIndex(i); };
   return <section id="image-listening" className="space-y-4">
     <h2 className="text-xl font-bold text-teal-200">Listening từ ảnh</h2>
@@ -109,23 +122,43 @@ export default function ListeningImage() {
     {upload?.id && !lesson && !busy && <button onClick={() => analyze(upload.id)} className="w-full rounded-xl bg-teal-600 p-3">Phân tích ảnh đã lưu</button>}
     {busy && <p role="status" className="text-teal-200">Đang phân tích nền: {stage || 'read-image'}. Có thể đổi tab, tải lại để tiếp tục.</p>}
     {error && <div role="alert" className="whitespace-pre-wrap break-words rounded-xl bg-red-950 p-3 text-sm text-red-200">{error}</div>}
-    {lesson && <div className="space-y-4 rounded-2xl border border-teal-800 p-4">
+    {lesson && <div className="space-y-4 rounded-3xl border border-white/10 bg-slate-950 p-3 sm:p-5">
       <h3 className="font-bold text-teal-200">{lesson.title}</h3>
       {!clips.length && <button disabled={audioBusy} onClick={() => createAudio()} className="rounded-xl bg-teal-600 p-3 disabled:opacity-50">{audioBusy ? `Đang tạo MP3 ${audioProgress}/${lesson.sentences.length} câu…` : resources.current.length ? 'Thử lại các câu chưa tạo' : 'Tạo audio Listening'}</button>}
       <div className="overflow-hidden rounded-2xl border border-teal-900/60 bg-gradient-to-b from-teal-950/50 to-slate-950">
         <div className="flex items-center justify-between px-5 pt-4 text-xs font-semibold uppercase tracking-widest text-teal-300"><span>Transcript</span><span>{clips.length ? `${index + 1} / ${lesson.sentences.length}` : 'Chưa có audio'}</span></div>
-        <div ref={lyricsRef} data-testid="listening-lyrics" aria-label="Transcript Listening" className="relative max-h-[55dvh] min-h-64 overflow-y-auto overscroll-contain px-5 py-24 sm:px-8">
+        <div ref={lyricsRef} data-testid="listening-lyrics" aria-label="Transcript Listening" className="relative max-h-[48dvh] min-h-64 overflow-y-auto overscroll-contain px-5 py-24 sm:px-8">
           {lesson.sentences.map((s, i) => <button key={i} disabled={!clips.length} aria-current={clips.length && i === index ? 'true' : undefined} onClick={() => selectSentence(i)} className={`block w-full py-5 text-left transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 disabled:opacity-100 motion-reduce:transition-none ${clips.length && i === index ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}>
-            <span className="block break-words text-2xl font-bold leading-snug sm:text-3xl">{s.en}</span>
+            <span className="block break-words text-[25px] font-semibold leading-relaxed tracking-tight sm:text-3xl">{s.en}</span>
             <span className={`mt-3 block text-base leading-relaxed ${clips.length && i === index ? 'text-teal-200' : 'text-slate-600'}`}>{s.vi}</span>
           </button>)}
         </div>
         <p className="px-5 pb-4 text-xs text-slate-400">Bấm câu để nghe lại · Tự cuộn theo câu đang phát</p>
       </div>
-      {!!clips.length && <div data-testid="listening-player" className="sticky bottom-2 z-10 space-y-3 rounded-2xl border border-slate-700 bg-slate-950/95 p-4 shadow-xl">
-        <audio ref={audio} src={clips[index]?.url} controls preload="auto" className="w-full" onLoadedMetadata={() => { audio.current.playbackRate = speed; if (resume.current) { resume.current = false; audio.current.play().catch(e => setError(formatErrorMessage(e))); } }} onPlay={() => { if ('mediaSession' in navigator && typeof MediaMetadata !== 'undefined') navigator.mediaSession.metadata = new MediaMetadata({ title: lesson.title, artist: 'English Learner' }); }} onEnded={() => { if (index + 1 < clips.length) { resume.current = true; setIndex(index + 1); } }} />
-        <div className="flex flex-wrap items-center gap-3 text-sm"><label>Tốc độ <select value={speed} onChange={e => { const value = Number(e.target.value); setSpeed(value); if (audio.current) audio.current.playbackRate = value; }} className="rounded bg-slate-800 p-2">{[.6,.7,.8,1,1.2].map(v => <option key={v} value={v}>{v}×</option>)}</select></label><button onClick={saveAudio} className="text-teal-200 underline">Tải MP3 + lời nhúng</button><button onClick={() => download(new Blob([measuredLrc(lesson.sentences, clips.map(c => c.duration))], { type: 'text/plain;charset=utf-8' }), 'listening.lrc')} className="text-teal-200 underline">Tải LRC</button></div>
-        <p className="text-xs text-slate-400">Thời gian LRC đo từ MP3 ở tốc độ 1×. MP3 nối các câu, có thể có khoảng nghỉ; lời nhúng USLT cần trình nghe hỗ trợ. Phát nền tùy trình duyệt/điện thoại.</p>
+      {!!clips.length && <div data-testid="listening-player" className="sticky bottom-2 z-10 space-y-4 rounded-2xl border border-white/10 bg-slate-900/95 px-4 py-5 shadow-2xl backdrop-blur-xl">
+        <audio ref={audio} src={clips[index]?.url} preload="auto"
+          onTimeUpdate={() => setElapsed(audio.current.currentTime)} onPause={() => setPlaying(false)}
+          onLoadedMetadata={() => { audio.current.playbackRate = speed; if (seekTo.current !== null) { audio.current.currentTime = seekTo.current; seekTo.current = null; } else setElapsed(0); if (resume.current) { resume.current = false; audio.current.play().catch(e => setError(formatErrorMessage(e))); } }}
+          onPlay={() => { setPlaying(true); if ('mediaSession' in navigator && typeof MediaMetadata !== 'undefined') navigator.mediaSession.metadata = new MediaMetadata({ title: lesson.title, artist: 'English Learner' }); }}
+          onEnded={() => { if (index + 1 < clips.length) { resume.current = true; setIndex(index + 1); } else setPlaying(false); }} />
+        <div className="space-y-1">
+          <input aria-label="Vị trí phát toàn bài" type="range" min="0" max={total} step="0.1" value={Math.min(total, offset + elapsed)} onChange={e => seek(Number(e.target.value))} className="h-6 w-full cursor-pointer accent-teal-300" />
+          <div className="flex justify-between text-xs tabular-nums text-slate-400"><span>{clock(offset + elapsed)}</span><span>{clock(total)}</span></div>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <label className="text-sm text-slate-300"><span className="sr-only">Tốc độ</span><select aria-label="Tốc độ phát" value={speed} onChange={e => { const value = Number(e.target.value); setSpeed(value); audio.current.playbackRate = value; }} className="rounded-full border border-white/10 bg-slate-800 px-2 py-2">{[.6,.7,.8,1,1.2].map(v => <option key={v} value={v}>{v}×</option>)}</select></label>
+          <div className="flex items-center gap-3">
+            <button aria-label="Câu trước" disabled={index === 0} onClick={() => selectSentence(index - 1)} className="flex h-11 w-11 items-center justify-center rounded-full text-slate-200 hover:bg-white/10 disabled:opacity-25"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6"><path d="M6 5h2v14H6zm12 0v14L9 12z"/></svg></button>
+            <button aria-label={playing ? 'Tạm dừng' : 'Phát bài nghe'} onClick={() => { if (audio.current.paused) audio.current.play().catch(e => setError(formatErrorMessage(e))); else audio.current.pause(); }} className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-300 text-slate-950 shadow-lg shadow-teal-400/15 hover:bg-teal-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" className="h-7 w-7">{playing ? <path d="M6 4h4v16H6zm8 0h4v16h-4z"/> : <path d="m8 4 13 8-13 8z"/>}</svg></button>
+            <button aria-label="Câu tiếp" disabled={index === clips.length - 1} onClick={() => selectSentence(index + 1)} className="flex h-11 w-11 items-center justify-center rounded-full text-slate-200 hover:bg-white/10 disabled:opacity-25"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6"><path d="M16 5h2v14h-2zM6 5l9 7-9 7z"/></svg></button>
+          </div>
+          <span className="min-w-12 text-right text-xs tabular-nums text-slate-400">{index + 1}/{clips.length}</span>
+        </div>
+        <details className="border-t border-white/5 pt-3 text-sm text-slate-400">
+          <summary className="cursor-pointer text-center hover:text-teal-200">Tải file & thông tin</summary>
+          <div className="mt-3 flex flex-wrap gap-2"><button onClick={saveAudio} className="rounded-lg bg-slate-800 px-3 py-2 text-teal-200">MP3 + lời nhúng</button><button onClick={() => download(new Blob([measuredLrc(lesson.sentences, clips.map(c => c.duration))], { type: 'text/plain;charset=utf-8' }), 'listening.lrc')} className="rounded-lg bg-slate-800 px-3 py-2 text-teal-200">Lyrics LRC</button></div>
+          <p className="mt-3 text-xs leading-relaxed">LRC đo ở 1×. MP3 nối từng câu có thể có khoảng nghỉ. Lời nhúng và phát nền tùy trình nghe hỗ trợ.</p>
+        </details>
       </div>}
       <button onClick={() => download(new Blob([lesson.title + '\n\n' + lesson.sentences.map(s => `${s.en}\n${s.vi}`).join('\n\n')], { type: 'text/plain;charset=utf-8' }), 'listening-transcript.txt')} className="text-sm text-teal-200 underline">Tải transcript Anh–Việt</button>
 
