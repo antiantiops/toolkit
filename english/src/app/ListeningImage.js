@@ -20,6 +20,7 @@ export default function ListeningImage() {
   const [crop, setCrop] = useState(null), [preview, setPreview] = useState(null), [upload, setUpload] = useState(null), [confirm, setConfirm] = useState(false);
   const [lesson, setLesson] = useState(null), [busy, setBusy] = useState(false), [error, setError] = useState(''), [stage, setStage] = useState('');
   const [clips, setClips] = useState([]), [index, setIndex] = useState(0), [speed, setSpeed] = useState(.8), [audioBusy, setAudioBusy] = useState(false), [audioProgress, setAudioProgress] = useState(0);
+  const [dragging, setDragging] = useState(false);
   const audio = useRef(null), resources = useRef([]), fileInput = useRef(null), version = useRef(0), loaded = useRef(false), resume = useRef(false);
   const release = () => { resources.current.forEach(c => URL.revokeObjectURL(c.url)); resources.current = []; setClips([]); setIndex(0); };
   const analyze = async id => {
@@ -32,6 +33,11 @@ export default function ListeningImage() {
     if (sessionStorage.getItem('listening-image-pending-job')) { loaded.current = true; analyze(); }
     return () => { version.current++; resources.current.forEach(c => URL.revokeObjectURL(c.url)); };
   }, []);
+  const chooseFile = file => {
+    if (!file) return;
+    if (!['image/jpeg','image/png','image/webp'].includes(file.type) || !file.size || file.size > 25 * 1024 * 1024) { setError('Chọn JPEG, PNG hoặc WebP dưới 25 MB.'); return; }
+    setError(''); setCrop(file);
+  };
   const stageFile = async file => {
     const token = ++version.current; loaded.current = true;
     release(); setLesson(null); setError(''); setConfirm(true); setUpload({ file, loading: true, id: null, size: file.size });
@@ -74,9 +80,23 @@ export default function ListeningImage() {
   const selectSentence = i => { resume.current = !!audio.current && !audio.current.paused; if (i === index) { audio.current.currentTime = 0; } else setIndex(i); };
   return <section id="image-listening" className="space-y-4">
     <h2 className="text-xl font-bold text-teal-200">Listening từ ảnh</h2>
-    <p className="text-sm text-slate-400">Chọn ảnh, cắt vùng cần học, lưu lên server rồi xác nhận phân tích. AI diễn đạt lại sát nội dung sách, không chép nguyên văn. Transcript tô sáng theo từng câu đang phát.</p>
-    <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; if (!file) return; if (!['image/jpeg','image/png','image/webp'].includes(file.type) || !file.size || file.size > 25 * 1024 * 1024) { setError('Chọn JPEG, PNG hoặc WebP dưới 25 MB.'); return; } setCrop(file); }} />
-    <div className="flex flex-wrap gap-3"><button disabled={busy || audioBusy || upload?.loading} onClick={() => fileInput.current.click()} className="rounded-xl bg-teal-600 px-4 py-3 disabled:opacity-50">Chọn ảnh Listening</button>
+    <p className="text-sm text-slate-400">Tạo bài nghe từ trang sách. Cắt ảnh, xác nhận rồi nghe cùng transcript Anh–Việt.</p>
+    <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; chooseFile(file); }} />
+    <button type="button" data-testid="listening-upload-card" disabled={busy || audioBusy || upload?.loading}
+      onClick={() => fileInput.current.click()}
+      onDragOver={e => { e.preventDefault(); if (!busy && !audioBusy && !upload?.loading) setDragging(true); }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={e => { e.preventDefault(); setDragging(false); if (!busy && !audioBusy && !upload?.loading) chooseFile(e.dataTransfer.files?.[0]); }}
+      className={`group flex min-h-56 w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-5 py-7 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none ${dragging ? 'border-teal-400 bg-teal-950/60' : 'border-slate-600 bg-slate-900/50 hover:border-teal-500 hover:bg-teal-950/30'}`}>
+      <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-teal-700/50 bg-teal-950/60 text-teal-300" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-7 w-7"><path strokeLinecap="round" strokeLinejoin="round" d="M15 8h5m-2.5-2.5v5M20 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7M4 16l5-5 5 5 2-2 4 4"/><circle cx="9" cy="8" r="1"/></svg>
+      </span>
+      <span className="text-base font-semibold text-slate-100">{dragging ? 'Thả ảnh để bắt đầu' : preview || lesson ? 'Chọn ảnh bài nghe khác' : 'Thêm ảnh bài nghe'}</span>
+      <span className="text-sm leading-relaxed text-slate-400">Chạm để chọn ảnh hoặc kéo thả vào đây</span>
+      <span className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white group-hover:bg-teal-500">Chọn ảnh</span>
+      <span className="text-xs text-slate-500">JPG, PNG, WebP · Tối đa 25 MB</span>
+    </button>
+    <div className="flex flex-wrap gap-3">
       {(preview || lesson) && <button disabled={busy || audioBusy || upload?.loading} onClick={() => { version.current++; loaded.current = true; release(); setLesson(null); setPreview(null); setUpload(null); setError(''); sessionStorage.removeItem('listening-image-pending-job'); fetch('/api/session?type=listening', { method: 'DELETE' }).catch(() => {}); }} className="rounded-xl bg-slate-800 px-4 py-3 disabled:opacity-50">Xóa bài</button>}
     </div>
     {preview && <img src={preview} alt="Ảnh bài Listening" className="mx-auto max-h-72 max-w-full rounded-xl" />}
