@@ -50,7 +50,10 @@ export function deleteSession(sid, type) {
   }
   try {
     const existing = loadSession(sid) || {};
-    if (type === "vocab") {
+    if (type === "listening") {
+      delete existing.listening;
+      delete existing.lPreview;
+    } else if (type === "vocab") {
       delete existing.words;
       delete existing.preview;
     } else if (type === "grammar") {
