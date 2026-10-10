@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import { meanings, complete } from './src/lib/lookup/local.js';
+assert.equal(meanings.doctor, 'bác sĩ');
+assert.equal(complete('m')[0], 'my');
+assert.equal(complete('wo')[0], 'work');
+assert.equal(complete('eng')[0], 'engineer');
+assert(complete('doc').includes('doctor'));
+assert.equal(complete('zzzz').length, 0);
+assert(complete('w').length <= 5);
+assert.equal(complete('doc', ['document'])[0], 'document');
+console.log('PASS local common meanings, prefix completion, lesson priority, bounded results');

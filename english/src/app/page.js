@@ -6,6 +6,7 @@ import LessonChat from "./LessonChat";
 import Listening from "./Listening";
 import ListeningImage from "./ListeningImage";
 import Writing from "./Writing";
+import { meanings, complete } from "../lib/lookup/local";
 
 const AiTag = () => <span title="Sách không có, AI tự tạo 100%" className="ml-1 rounded bg-fuchsia-900/60 px-1.5 py-0.5 text-[10px] font-semibold text-fuchsia-200">🤖 AI</span>;
 
@@ -107,6 +108,9 @@ export default function Home() {
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [suggestIndex, setSuggestIndex] = useState(-1);
   const suggestionCache = useRef(new Map());
+  const lookupCache = useRef(new Map());
+  const translationCache = useRef(new Map());
+  const lookupRequest = useRef(0);
 
   const [quickDirection, setQuickDirection] = useState("en-vi"); // "en-vi" | "vi-en"
   const [quickResult, setQuickResult] = useState(null);
@@ -180,12 +184,13 @@ export default function Home() {
     setSuggestIndex(-1);
     const q = (quickQuery.match(/(?:^|[^A-Za-z])([A-Za-z]{1,40})$/)?.[1] || "").toLowerCase();
     if (quickDirection !== "en-vi" || !/^[a-z]{1,40}$/.test(q)) return;
-    const local = words.map(x => x.word).filter(x => typeof x === "string" && x.toLowerCase().startsWith(q));
+    const local = complete(q, words.map(x => x.word));
     if (suggestionCache.current.has(q)) {
       setSuggestions([...new Set([...local, ...suggestionCache.current.get(q)])].slice(0, 5));
       return;
     }
     setSuggestions(local.slice(0, 5));
+    if (q.length === 1 || local.length >= 5) return;
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
@@ -541,6 +546,8 @@ export default function Home() {
     const dir = overrideDir || quickDirection;
     if (!text && !imageFile) return;
     if (dir === "en-vi" && !imageFile && /^[a-zA-Z][a-zA-Z'-]{0,63}$/.test(text)) { lookupWord(text); return; }
+    const cacheKey = JSON.stringify([dir, text]);
+    if (!imageFile && translationCache.current.has(cacheKey)) { setQuickResult(translationCache.current.get(cacheKey)); return; }
     setQuickLoading(true);
     setQuickResult(null);
     try {
@@ -550,25 +557,33 @@ export default function Home() {
       if (imageFile) form.append("image", imageFile);
       const res = await fetchWithRetry("/api/lookup", { method: "POST", body: form, timeout: 60000 }, 2, 1000);
       const data = await parseApiResponse(res);
+      if (!imageFile) { if (translationCache.current.size >= 100) translationCache.current.delete(translationCache.current.keys().next().value); translationCache.current.set(cacheKey, data.result); }
       setQuickResult(data.result);
     } catch (e) { setQuickResult({ error: formatErrorMessage(e) }); }
     finally { setQuickLoading(false); }
   };
 
   const lookupWord = async (word, context = "") => {
+    const requestId = ++lookupRequest.current;
+    const key = JSON.stringify([word.toLowerCase(), context]);
+    const cached = lookupCache.current.get(key);
+    if (cached) { setLookup({ ...cached, loading: false, detailLoading: false }); return; }
+    const meaning = meanings[word.toLowerCase()];
     const body = JSON.stringify({ word, context });
-    setLookup({ word, loading: true, detailLoading: true });
-    const quick = fetch("/api/quick-word", { method: "POST", headers: { "Content-Type": "application/json" }, body })
+    setLookup({ word, meaning, loading: !meaning, detailLoading: true });
+    const quick = meaning ? Promise.resolve() : fetch("/api/quick-word", { method: "POST", headers: { "Content-Type": "application/json" }, body })
       .then(parseApiResponse)
-      .then(data => setLookup(current => current?.word === word ? { ...current, meaning: data.meaning, loading: false, quick: true } : current))
+      .then(data => setLookup(current => requestId === lookupRequest.current && current?.word === word && current.detailLoading ? { ...current, meaning: data.meaning, loading: false, quick: true } : current))
       .catch(() => {});
     try {
       const res = await fetch("/api/word", { method: "POST", headers: { "Content-Type": "application/json" }, body });
       const data = await parseApiResponse(res);
-      setLookup({ ...data.word, loading: false, detailLoading: false });
+      if (lookupCache.current.size >= 100) lookupCache.current.delete(lookupCache.current.keys().next().value);
+      lookupCache.current.set(key, data.word);
+      if (requestId === lookupRequest.current) setLookup(current => current ? { ...data.word, loading: false, detailLoading: false } : null);
     } catch (e) {
       await quick;
-      setLookup(current => current?.word === word && current.meaning ? { ...current, loading: false, detailLoading: false } : { word, error: formatErrorMessage(e), loading: false, detailLoading: false });
+      if (requestId === lookupRequest.current) setLookup(current => !current ? null : current.meaning ? { ...current, loading: false, detailLoading: false } : { word, error: formatErrorMessage(e), loading: false, detailLoading: false });
     }
   };
 

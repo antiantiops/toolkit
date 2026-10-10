@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+const cache = globalThis.translationCache ||= new Map();
 const URL = process.env.NINEROUTER_URL || "http://192.168.101.36:20128";
 const KEY = process.env.NINEROUTER_KEY || "";
 const MODEL = process.env.NINEROUTER_LOOKUP_MODEL || "ag/gemini-3.8-flash";
@@ -19,6 +20,10 @@ export async function POST(request) {
     if (text.length > 500) return NextResponse.json({ error: "Nội dung tối đa 500 ký tự" }, { status: 400 });
     if (image instanceof File && image.size > 8 * 1024 * 1024) return NextResponse.json({ error: "Ảnh tối đa 8 MB" }, { status: 400 });
 
+    if (!['en-vi', 'vi-en'].includes(direction)) return NextResponse.json({ error: 'Invalid direction' }, { status: 400 });
+    const cacheKey = JSON.stringify([direction, text]);
+    const cached = cache.get(cacheKey);
+    if (!(image instanceof File) && cached && Date.now() - cached.at < 86400000) return NextResponse.json({ result: cached.result });
     const headers = { "Content-Type": "application/json" };
     if (KEY) headers.Authorization = `Bearer ${KEY}`;
 
@@ -83,6 +88,10 @@ If input is already correct, corrected must equal original and changed must be f
       throw new Error("AI trả dữ liệu không hợp lệ");
     }
     result.direction = direction;
+    if (!(image instanceof File)) {
+      if (cache.size >= 500) cache.delete(cache.keys().next().value);
+      cache.set(cacheKey, { result, at: Date.now() });
+    }
     return NextResponse.json({ result });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
