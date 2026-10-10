@@ -178,8 +178,8 @@ export default function Home() {
   useEffect(() => {
     setSuggestions([]);
     setSuggestIndex(-1);
-    const q = quickQuery.trim().toLowerCase();
-    if (quickDirection !== "en-vi" || !/^[a-z]{2,40}$/.test(q)) return;
+    const q = (quickQuery.match(/(?:^|[^A-Za-z])([A-Za-z]{1,40})$/)?.[1] || "").toLowerCase();
+    if (quickDirection !== "en-vi" || !/^[a-z]{1,40}$/.test(q)) return;
     const local = words.map(x => x.word).filter(x => typeof x === "string" && x.toLowerCase().startsWith(q));
     if (suggestionCache.current.has(q)) {
       setSuggestions([...new Set([...local, ...suggestionCache.current.get(q)])].slice(0, 5));
@@ -200,7 +200,8 @@ export default function Home() {
     return () => { clearTimeout(timer); controller.abort(); };
   }, [quickQuery, quickDirection, words]);
   const chooseSuggestion = word => {
-    setQuickQuery(word);
+    setQuickQuery(current => current.replace(/[A-Za-z]+$/, match => /^[A-Z]/.test(match) ? word[0].toUpperCase() + word.slice(1) : word));
+    quickInputRef.current?.focus();
     setQuickResult(null);
     setSuggestOpen(false);
     setSuggestIndex(-1);
@@ -945,7 +946,7 @@ export default function Home() {
                   <li key={word} id={`word-suggestion-${i}`} role="option" aria-selected={suggestIndex === i}
                     onPointerDown={e => e.preventDefault()} onClick={() => chooseSuggestion(word)}
                     className={`cursor-pointer rounded-lg px-3 py-2.5 text-sm ${suggestIndex === i ? "bg-sky-900 text-white" : "text-slate-200 hover:bg-slate-800"}`}>
-                    <span className="font-semibold text-sky-300">{word.slice(0, quickQuery.trim().length)}</span>{word.slice(quickQuery.trim().length)}
+                    <span className="font-semibold text-sky-300">{word.slice(0, (quickQuery.match(/[A-Za-z]+$/)?.[0] || "").length)}</span>{word.slice((quickQuery.match(/[A-Za-z]+$/)?.[0] || "").length)}
                   </li>
                 ))}
               </ul>
