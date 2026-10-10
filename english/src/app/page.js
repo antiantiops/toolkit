@@ -111,6 +111,9 @@ export default function Home() {
   const lookupCache = useRef(new Map());
   const translationCache = useRef(new Map());
   const lookupRequest = useRef(0);
+  const translationRequest = useRef(0);
+  const translationAbort = useRef(null);
+  useEffect(() => () => translationAbort.current?.abort(), []);
 
   const [quickDirection, setQuickDirection] = useState("en-vi"); // "en-vi" | "vi-en"
   const [quickResult, setQuickResult] = useState(null);
@@ -546,8 +549,12 @@ export default function Home() {
     const dir = overrideDir || quickDirection;
     if (!text && !imageFile) return;
     if (dir === "en-vi" && !imageFile && /^[a-zA-Z][a-zA-Z'-]{0,63}$/.test(text)) { lookupWord(text); return; }
+    const requestId = ++translationRequest.current;
+    translationAbort.current?.abort();
+    const controller = new AbortController();
+    translationAbort.current = controller;
     const cacheKey = JSON.stringify([dir, text]);
-    if (!imageFile && translationCache.current.has(cacheKey)) { setQuickResult(translationCache.current.get(cacheKey)); return; }
+    if (!imageFile && translationCache.current.has(cacheKey)) { setQuickResult(translationCache.current.get(cacheKey)); setQuickLoading(false); return; }
     setQuickLoading(true);
     setQuickResult(null);
     try {
@@ -555,12 +562,12 @@ export default function Home() {
       form.append("text", text);
       form.append("direction", dir);
       if (imageFile) form.append("image", imageFile);
-      const res = await fetchWithRetry("/api/lookup", { method: "POST", body: form, timeout: 60000 }, 2, 1000);
+      const res = await fetchWithRetry("/api/lookup", { method: "POST", body: form, timeout: 60000, signal: controller.signal }, 2, 1000);
       const data = await parseApiResponse(res);
       if (!imageFile) { if (translationCache.current.size >= 100) translationCache.current.delete(translationCache.current.keys().next().value); translationCache.current.set(cacheKey, data.result); }
-      setQuickResult(data.result);
-    } catch (e) { setQuickResult({ error: formatErrorMessage(e) }); }
-    finally { setQuickLoading(false); }
+      if (requestId === translationRequest.current) setQuickResult(data.result);
+    } catch (e) { if (!controller.signal.aborted && requestId === translationRequest.current) setQuickResult({ error: formatErrorMessage(e) }); }
+    finally { if (requestId === translationRequest.current) setQuickLoading(false); }
   };
 
   const lookupWord = async (word, context = "") => {
@@ -576,7 +583,7 @@ export default function Home() {
       .then(data => setLookup(current => requestId === lookupRequest.current && current?.word === word && current.detailLoading ? { ...current, meaning: data.meaning, loading: false, quick: true } : current))
       .catch(() => {});
     try {
-      const res = await fetch("/api/word", { method: "POST", headers: { "Content-Type": "application/json" }, body });
+      const res = await fetchWithRetry("/api/word", { method: "POST", headers: { "Content-Type": "application/json" }, body, timeout: 60000 }, 0);
       const data = await parseApiResponse(res);
       if (lookupCache.current.size >= 100) lookupCache.current.delete(lookupCache.current.keys().next().value);
       lookupCache.current.set(key, data.word);

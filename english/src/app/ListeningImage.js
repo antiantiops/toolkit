@@ -31,7 +31,7 @@ export default function ListeningImage() {
     panel.scrollTo({ top: panel.scrollTop + line.getBoundingClientRect().top - panel.getBoundingClientRect().top - panel.clientHeight / 2 + line.clientHeight / 2, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
   }, [index, clips.length]);
   const audio = useRef(null), resources = useRef([]), fileInput = useRef(null), version = useRef(0), loaded = useRef(false), resume = useRef(false);
-  const release = () => { resources.current.forEach(c => URL.revokeObjectURL(c.url)); resources.current = []; setClips([]); setIndex(0); setElapsed(0); setPlaying(false); };
+  const release = () => { audio.current?.pause(); resume.current = false; seekTo.current = null; resources.current.forEach(c => URL.revokeObjectURL(c.url)); resources.current = []; setClips([]); setIndex(0); setElapsed(0); setPlaying(false); };
   const analyze = async id => {
     setConfirm(false); setBusy(true); setError('');
     try { const data = await pollLesson('listening-image', id ? { imageId: id } : {}, d => setStage(d.stage)); const current = validateTranscript(data['listening-image']); setLesson(current); await createAudio(current); }

@@ -1,42 +1,33 @@
-// ponytail: retry 2 times on transient network fail or 502/503/504. Exponential backoff 1s, 2s.
+// ponytail: bounded retries for transient failures; abort cancels requests and backoff.
 export async function fetchWithRetry(url, options = {}, retries = 2, delay = 1000) {
-  const timeoutMs = options.timeout || 120000;
+  const { timeout: timeoutMs = 120000, signal, ...init } = options;
   let lastErr;
-
   for (let attempt = 0; attempt <= retries; attempt++) {
+    signal?.throwIfAborted();
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-    if (options.signal) {
-      options.signal.addEventListener("abort", () => controller.abort());
-    }
-
+    const abort = () => controller.abort(signal.reason);
+    signal?.addEventListener("abort", abort, { once: true });
+    const timer = setTimeout(() => controller.abort(new DOMException('Request timed out', 'TimeoutError')), timeoutMs);
     try {
-      const res = await fetch(url, {
-        ...options,
-        signal: controller.signal,
-      });
-      clearTimeout(timer);
-
-      if ([502, 503, 504].includes(res.status) && attempt < retries) {
-        await new Promise((r) => setTimeout(r, delay * Math.pow(2, attempt)));
-        continue;
-      }
-
-      return res;
+      const res = await fetch(url, { ...init, signal: controller.signal });
+      if (![502, 503, 504].includes(res.status) || attempt === retries) return res;
+      await res.body?.cancel();
     } catch (err) {
+      if (signal?.aborted) throw signal.reason;
+      lastErr = new Error(`${err.message} [${init.method || "GET"} ${url}; attempt ${attempt + 1}/${retries + 1}; timeout ${timeoutMs}ms]`, { cause: err });
+      if (attempt === retries) throw lastErr;
+    } finally {
       clearTimeout(timer);
-      err.message = `${err.message} [${options.method || "GET"} ${url}; attempt ${attempt + 1}/${retries + 1}; timeout ${timeoutMs}ms]`;
-      lastErr = err;
-      if (options.signal?.aborted) throw err;
-
-      if (attempt < retries) {
-        await new Promise((r) => setTimeout(r, delay * Math.pow(2, attempt)));
-        continue;
-      }
+      signal?.removeEventListener("abort", abort);
     }
+    await new Promise((resolve, reject) => {
+      const cleanup = () => signal?.removeEventListener('abort', cancel);
+      const cancel = () => { clearTimeout(wait); cleanup(); reject(signal.reason); };
+      const wait = setTimeout(() => { cleanup(); resolve(); }, delay * 2 ** attempt);
+      signal?.addEventListener('abort', cancel, { once: true });
+      if (signal?.aborted) cancel();
+    });
   }
-
   throw lastErr;
 }
 
