@@ -22,6 +22,7 @@ export default function ListeningImage() {
   const [clips, setClips] = useState([]), [index, setIndex] = useState(0), [speed, setSpeed] = useState(.8), [audioBusy, setAudioBusy] = useState(false), [audioProgress, setAudioProgress] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [playing, setPlaying] = useState(false), [elapsed, setElapsed] = useState(0);
+  const [repeat, setRepeat] = useState(false);
   const seekTo = useRef(null);
   const lyricsRef = useRef(null);
   useEffect(() => {
@@ -140,7 +141,7 @@ export default function ListeningImage() {
           onTimeUpdate={() => setElapsed(audio.current.currentTime)} onPause={() => setPlaying(false)}
           onLoadedMetadata={() => { audio.current.playbackRate = speed; if (seekTo.current !== null) { audio.current.currentTime = seekTo.current; seekTo.current = null; } else setElapsed(0); if (resume.current) { resume.current = false; audio.current.play().catch(e => setError(formatErrorMessage(e))); } }}
           onPlay={() => { setPlaying(true); if ('mediaSession' in navigator && typeof MediaMetadata !== 'undefined') navigator.mediaSession.metadata = new MediaMetadata({ title: lesson.title, artist: 'English Learner' }); }}
-          onEnded={() => { if (index + 1 < clips.length) { resume.current = true; setIndex(index + 1); } else setPlaying(false); }} />
+          onEnded={() => { if (index + 1 < clips.length) { resume.current = true; setIndex(index + 1); } else if (repeat) { setElapsed(0); seekTo.current = null; if (index === 0) { audio.current.currentTime = 0; audio.current.play().catch(e => setError(formatErrorMessage(e))); } else { resume.current = true; setIndex(0); } } else setPlaying(false); }} />
         <div className="space-y-1">
           <input aria-label="Vị trí phát toàn bài" type="range" min="0" max={total} step="0.1" value={Math.min(total, offset + elapsed)} onChange={e => seek(Number(e.target.value))} className="h-6 w-full cursor-pointer accent-teal-300" />
           <div className="flex justify-between text-xs tabular-nums text-slate-400"><span>{clock(offset + elapsed)}</span><span>{clock(total)}</span></div>
@@ -152,7 +153,7 @@ export default function ListeningImage() {
             <button aria-label={playing ? 'Tạm dừng' : 'Phát bài nghe'} onClick={() => { if (audio.current.paused) audio.current.play().catch(e => setError(formatErrorMessage(e))); else audio.current.pause(); }} className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-300 text-slate-950 shadow-lg shadow-teal-400/15 hover:bg-teal-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" className="h-7 w-7">{playing ? <path d="M6 4h4v16H6zm8 0h4v16h-4z"/> : <path d="m8 4 13 8-13 8z"/>}</svg></button>
             <button aria-label="Câu tiếp" disabled={index === clips.length - 1} onClick={() => selectSentence(index + 1)} className="flex h-11 w-11 items-center justify-center rounded-full text-slate-200 hover:bg-white/10 disabled:opacity-25"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6"><path d="M16 5h2v14h-2zM6 5l9 7-9 7z"/></svg></button>
           </div>
-          <span className="min-w-12 text-right text-xs tabular-nums text-slate-400">{index + 1}/{clips.length}</span>
+          <button type="button" aria-label="Lặp lại toàn bài" aria-pressed={repeat} title={repeat ? 'Tắt lặp lại toàn bài' : 'Bật lặp lại toàn bài'} onClick={() => setRepeat(value => !value)} className={`flex min-h-11 min-w-11 flex-col items-center justify-center rounded-xl px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 ${repeat ? 'bg-teal-300/15 text-teal-200' : 'text-slate-400 hover:bg-white/10'}`}><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5"><path d="m17 2 4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4m14-1v2a3 3 0 0 1-3 3H3"/></svg><span>{repeat ? 'Lặp: bật' : 'Lặp: tắt'}</span></button>
         </div>
         <details className="border-t border-white/5 pt-3 text-sm text-slate-400">
           <summary className="cursor-pointer text-center hover:text-teal-200">Tải file & thông tin</summary>
