@@ -1207,7 +1207,7 @@ export default function Home() {
           </section>
         )}
 
-        {words.length >= 4 && <BusinessPractice key={JSON.stringify(words.map(w=>w.word))} mode="vocab" words={words} />}
+        {!loading && !practice && words.length >= 4 && words.every(w => !w.pending) && <div key="vocab-business-test" data-testid="vocab-business-test"><BusinessPractice key={JSON.stringify(words.map(w=>w.word))} mode="vocab" words={words} /></div>}
 
         {/* Word cards */}
         {!practice && <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
@@ -1366,7 +1366,7 @@ export default function Home() {
           </div>
         )}
 
-        {grammar && <BusinessPractice key={JSON.stringify(grammar)} mode="grammar" grammar={grammar} />}
+        {grammar && !gLoading && !gPractice && <div key="grammar-business-test"><BusinessPractice key={JSON.stringify(grammar)} mode="grammar" grammar={grammar} /></div>}
 
         {/* Grammar Practice */}
         {grammar && gPractice && (
