@@ -8,14 +8,31 @@ export default function MyWords({onLookup}) {
   const requestVersion = useRef(0);
   const gesture = useRef(null), suppressClick = useRef(false);
   const [drag,setDrag] = useState(0);
-  const moveCard = direction => setCard(current => Math.max(0,Math.min(rows.length-1,current+direction)));
+  const topCard = useRef(null), underCard = useRef(null), animating = useRef(false), animations = useRef([]);
+  const [under,setUnder] = useState(null);
+  const moveCard = async direction => {
+    const target = card+direction;
+    if (animating.current || target<0 || target>=rows.length) { setDrag(0); return; }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setCard(target);setDrag(0);return; }
+    animating.current = true; suppressClick.current = true;
+    setUnder(target);
+    const outgoing = topCard.current.animate([
+      {transform:`translateX(${drag}px) rotate(${drag/20}deg)`,opacity:1},
+      {transform:`translateX(${direction*420}px) rotate(${direction*22}deg)`,opacity:0}
+    ],{duration:300,easing:'cubic-bezier(.2,.7,.3,1)',fill:'forwards'});
+    const incoming = underCard.current.animate([{transform:'translateY(14px) scale(.94)',opacity:.45},{transform:'translateY(0) scale(1)',opacity:1}],{duration:300,easing:'ease-out',fill:'forwards'});
+    animations.current = [outgoing,incoming];
+    try { await Promise.all(animations.current.map(a=>a.finished)); setCard(target);setDrag(0);setUnder(null); await new Promise(resolve=>requestAnimationFrame(resolve)); }
+    catch {} finally { animations.current.forEach(a=>a.cancel());animations.current=[];animating.current=false; }
+  };
+  useEffect(() => () => { animations.current.forEach(a=>a.cancel());animating.current=false;setUnder(null);setDrag(0); }, [week,review]);
   const finishSwipe = e => {
     const start = gesture.current; gesture.current = null;
     if (!start) return;
     const dx = e.clientX-start.x, dy=e.clientY-start.y;
     suppressClick.current = Math.abs(dx)>12 || Math.abs(dy)>12;
     if (Math.abs(dx)>=60 && Math.abs(dx)>Math.abs(dy)*1.3) moveCard(dx>0?1:-1);
-    setDrag(0);
+    else setDrag(0);
   };
   const load = async (cursor=null) => {
     const version = ++requestVersion.current;
@@ -44,12 +61,12 @@ export default function MyWords({onLookup}) {
       <button disabled={!rows.length||busy} onClick={()=>{setReview(!review);setCard(0);}} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-950/30 hover:bg-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 disabled:opacity-40"><span aria-hidden="true">{review?'☰':'▷'}</span>{review?'Trở về danh sách':'Bắt đầu ôn tuần đã chọn'}</button>
     </div>
     {review && rows[card] && <div className="relative px-1 pb-2 pt-2">
-      <div aria-hidden="true" className="absolute inset-x-4 bottom-0 top-5 rounded-3xl border border-indigo-500/20 bg-indigo-950/30" />
-      <div role="button" tabIndex={0} aria-label={`${rows[card].english}. Bấm xem nghĩa chi tiết. Phím phải: từ tiếp theo; phím trái: từ trước.`}
-        onPointerDown={e=>{ if(e.button!==0)return; suppressClick.current=false; gesture.current={x:e.clientX,y:e.clientY}; e.currentTarget.setPointerCapture(e.pointerId); }}
+      <div ref={underCard} aria-hidden="true" className="pointer-events-none absolute inset-x-1 top-2 flex min-h-72 flex-col items-center justify-center rounded-3xl border border-indigo-400/30 bg-gradient-to-br from-indigo-950 to-slate-900 p-6 text-center"><p className="break-words text-3xl font-semibold text-indigo-100">{rows[under ?? Math.min(rows.length-1,card+1)]?.english}</p><span className="mt-8 text-sm text-indigo-200">Bấm thẻ để xem nghĩa chi tiết</span></div>
+      <div ref={topCard} role="button" tabIndex={0} aria-label={`${rows[card].english}. Bấm xem nghĩa chi tiết. Phím phải: từ tiếp theo; phím trái: từ trước.`}
+        onPointerDown={e=>{ if(e.button!==0||animating.current)return; suppressClick.current=false; gesture.current={x:e.clientX,y:e.clientY}; e.currentTarget.setPointerCapture(e.pointerId); }}
         onPointerMove={e=>{const start=gesture.current;if(start){const dx=e.clientX-start.x,dy=e.clientY-start.y;if(Math.abs(dx)>Math.abs(dy)*1.3)setDrag(Math.max(-120,Math.min(120,dx)));}}}
         onPointerUp={finishSwipe} onPointerCancel={()=>{gesture.current=null;suppressClick.current=true;setDrag(0);}}
-        onClick={()=>{if(!suppressClick.current)onLookup(rows[card].english);suppressClick.current=false;}}
+        onClick={()=>{if(!animating.current&&!suppressClick.current)onLookup(rows[card].english);suppressClick.current=false;}}
         onKeyDown={e=>{if(e.key==='ArrowRight'){e.preventDefault();moveCard(1);}else if(e.key==='ArrowLeft'){e.preventDefault();moveCard(-1);}else if(e.key==='Enter'||e.key===' '){e.preventDefault();onLookup(rows[card].english);}}}
         style={{touchAction:'pan-y',transform:`translateX(${drag}px) rotate(${drag/20}deg)`}}
         className={`relative flex min-h-72 cursor-pointer select-none flex-col items-center justify-between rounded-3xl border border-indigo-400/30 bg-gradient-to-br from-indigo-950 to-slate-900 p-6 text-center shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 ${drag?'':'transition-transform motion-reduce:transition-none'}`}>
