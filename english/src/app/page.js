@@ -7,6 +7,7 @@ import Listening from "./Listening";
 import ListeningImage from "./ListeningImage";
 import Writing from "./Writing";
 import Account from "./Account";
+import MyWords, { rememberEnglish } from "./MyWords";
 import { meanings, complete } from "../lib/lookup/local";
 
 const AiTag = () => <span title="Sách không có, AI tự tạo 100%" className="ml-1 rounded bg-fuchsia-900/60 px-1.5 py-0.5 text-[10px] font-semibold text-fuchsia-200">🤖 AI</span>;
@@ -555,7 +556,7 @@ export default function Home() {
     const controller = new AbortController();
     translationAbort.current = controller;
     const cacheKey = JSON.stringify([dir, text]);
-    if (!imageFile && translationCache.current.has(cacheKey)) { setQuickResult(translationCache.current.get(cacheKey)); setQuickLoading(false); return; }
+    if (!imageFile && translationCache.current.has(cacheKey)) { const cached = translationCache.current.get(cacheKey); setQuickResult(cached); rememberEnglish(cached.corrected).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại.")); setQuickLoading(false); return; }
     setQuickLoading(true);
     setQuickResult(null);
     try {
@@ -566,12 +567,16 @@ export default function Home() {
       const res = await fetchWithRetry("/api/lookup", { method: "POST", body: form, timeout: 60000, signal: controller.signal }, 2, 1000);
       const data = await parseApiResponse(res);
       if (!imageFile) { if (translationCache.current.size >= 100) translationCache.current.delete(translationCache.current.keys().next().value); translationCache.current.set(cacheKey, data.result); }
+      rememberEnglish(data.result.corrected).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại."));
       if (requestId === translationRequest.current) setQuickResult(data.result);
     } catch (e) { if (!controller.signal.aborted && requestId === translationRequest.current) setQuickResult({ error: formatErrorMessage(e) }); }
     finally { if (requestId === translationRequest.current) setQuickLoading(false); }
   };
 
+  const [saveError, setSaveError] = useState("");
   const lookupWord = async (word, context = "") => {
+    setSaveError("");
+    rememberEnglish(word).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại."));
     const requestId = ++lookupRequest.current;
     const key = JSON.stringify([word.toLowerCase(), context]);
     const cached = lookupCache.current.get(key);
@@ -860,7 +865,9 @@ export default function Home() {
         📚 English Learner
       </h1>
 
+      {saveError && <p role="alert" className="mb-2 text-xs text-red-300">{saveError}</p>}
       <Account />
+      <MyWords onLookup={lookupWord} />
       {/* Mode tabs */}
       <div role="navigation" aria-label="Chọn kỹ năng" className="flex gap-2 mb-3 sm:mb-6 overflow-x-auto whitespace-nowrap pb-2 [&>button]:shrink-0">
         <button onClick={() => setMode("vocab")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "vocab" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>📖 Vocabulary</button>
