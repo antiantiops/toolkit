@@ -574,9 +574,9 @@ export default function Home() {
   };
 
   const [saveError, setSaveError] = useState("");
-  const lookupWord = async (word, context = "") => {
+  const lookupWord = async (word, context = "", save = true) => {
     setSaveError("");
-    rememberEnglish(word).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại."));
+    if (save) rememberEnglish(word).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại."));
     const requestId = ++lookupRequest.current;
     const key = JSON.stringify([word.toLowerCase(), context]);
     const cached = lookupCache.current.get(key);
@@ -876,7 +876,7 @@ export default function Home() {
         <button onClick={() => setMode("my-words")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "my-words" ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>My Words</button>
       </div>
 
-      {mode === "my-words" && <MyWords onLookup={lookupWord} />}
+      {mode === "my-words" && <MyWords onLookup={word => lookupWord(word, "", false)} />}
 
       {/* Quick lookup */}
       <section ref={quickSectionRef} data-testid="mobile-search" className="mb-6 scroll-mt-2 rounded-2xl border border-slate-700 bg-slate-900 p-3 sm:p-4 transition-all duration-300">

@@ -1,15 +1,18 @@
 import { NextResponse } from 'next/server';
 import { currentUser } from '../me/auth';
-import { saveWord, listWords } from '../../../lib/words/store';
+import { saveWord, listWords, listWeeks } from '../../../lib/words/store';
 export const dynamic = 'force-dynamic';
 const reply = (data,status=200) => NextResponse.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
 export async function GET(request) {
   const user = currentUser(request);
   if (!user) return reply({error:'Cần đăng nhập qua Kong'},401);
-  const raw = new URL(request.url).searchParams.get('before');
+  const params = new URL(request.url).searchParams;
+  const week = params.get('week');
+  if (week && (!/^\d{4}-\d{2}-\d{2}$/.test(week) || Number.isNaN(Date.parse(week)))) return reply({error:'Invalid week'},400);
+  const raw = params.get('before');
   const before = raw === null ? Number.MAX_SAFE_INTEGER : Number(raw);
   if (!Number.isSafeInteger(before) || before <= 0) return reply({error:'Invalid cursor'},400);
-  try { const rows = listWords(user.id,before); return reply({words:rows.slice(0,50),next:rows.length>50 ? rows[49].id : null}); }
+  try { const rows = listWords(user.id,before,week); return reply({weeks:listWeeks(user.id),words:rows.slice(0,50),next:rows.length>50 ? rows[49].id : null}); }
   catch { return reply({error:'Không tải được từ đã tra'},503); }
 }
 export async function POST(request) {
