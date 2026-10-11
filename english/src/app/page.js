@@ -7,6 +7,7 @@ import Listening from "./Listening";
 import ListeningImage from "./ListeningImage";
 import Writing from "./Writing";
 import Account from "./Account";
+import BusinessPractice from "./BusinessPractice";
 import MyWords, { rememberEnglish } from "./MyWords";
 import { meanings, complete } from "../lib/lookup/local";
 
@@ -1206,6 +1207,8 @@ export default function Home() {
           </section>
         )}
 
+        {words.length >= 4 && <BusinessPractice key={JSON.stringify(words.map(w=>w.word))} mode="vocab" words={words} />}
+
         {/* Word cards */}
         {!practice && <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {words.map((w, i) => (
@@ -1362,6 +1365,8 @@ export default function Home() {
             </div>
           </div>
         )}
+
+        {grammar && <BusinessPractice key={JSON.stringify(grammar)} mode="grammar" grammar={grammar} />}
 
         {/* Grammar Practice */}
         {grammar && gPractice && (
