@@ -6,6 +6,7 @@ import LessonChat from "./LessonChat";
 import Listening from "./Listening";
 import ListeningImage from "./ListeningImage";
 import Writing from "./Writing";
+import Account from "./Account";
 import { meanings, complete } from "../lib/lookup/local";
 
 const AiTag = () => <span title="Sách không có, AI tự tạo 100%" className="ml-1 rounded bg-fuchsia-900/60 px-1.5 py-0.5 text-[10px] font-semibold text-fuchsia-200">🤖 AI</span>;
@@ -859,6 +860,7 @@ export default function Home() {
         📚 English Learner
       </h1>
 
+      <Account />
       {/* Mode tabs */}
       <div role="navigation" aria-label="Chọn kỹ năng" className="flex gap-2 mb-3 sm:mb-6 overflow-x-auto whitespace-nowrap pb-2 [&>button]:shrink-0">
         <button onClick={() => setMode("vocab")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "vocab" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>📖 Vocabulary</button>

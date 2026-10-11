@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import { readIdentity } from './src/app/api/me/identity.js';
+const secret = 'test-secret';
+const valid = {sub:'123', email:'test@example.com', email_verified:true, name:'Test'};
+const headers = (user, token=secret) => new Headers({'x-userinfo':Buffer.from(JSON.stringify(user)).toString('base64'),'x-english-gateway':token});
+assert.deepEqual(readIdentity(headers(valid),secret), {email:valid.email,name:'Test'});
+assert.equal(readIdentity(headers(valid,'fake'),secret),null);
+assert.equal(readIdentity(headers(valid),''),null);
+assert.equal(readIdentity(headers({...valid,email_verified:false}),secret),null);
+assert.equal(readIdentity(headers({...valid,sub:null}),secret),null);
+assert.equal(readIdentity(new Headers({'x-english-gateway':secret,'x-userinfo':'invalid'}),secret),null);
+console.log('PASS trusted identity, fake/missing trust rejected, verified email required, malformed input rejected');
