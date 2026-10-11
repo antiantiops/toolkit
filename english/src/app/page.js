@@ -872,8 +872,8 @@ export default function Home() {
         <button onClick={() => setMode("vocab")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "vocab" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>📖 Vocabulary</button>
         <button onClick={() => setMode("grammar")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "grammar" ? "bg-purple-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>📐 Grammar</button>
         <button onClick={() => setMode("writing")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "writing" ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>✍️ Writing</button>
-        <button onClick={() => setMode("listening")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "listening" ? "bg-teal-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>Listening</button>
-        <button onClick={() => setMode("my-words")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "my-words" ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>My Words</button>
+        <button onClick={() => setMode("listening")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "listening" ? "bg-teal-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}><span aria-hidden="true">🎧</span> Listening</button>
+        <button onClick={() => setMode("my-words")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "my-words" ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}><span aria-hidden="true">📚</span> My Words</button>
       </div>
 
       {mode === "my-words" && <MyWords onLookup={word => lookupWord(word, "", false)} />}
