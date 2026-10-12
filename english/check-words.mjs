@@ -23,3 +23,7 @@ try {
  assert.throws(()=>saveWord('alice','a'.repeat(501)));
  console.log('PASS SQLite deduplication, user isolation, cursor pagination, input ceiling');
 } finally {rmSync(dir,{recursive:true,force:true});}
+
+// Meaning clicks count; automatic IPA requests remain read-only.
+const pageSource = (await import("node:fs")).readFileSync("src/app/page.js", "utf8");
+assert(pageSource.includes("onLookup={word => lookupWord(word)}"));
