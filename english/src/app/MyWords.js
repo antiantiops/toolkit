@@ -5,6 +5,26 @@ import { parseApiResponse, formatErrorMessage } from './fetch-helper';
 export default function MyWords({onLookup}) {
   const [rows,setRows]=useState([]), [next,setNext]=useState(null), [busy,setBusy]=useState(false), [error,setError]=useState('');
   const [week,setWeek]=useState(weekStart()), [weeks,setWeeks]=useState([]), [review,setReview]=useState(false), [card,setCard]=useState(0);
+  const [pronunciations,setPronunciations] = useState({});
+  const pronunciationCache = useRef(new Map());
+  useEffect(() => {
+    const word = review && rows[card]?.english;
+    if (!word) return;
+    if (pronunciationCache.current.has(word)) { setPronunciations(current=>({...current,[word]:pronunciationCache.current.get(word)})); return; }
+    const controller = new AbortController();
+    fetch('/api/word',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({word}),signal:controller.signal})
+      .then(parseApiResponse).then(data=>{
+        const ipa = data.word.ipa || '';
+        const easy = data.word.easyReading || '';
+        const us = easy.match(/(?:🇺🇸\s*)?US\s*:\s*([\s\S]*?)(?=🇬🇧|$)/i)?.[1]?.trim();
+        const usIpa = ipa.match(/US[^/]*(\/[^/]+\/)/i)?.[1] || ipa.match(/(\/[^/]+\/)\s*\(US\)/i)?.[1] || ipa;
+        const value = { ipa: usIpa, easy: us || easy };
+        pronunciationCache.current.set(word,value);
+        if (!controller.signal.aborted) setPronunciations(current=>({...current,[word]:value}));
+      }).catch(()=>{ if(!controller.signal.aborted)setPronunciations(current=>({...current,[word]:{ipa:'Chưa tải được phiên âm. Bấm thẻ để thử tra chi tiết.',easy:''}})); });
+    return ()=>controller.abort();
+  }, [review,card,rows]);
+  const pronunciation = word => <div className="mt-3 space-y-2"><p className="text-sm italic text-purple-300">{pronunciations[word]?.ipa || 'Đang tải phiên âm…'}</p>{pronunciations[word]?.easy && <p className="max-w-sm text-sm leading-relaxed text-sky-200">🇺🇸 US: {pronunciations[word].easy}</p>}</div>;
   const requestVersion = useRef(0);
   const gesture = useRef(null), suppressClick = useRef(false);
   const [drag,setDrag] = useState(0);
@@ -71,7 +91,7 @@ export default function MyWords({onLookup}) {
         style={{touchAction:'pan-y',transform:`translateX(${drag}px) rotate(${drag/20}deg)`}}
         className={`relative flex min-h-72 cursor-pointer select-none flex-col items-center justify-between rounded-3xl border border-indigo-400/30 bg-gradient-to-br from-indigo-950 to-slate-900 p-6 text-center shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 ${drag?'':'transition-transform motion-reduce:transition-none'}`}>
         <p aria-live="polite" className="text-xs text-slate-400">{card+1}/{rows.length}{next?' mục đã tải':''} · Tự nhớ nghĩa trước khi mở</p>
-        <div className="my-8"><p className="break-words text-3xl font-semibold text-indigo-100">{rows[card].english}</p>{rows[card].searches>1&&<span className="mt-3 inline-block rounded-full bg-amber-500/10 px-3 py-1 text-xs text-amber-200">↻ Tra lại {rows[card].searches-1} lần</span>}</div>
+        <div className="my-8"><p className="break-words text-3xl font-semibold text-indigo-100">{rows[card].english}</p>{pronunciation(rows[card].english)}{rows[card].searches>1&&<span className="mt-3 inline-block rounded-full bg-amber-500/10 px-3 py-1 text-xs text-amber-200">↻ Tra lại {rows[card].searches-1} lần</span>}</div>
         <span className="rounded-full bg-indigo-500/15 px-4 py-2 text-sm text-indigo-200">Bấm thẻ để xem nghĩa chi tiết</span>
       </div>
       <div className="relative mt-5 flex items-center justify-between gap-2"><button disabled={card===0} onClick={()=>moveCard(-1)} className="min-h-11 rounded-full bg-slate-800 px-4 text-sm text-slate-300 disabled:opacity-30">← Trước</button><span className="text-center text-xs text-slate-500">Quẹt trái: trước<br/>Quẹt phải: tiếp</span><button disabled={card===rows.length-1} onClick={()=>moveCard(1)} className="min-h-11 rounded-full bg-indigo-500/15 px-4 text-sm text-indigo-200 disabled:opacity-30">Tiếp →</button></div>
