@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import ImageCrop from './ImageCrop';
 import { fetchWithRetry, parseApiResponse, formatErrorMessage, pollLesson } from './fetch-helper';
-import { validateTranscript, stripId3, lyricsTag, measuredLrc } from '../lib/listening/transcript';
+import { validateTranscript, stripId3, lyricsTag, measuredLrc, dialogueVoices, speakerVoices, spokenSentence } from '../lib/listening/transcript';
 function download(blob, name) {
   const url = URL.createObjectURL(blob), link = document.createElement('a');
   link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -20,6 +20,7 @@ export default function ListeningImage() {
   const [crop, setCrop] = useState(null), [preview, setPreview] = useState(null), [upload, setUpload] = useState(null), [confirm, setConfirm] = useState(false);
   const [lesson, setLesson] = useState(null), [busy, setBusy] = useState(false), [error, setError] = useState(''), [stage, setStage] = useState('');
   const [clips, setClips] = useState([]), [index, setIndex] = useState(0), [speed, setSpeed] = useState(.8), [audioBusy, setAudioBusy] = useState(false), [audioProgress, setAudioProgress] = useState(0);
+  const [voices,setVoices]=useState({});
   const [dragging, setDragging] = useState(false);
   const [playing, setPlaying] = useState(false), [elapsed, setElapsed] = useState(0);
   const [repeat, setRepeat] = useState(false);
@@ -34,11 +35,11 @@ export default function ListeningImage() {
   const release = () => { audio.current?.pause(); resume.current = false; seekTo.current = null; resources.current.forEach(c => URL.revokeObjectURL(c.url)); resources.current = []; setClips([]); setIndex(0); setElapsed(0); setPlaying(false); };
   const analyze = async id => {
     setConfirm(false); setBusy(true); setError('');
-    try { const data = await pollLesson('listening-image', id ? { imageId: id } : {}, d => setStage(d.stage)); const current = validateTranscript(data['listening-image']); setLesson(current); await createAudio(current); }
+    try { const data = await pollLesson('listening-image', id ? { imageId: id } : {}, d => setStage(d.stage)); const current = validateTranscript(data['listening-image']); setLesson(current); setVoices(dialogueVoices(current.sentences)); }
     catch (e) { setError(formatErrorMessage(e)); } finally { setBusy(false); }
   };
   useEffect(() => {
-    fetch('/api/session').then(parseApiResponse).then(data => { if (!loaded.current && data.session?.listening) { setLesson(validateTranscript(data.session.listening)); setPreview(data.session.lPreview || null); } }).catch(() => {});
+    fetch('/api/session').then(parseApiResponse).then(data => { if (!loaded.current && data.session?.listening) { const restored=validateTranscript(data.session.listening); setLesson(restored);setVoices(dialogueVoices(restored.sentences)); setPreview(data.session.lPreview || null); } }).catch(() => {});
     if (sessionStorage.getItem('listening-image-pending-job')) { loaded.current = true; analyze(); }
     return () => { version.current++; resources.current.forEach(c => URL.revokeObjectURL(c.url)); };
   }, []);
@@ -65,7 +66,7 @@ export default function ListeningImage() {
     // ponytail: sequential sentence MP3s, measured browser durations. Upgrade to provider timestamps for gapless audio.
     try {
       for (let i = resources.current.length; i < current.sentences.length; i++) {
-        const res = await fetchWithRetry('/api/listening', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paragraph: current.sentences[i].en }), timeout: 100000 }, 0);
+        const res = await fetchWithRetry('/api/listening', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paragraph: spokenSentence(current.sentences[i]), voice: voices[current.sentences[i].speaker] || "en-US-AriaNeural" }), timeout: 100000 }, 0);
         if (!res.ok) await parseApiResponse(res);
         if (!res.headers.get('content-type')?.includes('audio/')) throw new Error('TTS response không phải audio');
         const blob = await res.blob(); if (blob.size < 1000) throw new Error('MP3 rỗng');
@@ -125,11 +126,13 @@ export default function ListeningImage() {
     {error && <div role="alert" className="whitespace-pre-wrap break-words rounded-xl bg-red-950 p-3 text-sm text-red-200">{error}</div>}
     {lesson && <div className="space-y-4 rounded-3xl border border-white/10 bg-slate-950 p-3 sm:p-5">
       <h3 className="font-bold text-teal-200">{lesson.title}</h3>
+      {!!Object.keys(voices).length && <div className="space-y-2 rounded-xl bg-slate-900 p-3"><p className="text-sm text-teal-200">Giọng từng nhân vật · US</p><p className="text-xs text-slate-400">Chưa rõ giới tính: gán giọng khác nhau, không đoán từ tên. Tên chỉ hiện trong transcript, không đọc thành tiếng.</p>{Object.entries(voices).map(([name,voice])=><label key={name} className="flex items-center justify-between gap-3 text-sm"><span className="min-w-0 break-words text-slate-300">{name}</span><select aria-label={`Giọng ${name}`} disabled={audioBusy||busy} value={voice} onChange={e=>{version.current++;release();setVoices(current=>({...current,[name]:e.target.value}));}} className="min-h-11 rounded-lg bg-slate-800 px-2 text-teal-100">{speakerVoices.map(v=><option key={v.id} value={v.id}>{v.label}</option>)}</select></label>)}</div>}
       {!clips.length && <button disabled={audioBusy} onClick={() => createAudio()} className="rounded-xl bg-teal-600 p-3 disabled:opacity-50">{audioBusy ? `Đang tạo MP3 ${audioProgress}/${lesson.sentences.length} câu…` : resources.current.length ? 'Thử lại các câu chưa tạo' : 'Tạo audio Listening'}</button>}
       <div className="overflow-hidden rounded-2xl border border-teal-900/60 bg-gradient-to-b from-teal-950/50 to-slate-950">
         <div className="flex items-center justify-between px-5 pt-4 text-xs font-semibold uppercase tracking-widest text-teal-300"><span>Transcript</span><span>{clips.length ? `${index + 1} / ${lesson.sentences.length}` : 'Chưa có audio'}</span></div>
         <div ref={lyricsRef} data-testid="listening-lyrics" aria-label="Transcript Listening" className="relative max-h-[48dvh] min-h-64 overflow-y-auto overscroll-contain px-5 py-24 sm:px-8">
           {lesson.sentences.map((s, i) => <button key={i} disabled={!clips.length} aria-current={clips.length && i === index ? 'true' : undefined} onClick={() => selectSentence(i)} className={`block w-full py-5 text-left transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 disabled:opacity-100 motion-reduce:transition-none ${clips.length && i === index ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}>
+            {s.speaker&&<span className="mb-2 block text-xs font-medium text-teal-400">{s.speaker}</span>}
             <span className="block break-words text-[25px] font-semibold leading-relaxed tracking-tight sm:text-3xl">{s.en}</span>
             <span className={`mt-3 block text-base leading-relaxed ${clips.length && i === index ? 'text-teal-200' : 'text-slate-600'}`}>{s.vi}</span>
           </button>)}

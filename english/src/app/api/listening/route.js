@@ -1,12 +1,14 @@
+import { speakerVoices } from '../../../lib/listening/transcript';
 import { NextResponse } from "next/server";
 const base = process.env.NINEROUTER_URL || "http://192.168.101.36:20128";
 const headers = { "Content-Type": "application/json", Authorization: `Bearer ${process.env.NINEROUTER_KEY || ""}` };
 export async function POST(request) {
   try {
-    const { words, paragraph } = await request.json();
+    const { words, paragraph, voice = "en-US-AriaNeural" } = await request.json();
     if (paragraph !== undefined) {
+      if (!speakerVoices.some(v=>v.id===voice)) return NextResponse.json({error:"Invalid voice"},{status:400});
       if (typeof paragraph !== "string" || !paragraph.trim() || paragraph.length > 6000) return NextResponse.json({ error: "Đoạn nghe không hợp lệ" }, { status: 400 });
-      const res = await fetch(`${base}/v1/audio/speech`, { method: "POST", headers, signal: AbortSignal.timeout(90000), body: JSON.stringify({ model: "edge-tts/en-US-AriaNeural", input: paragraph, response_format: "mp3" }) });
+      const res = await fetch(`${base}/v1/audio/speech`, { method: "POST", headers, signal: AbortSignal.timeout(90000), body: JSON.stringify({ model: `edge-tts/${voice}`, input: paragraph, response_format: "mp3" }) });
       if (!res.ok) throw new Error(`Tạo MP3 lỗi (${res.status})`);
       const audio = await res.arrayBuffer();
       if (audio.byteLength < 1000) throw new Error("Audio không hợp lệ");

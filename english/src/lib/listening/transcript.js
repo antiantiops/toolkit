@@ -2,7 +2,8 @@ export function validateTranscript(value) {
   if (!value || typeof value.title !== 'string' || !value.title.trim() || value.title.length > 200 || !Array.isArray(value.sentences) || !value.sentences.length || value.sentences.length > 30) throw new Error('Invalid listening transcript');
   for (const s of value.sentences) if (!s || typeof s.en !== 'string' || !s.en.trim() || s.en.length > 600 || typeof s.vi !== 'string' || !s.vi.trim() || s.vi.length > 1000) throw new Error('Invalid listening sentence');
   if (value.sentences.reduce((n, s) => n + s.en.length, 0) > 6000) throw new Error('Listening text too long');
-  return { title: value.title.trim(), sentences: value.sentences.map(s => ({ en: s.en.trim(), vi: s.vi.trim() })) };
+  for (const s of value.sentences) if (s.speaker !== undefined && (typeof s.speaker !== 'string' || s.speaker.length > 80) || s.gender !== undefined && !['male','female','unknown'].includes(s.gender)) throw new Error('Invalid speaker');
+  return { title: value.title.trim(), sentences: value.sentences.map(s => ({ en: s.en.trim(), vi: s.vi.trim(), speaker: (s.speaker || "").trim(), gender: s.gender || "unknown" })) };
 }
 const synchsafe = n => new Uint8Array([(n >>> 21) & 127, (n >>> 14) & 127, (n >>> 7) & 127, n & 127]);
 export function stripId3(bytes) {
@@ -32,4 +33,25 @@ export function measuredLrc(sentences, durations) {
     const line = `[${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(fraction).padStart(2, '0')}]${s.en}`;
     time += durations[i]; return line;
   }).join('\n');
+}
+
+export const speakerVoices = [
+ {id:'en-US-AriaNeural',label:'Nữ · Aria',gender:'female'},
+ {id:'en-US-JennyNeural',label:'Nữ · Jenny',gender:'female'},
+ {id:'en-US-GuyNeural',label:'Nam · Guy',gender:'male'},
+ {id:'en-US-ChristopherNeural',label:'Nam · Christopher',gender:'male'},
+ {id:'en-US-EricNeural',label:'Nam · Eric',gender:'male'},
+ {id:'en-US-MichelleNeural',label:'Nữ · Michelle',gender:'female'},
+];
+export function dialogueVoices(sentences) {
+ const result=Object.create(null),used=new Set();
+ for(const s of sentences){if(!s.speaker||result[s.speaker])continue;
+ const choices=s.gender==='unknown'?speakerVoices:speakerVoices.filter(v=>v.gender===s.gender);
+ const voice=choices.find(v=>!used.has(v.id))||choices[0];result[s.speaker]=voice.id;used.add(voice.id);
+ }return result;
+}
+export function spokenSentence(sentence) {
+ if(!sentence.speaker)return sentence.en;
+ const escaped=sentence.speaker.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+ return sentence.en.replace(new RegExp('^'+escaped+'\\s*[:：–—-]\\s*','i'),'').trim();
 }

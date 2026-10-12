@@ -2,9 +2,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const load = text => import(`data:text/javascript;base64,${Buffer.from(text).toString('base64')}`);
 const source = readFileSync('src/lib/listening/transcript.js', 'utf8');
-const { validateTranscript, lyricsTag, stripId3, measuredLrc } = await load(source);
+const { validateTranscript, lyricsTag, stripId3, measuredLrc, dialogueVoices, spokenSentence } = await load(source);
 const lesson = { title: 'Test', sentences: [{ en: 'First sentence.', vi: 'Câu đầu.' }, { en: 'Second sentence.', vi: 'Câu sau.' }] };
-assert.deepEqual(validateTranscript(lesson), lesson);
+assert.deepEqual(validateTranscript(lesson), {...lesson,sentences:lesson.sentences.map(s=>({...s,speaker:"",gender:"unknown"}))});
+const dialogue=validateTranscript({title:"Interview",sentences:[{en:"Interviewer: Where do you work?",vi:"Bạn làm ở đâu?",speaker:"Interviewer",gender:"unknown"},{en:"I work with Sang Chun.",vi:"Tôi làm với Sang Chun.",speaker:"Sang Chun",gender:"male"}]});
+assert.equal(spokenSentence(dialogue.sentences[0]),"Where do you work?");
+assert.equal(spokenSentence(dialogue.sentences[1]),"I work with Sang Chun.");
+const assigned=dialogueVoices(dialogue.sentences);assert.notEqual(assigned.Interviewer,assigned["Sang Chun"]);
+assert.throws(()=>validateTranscript({title:"x",sentences:[{en:"Hello",vi:"Chào",speaker:"a",gender:"guess"}]}));
 for (const value of [null, {}, { ...lesson, sentences: [] }, { ...lesson, sentences: [{ en: '', vi: 'x' }] }, { ...lesson, sentences: Array(31).fill(lesson.sentences[0]) }]) assert.throws(() => validateTranscript(value));
 assert.equal(measuredLrc(lesson.sentences, [2.345, 3]), '[00:00.00]First sentence.\n[00:02.35]Second sentence.');
 assert.equal(measuredLrc(lesson.sentences, [61.01, 3]).split('\n')[1], '[01:01.01]Second sentence.');
@@ -49,9 +54,9 @@ const getRequest = owner => ({ ...request(null, owner), url: `http://localhost/a
 assert.equal((await GET(getRequest('other'))).status, 404);
 await scheduled.shift()();
 assert.equal(calls, 1); assert.equal(saves.length, 1);
-assert.deepEqual(saves[0][1].listening, lesson);
+assert.deepEqual(saves[0][1].listening, validateTranscript(lesson));
 const completed = await GET(getRequest('owner'));
-assert.equal(completed.data.status, 'completed'); assert.deepEqual(completed.data['listening-image'], lesson);
+assert.equal(completed.data.status, 'completed'); assert.deepEqual(completed.data['listening-image'], validateTranscript(lesson));
 assert.equal((await POST(request({ imageId: fileId }))).data.jobId, first.data.jobId);
 mock.callJson = async () => { throw new Error('injected failure'); };
 // Route transport captured at import; use distinct module to inject failure.
