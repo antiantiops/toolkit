@@ -66,3 +66,7 @@ const failed = await failureRoute.POST(request({ imageId: fileId })); await sche
 const failure = await failureRoute.GET({ ...getRequest('owner'), url: `http://localhost/api/listening-image?jobId=${failed.data.jobId}` });
 assert.equal(failure.data.status, 'failed'); assert.equal(failure.data.stage, 'ai-request'); assert.match(failure.data.error, /injected failure/);
 console.log('Listening checks passed: schema, measured timing, USLT, tab order, vocabulary preservation, invalid input, deduplication, ownership, completion, failure.');
+
+const extraction = readFileSync("src/app/api/listening-image/route.js", "utf8");
+assert(extraction.includes("Copy readable spoken English VERBATIM"));
+assert(!extraction.includes("Faithfully PARAPHRASE"));
