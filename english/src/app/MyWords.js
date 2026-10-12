@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { weekStart } from '../lib/words/week';
 import { parseApiResponse, formatErrorMessage } from './fetch-helper';
 export default function MyWords({onLookup}) {
@@ -29,18 +29,39 @@ export default function MyWords({onLookup}) {
   const topCard = useRef(null), underCard = useRef(null), animating = useRef(false), animations = useRef([]);
   const [under,setUnder] = useState(null);
   const [ordering,setOrdering]=useState(false),[dragging,setDragging]=useState(null);
-  const reorderDrag=useRef(null);
+  const reorderDrag=useRef(null), listRef=useRef(null), positions=useRef(new Map());
+  const [floating,setFloating]=useState(null),[dropTarget,setDropTarget]=useState(null);
+  const capturePositions=()=>{positions.current=new Map([...listRef.current.querySelectorAll('[data-word-id]')].map(el=>[+el.dataset.wordId,el.getBoundingClientRect().top]));};
+  useLayoutEffect(()=>{
+    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    listRef.current?.querySelectorAll('[data-word-id]').forEach(el=>{const old=positions.current.get(+el.dataset.wordId),dy=old-el.getBoundingClientRect().top;if(Number.isFinite(dy)&&dy)el.animate([{transform:`translateY(${dy}px)`},{transform:'translateY(0)'}],{duration:220,easing:'ease-out'});});
+    positions.current.clear();
+  },[rows]);
   const reorder = async (id,beforeId) => {
     if(ordering||id===beforeId)return;
+    const original=rows,updated=[...rows],index=updated.findIndex(r=>r.id===id);
+    if(index<0||!updated.some(r=>r.id===beforeId))return;
+    capturePositions();const [row]=updated.splice(index,1);updated.splice(updated.findIndex(r=>r.id===beforeId),0,row);setRows(updated);
     setOrdering(true);setError('');
-    try {await parseApiResponse(await fetch('/api/my-words',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({week,id,beforeId})}));await load();}
-    catch(e){setError(formatErrorMessage(e));}finally{setOrdering(false);}
+    try {await parseApiResponse(await fetch('/api/my-words',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({week,id,beforeId})}));}
+    catch(e){setRows(original);setError(formatErrorMessage(e));}finally{setOrdering(false);}
   };
+  const startOrder=e=>{
+    if(e.button!==0||ordering||busy)return;
+    e.preventDefault();const el=e.currentTarget.closest('[data-word-id]'),rect=el.getBoundingClientRect(),id=+el.dataset.wordId;
+    reorderDrag.current={id,offset:e.clientY-rect.top};setDragging(id);setDropTarget(null);
+    setFloating({left:rect.left,top:rect.top,width:rect.width,height:rect.height,english:rows.find(r=>r.id===id).english});e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const moveOrder=e=>{
+    const start=reorderDrag.current;if(!start)return;
+    setFloating(current=>({...current,top:e.clientY-start.offset}));
+    const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('[data-word-id]');setDropTarget(target&&+target.dataset.wordId!==start.id?+target.dataset.wordId:null);
+    if(e.clientY<90)window.scrollBy(0,-18);else if(e.clientY>window.innerHeight-90)window.scrollBy(0,18);
+  };
+  const cancelOrder=()=>{reorderDrag.current=null;setDragging(null);setFloating(null);setDropTarget(null);};
   const dropOrder = e => {
-    const start=reorderDrag.current;reorderDrag.current=null;setDragging(null);
-    if(!start)return;
-    const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('[data-word-id]');
-    if(target)reorder(start,+target.dataset.wordId);
+    const start=reorderDrag.current,target=document.elementFromPoint(e.clientX,e.clientY)?.closest('[data-word-id]');cancelOrder();
+    if(start&&target)reorder(start.id,+target.dataset.wordId);
   };
   const moveCard = async direction => {
     const target = card+direction;
@@ -112,7 +133,13 @@ export default function MyWords({onLookup}) {
     {!busy&&!error&&!rows.length&&<div className="rounded-xl border border-dashed border-slate-700 px-4 py-8 text-center"><p className="font-medium text-slate-300">Chưa có từ đã tra</p><p className="mt-2 text-sm text-slate-500">Tra Anh–Việt hoặc Việt–Anh để thêm vào bộ từ của bạn.</p></div>}
     {!review && !!rows.length && <div className="flex items-center justify-between border-t border-slate-800 pt-4"><h3 className="text-sm font-semibold text-slate-300">Từ trong tuần</h3><span className="text-xs text-slate-500">↻ Số lần xem lại tổng cộng</span></div>}
     {!review && !!rows.length && <p role="status" className="text-xs text-slate-400">{ordering?"Đang lưu thứ tự…":dragging!==null?"Thả tay trên từ muốn đặt phía sau.":"Kéo tay nắm ⠿ để đặt từ lên trước. Hoặc dùng ↑ ↓. Thứ tự ôn lưu theo tuần."}</p>}
-    {!review && <ul className="space-y-2">{rows.map((row,index)=><li data-word-id={row.id} key={row.id} className="flex items-center justify-between gap-2 rounded-xl bg-slate-950/40 px-3 py-3 hover:bg-slate-800/60"><div className="flex shrink-0 flex-col"><button disabled={busy||ordering} aria-label={`Kéo ${row.english} đến trước từ khác`} onPointerDown={e=>{if(e.button!==0)return;e.preventDefault();reorderDrag.current=row.id;setDragging(row.id);e.currentTarget.setPointerCapture(e.pointerId);}} onPointerMove={e=>{if(reorderDrag.current===null)return;const y=e.clientY;if(y<90)window.scrollBy(0,-18);else if(y>window.innerHeight-90)window.scrollBy(0,18);}} onPointerUp={dropOrder} onPointerCancel={()=>{reorderDrag.current=null;setDragging(null);}} style={{touchAction:"none"}} className={`min-h-11 min-w-11 rounded-lg text-xl ${dragging===row.id?"bg-indigo-600 text-white":"text-slate-400"}`}>⠿</button><div className="flex"><button disabled={busy||ordering||index===0} aria-label={`Đưa ${row.english} lên`} onClick={()=>reorder(row.id,rows[index-1].id)} className="min-h-11 px-2 text-slate-400 disabled:opacity-30">↑</button><button disabled={busy||ordering||index===rows.length-1} aria-label={`Đưa ${row.english} xuống`} onClick={()=>reorder(rows[index+1].id,row.id)} className="min-h-11 px-2 text-slate-400 disabled:opacity-30">↓</button></div></div><span className="min-w-0 break-words text-sm font-medium text-slate-200">{row.english}{row.searches>1&&<span title={`Xem lại ${row.searches-1} lần (tổng cộng)`} aria-label={`Xem lại ${row.searches-1} lần`} className="ml-2 inline-flex rounded-full bg-amber-500/10 px-2 py-1 text-xs text-amber-200">↻ {row.searches-1}</span>}</span><button onClick={()=>onLookup(row.english)} className="min-h-11 shrink-0 rounded-lg px-3 text-xs font-semibold text-indigo-200 hover:bg-indigo-500/10">Xem nghĩa</button></li>)}</ul>}
+    {!review && <ul ref={listRef} className="space-y-2">{rows.map((row,index)=><li data-word-id={row.id} key={row.id} className={`relative flex items-center gap-2 rounded-xl border p-3 ${dropTarget===row.id?'border-indigo-400 bg-indigo-950/60':'border-transparent bg-slate-950/40'} ${dragging===row.id?'opacity-30':''}`}>
+      {dropTarget===row.id&&<span aria-hidden="true" className="absolute -top-1 inset-x-2 h-1 rounded-full bg-indigo-400"/>}
+      <button disabled={busy||ordering} aria-label={`Kéo ${row.english} đổi vị trí`} onPointerDown={startOrder} onPointerMove={moveOrder} onPointerUp={dropOrder} onPointerCancel={cancelOrder} style={{touchAction:'none'}} className="flex h-11 w-9 shrink-0 items-center justify-center rounded-lg text-xl text-slate-400 active:bg-indigo-500/20">⠿</button>
+      <div className="min-w-0 flex-1"><p className="break-words text-sm font-medium leading-6 text-slate-200">{row.english}</p><div className="mt-1 flex items-center gap-1"><button disabled={busy||ordering||index===0} aria-label={`Đưa ${row.english} lên`} onClick={()=>reorder(row.id,rows[index-1].id)} className="min-h-11 min-w-11 rounded-lg text-slate-400 disabled:opacity-25">↑</button><button disabled={busy||ordering||index===rows.length-1} aria-label={`Đưa ${row.english} xuống`} onClick={()=>reorder(rows[index+1].id,row.id)} className="min-h-11 min-w-11 rounded-lg text-slate-400 disabled:opacity-25">↓</button>{row.searches>1&&<span className="ml-1 rounded-full bg-amber-500/10 px-2 py-1 text-xs text-amber-200">↻ {row.searches-1}</span>}</div></div>
+      <button onClick={()=>onLookup(row.english)} className="min-h-11 shrink-0 rounded-lg bg-indigo-500/10 px-3 text-xs font-semibold text-indigo-200">Xem nghĩa</button>
+    </li>)}</ul>}
+    {floating&&<div aria-hidden="true" style={{position:'fixed',left:floating.left,top:floating.top,width:floating.width,minHeight:floating.height,zIndex:1000,pointerEvents:'none'}} className="flex items-center gap-3 rounded-xl border border-indigo-400 bg-slate-800 p-4 shadow-2xl shadow-black/60"><span className="text-xl text-indigo-300">⠿</span><p className="min-w-0 flex-1 break-words text-sm font-medium text-white">{floating.english}</p><span className="text-xs text-indigo-200">Đang kéo</span></div>}
     {busy&&<p role="status" className="text-sm text-slate-400">Đang tải…</p>}
     {next&&<button disabled={busy||ordering} onClick={()=>load(next)} className="min-h-11 w-full rounded-xl bg-slate-800 text-sm text-indigo-200 hover:bg-slate-700 disabled:opacity-50">Tải thêm</button>}
   </section>;
