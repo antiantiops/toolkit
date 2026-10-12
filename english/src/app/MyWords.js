@@ -22,6 +22,15 @@ export default function MyWords({onLookup}) {
       }).catch(()=>{ if(!controller.signal.aborted)setPronunciations(current=>({...current,[word]:{ipa:'Chưa tải được phiên âm. Bấm thẻ để thử tra chi tiết.',easy:''}})); });
     return ()=>controller.abort();
   }, [review,card,rows]);
+  const viewMeaning = word => {
+    onLookup(word);
+    const selectedWeek=week,version=requestVersion.current;
+    rememberEnglish(word).then(saved=>{
+      if(!saved||version!==requestVersion.current)return;
+      setRows(current=>current.map(row=>row.english===word?{...row,searches:row.searches+1,weekSearches:row.weekSearches+(selectedWeek===weekStart()?1:0)}:row));
+      if(selectedWeek===weekStart())setWeeks(current=>current.map(w=>w.week===selectedWeek?{...w,searches:w.searches+1}:w));
+    }).catch(e=>setError(formatErrorMessage(e)));
+  };
   const pronunciation = word => <p className="mt-3 text-sm italic text-purple-300" title="Phiên âm do AI cung cấp, chưa xác thực từ điển">{pronunciations[word]?.ipa ? `US · ${pronunciations[word].ipa}` : 'Đang tải IPA US…'}</p>;
   const requestVersion = useRef(0);
   const gesture = useRef(null), suppressClick = useRef(false);
@@ -119,8 +128,8 @@ export default function MyWords({onLookup}) {
         onPointerDown={e=>{ if(e.button!==0||animating.current)return; suppressClick.current=false; gesture.current={x:e.clientX,y:e.clientY}; e.currentTarget.setPointerCapture(e.pointerId); }}
         onPointerMove={e=>{const start=gesture.current;if(start){const dx=e.clientX-start.x,dy=e.clientY-start.y;if(Math.abs(dx)>Math.abs(dy)*1.3)setDrag(Math.max(-120,Math.min(120,dx)));}}}
         onPointerUp={finishSwipe} onPointerCancel={()=>{gesture.current=null;suppressClick.current=true;setDrag(0);}}
-        onClick={()=>{if(!animating.current&&!suppressClick.current)onLookup(rows[card].english);suppressClick.current=false;}}
-        onKeyDown={e=>{if(e.key==='ArrowRight'){e.preventDefault();moveCard(1);}else if(e.key==='ArrowLeft'){e.preventDefault();moveCard(-1);}else if(e.key==='Enter'||e.key===' '){e.preventDefault();onLookup(rows[card].english);}}}
+        onClick={()=>{if(!animating.current&&!suppressClick.current)viewMeaning(rows[card].english);suppressClick.current=false;}}
+        onKeyDown={e=>{if(e.key==='ArrowRight'){e.preventDefault();moveCard(1);}else if(e.key==='ArrowLeft'){e.preventDefault();moveCard(-1);}else if(e.key==='Enter'||e.key===' '){e.preventDefault();viewMeaning(rows[card].english);}}}
         style={{touchAction:'pan-y',transform:`translateX(${drag}px) rotate(${drag/20}deg)`}}
         className={`relative flex h-96 cursor-pointer select-none flex-col items-center justify-between rounded-3xl border border-indigo-400/30 bg-gradient-to-br from-indigo-950 to-slate-900 p-6 text-center shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 ${drag?'':'transition-transform motion-reduce:transition-none'}`}>
         <p aria-live="polite" className="text-xs text-slate-400">{card+1}/{rows.length}{next?' mục đã tải':''} · Tự nhớ nghĩa trước khi mở</p>
@@ -141,7 +150,7 @@ export default function MyWords({onLookup}) {
         <button disabled={busy||ordering||index===rows.length-1} aria-label={`Đưa ${row.english} xuống`} onClick={()=>reorder(rows[index+1].id,row.id)} className="h-6 w-9 rounded text-sm text-slate-400 hover:bg-indigo-500/10 disabled:opacity-25">↓</button>
       </div>
       <div className="min-w-0 flex-1"><p className="break-words text-sm font-medium leading-6 text-slate-200">{row.english}</p>{row.searches>1&&<span className="mt-2 inline-block rounded-full bg-amber-500/10 px-2 py-1 text-xs text-amber-200">↻ {row.searches-1}</span>}</div>
-      <button onClick={()=>onLookup(row.english)} className="min-h-11 shrink-0 rounded-lg bg-indigo-500/10 px-3 text-xs font-semibold text-indigo-200">Xem nghĩa</button>
+      <button onClick={()=>viewMeaning(row.english)} className="min-h-11 shrink-0 rounded-lg bg-indigo-500/10 px-3 text-xs font-semibold text-indigo-200">Xem nghĩa</button>
     </li>)}</ul>}
     {floating&&<div aria-hidden="true" style={{position:'fixed',left:floating.left,top:floating.top,width:floating.width,minHeight:floating.height,zIndex:1000,pointerEvents:'none'}} className="flex items-center gap-3 rounded-xl border border-indigo-400 bg-slate-800 p-4 shadow-2xl shadow-black/60"><span className="text-xl text-indigo-300">⠿</span><p className="min-w-0 flex-1 break-words text-sm font-medium text-white">{floating.english}</p><span className="text-xs text-indigo-200">Đang kéo</span></div>}
     {busy&&<p role="status" className="text-sm text-slate-400">Đang tải…</p>}
@@ -150,5 +159,6 @@ export default function MyWords({onLookup}) {
 }
 export async function rememberEnglish(english) {
   const res=await fetch('/api/my-words',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({english})});
-  if (!res.ok && res.status!==401) throw new Error('Không lưu được từ đã tra');
+  if (!res.ok) throw new Error('Không lưu được lượt xem. Kiểm tra đăng nhập rồi thử lại.');
+  return true;
 }

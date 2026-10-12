@@ -44,4 +44,4 @@ try {
 
 // Meaning clicks count; automatic IPA requests remain read-only.
 const pageSource = (await import("node:fs")).readFileSync("src/app/page.js", "utf8");
-assert(pageSource.includes("onLookup={word => lookupWord(word)}"));
+assert(pageSource.includes("onLookup={word => lookupWord(word, \"\", false)}"));
