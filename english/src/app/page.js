@@ -1,4 +1,5 @@
 "use client";
+import { normalizeGrammarAnswer } from "../lib/grammar/answers";
 import { fetchWithRetry, parseApiResponse, formatErrorMessage, pollLesson } from "./fetch-helper";
 import { useState, useRef, useCallback, useEffect } from "react";
 import ImageCrop from "./ImageCrop";
@@ -770,7 +771,7 @@ export default function Home() {
 
   // --- Grammar practice scores ---
   const gChooseScore = gPracticeData?.choose?.filter((q, i) => gChooseAnswers[i] === q.answer).length || 0;
-  const gRewriteScore = gPracticeData?.rewrite?.filter((q, i) => gRewriteAnswers[i]?.trim().toLowerCase() === q.answer.trim().toLowerCase()).length || 0;
+  const gRewriteScore = gPracticeData?.rewrite?.filter((q, i) => normalizeGrammarAnswer(gRewriteAnswers[i]) === normalizeGrammarAnswer(q.answer)).length || 0;
 
   return (
     <div className="max-w-5xl mx-auto px-3 py-4 sm:px-5 sm:py-8">
@@ -1409,11 +1410,11 @@ export default function Home() {
             {gPracticeData && gPracticeType === "rewrite" && (
               <div className="mt-5 space-y-4">
                 {gPracticeData.rewrite?.map((q, qi) => (
-                  <div key={qi} className={`rounded-xl border p-4 ${gSubmitted ? (gRewriteAnswers[qi]?.trim().toLowerCase() === q.answer.trim().toLowerCase() ? "border-emerald-500" : "border-red-500") : "border-slate-700"} bg-slate-950`}>
+                  <div key={qi} className={`rounded-xl border p-4 ${gSubmitted ? (normalizeGrammarAnswer(gRewriteAnswers[qi]) === normalizeGrammarAnswer(q.answer) ? "border-emerald-500" : "border-red-500") : "border-slate-700"} bg-slate-950`}>
                     <div className="text-sm text-slate-200 mb-1">{qi + 1}. {q.instruction}</div>
                     <div className="mb-3 break-words text-sm font-medium text-sky-300">{clickableText(q.input)}<CopyBtn text={q.input} /></div>
                     <input value={gRewriteAnswers[qi] || ""} onChange={(e) => setGRewriteAnswers((v) => ({ ...v, [qi]: e.target.value }))} disabled={gSubmitted} placeholder="Viết lại câu ở đây" className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-3 text-white outline-none focus:border-purple-400" />
-                    {gSubmitted && gRewriteAnswers[qi]?.trim().toLowerCase() !== q.answer.trim().toLowerCase() && <div className="mt-2 text-sm text-emerald-300">Đáp án: {clickableText(q.answer)}</div>}
+                    {gSubmitted && normalizeGrammarAnswer(gRewriteAnswers[qi]) !== normalizeGrammarAnswer(q.answer) && <div className="mt-2 text-sm text-emerald-300">Đáp án: {clickableText(q.answer)}</div>}
                   </div>
                 ))}
                 <button onClick={() => setGSubmitted(true)} className="w-full rounded-xl bg-emerald-600 py-3 font-semibold hover:bg-emerald-500">Nộp bài · {gSubmitted ? `${gRewriteScore}/${gPracticeData.rewrite?.length} đúng` : "Chấm điểm"}</button>

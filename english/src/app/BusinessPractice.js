@@ -1,7 +1,7 @@
 'use client';
 import { useRef, useState } from 'react';
 import { fetchWithRetry, parseApiResponse, formatErrorMessage } from './fetch-helper';
-const normal = value => (value||'').trim().toLowerCase().replace(/\s+/g,' ');
+import { normalizeGrammarAnswer as normal } from '../lib/grammar/answers';
 export default function BusinessPractice({mode,words,grammar}) {
   const [test,setTest]=useState(null),[answers,setAnswers]=useState({}),[submitted,setSubmitted]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const [part,setPart]=useState(0), [checked,setChecked]=useState({});
