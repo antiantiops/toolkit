@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 const dir=mkdtempSync(join(tmpdir(),'words-test-'));
 process.env.WORDS_DB_PATH=join(dir,'words.sqlite');
-const {saveWord,listWords,listWeeks}=await import('./src/lib/words/store.js');
+const {saveWord,listWords,listWeeks,moveWord}=await import('./src/lib/words/store.js');
 try {
  saveWord('alice',' Engineer ');saveWord('alice','engineer');saveWord('bob','doctor');
  assert.equal(listWords('alice')[0].searches,2);
@@ -20,6 +20,22 @@ try {
  const first=listWords('alice');assert.equal(first.length,51);
  const second=listWords('alice',first[49].id);assert.equal(second.length,21);
  assert(!second.some(row=>first.slice(0,50).some(x=>x.id===row.id)));
+ const week=weekStart(), initial=listWords('alice',Number.MAX_SAFE_INTEGER,week);
+ const total=listWeeks('alice')[0].searches;
+ moveWord('alice',week,initial[49].id,initial[0].id);
+ const ordered=listWords('alice',Number.MAX_SAFE_INTEGER,week);
+ assert.equal(ordered[0].id,initial[49].id);
+ assert.equal(listWeeks('alice')[0].searches,total);
+ const page2=listWords('alice',50,week);
+ assert.equal(page2.length,21);
+ assert(!page2.some(r=>ordered.slice(0,50).some(x=>x.id===r.id)));
+ assert.throws(()=>moveWord('bob',week,initial[49].id,initial[0].id));
+ assert.throws(()=>moveWord('alice','2020-01-06',initial[49].id,initial[0].id));
+ saveWord('alice',ordered[2].english);
+ assert.equal(listWords('alice',Number.MAX_SAFE_INTEGER,week)[0].id,ordered[0].id);
+ saveWord('alice','new after custom order');
+ assert.equal(listWords('alice',Number.MAX_SAFE_INTEGER,week)[0].id,ordered[0].id);
+ assert.equal(listWords('alice',50,week).at(-1).english,'new after custom order');
  assert.throws(()=>saveWord('alice','a'.repeat(501)));
  console.log('PASS SQLite deduplication, user isolation, cursor pagination, input ceiling');
 } finally {rmSync(dir,{recursive:true,force:true});}

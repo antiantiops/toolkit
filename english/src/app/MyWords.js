@@ -28,6 +28,20 @@ export default function MyWords({onLookup}) {
   const [drag,setDrag] = useState(0);
   const topCard = useRef(null), underCard = useRef(null), animating = useRef(false), animations = useRef([]);
   const [under,setUnder] = useState(null);
+  const [ordering,setOrdering]=useState(false),[dragging,setDragging]=useState(null);
+  const reorderDrag=useRef(null);
+  const reorder = async (id,beforeId) => {
+    if(ordering||id===beforeId)return;
+    setOrdering(true);setError('');
+    try {await parseApiResponse(await fetch('/api/my-words',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({week,id,beforeId})}));await load();}
+    catch(e){setError(formatErrorMessage(e));}finally{setOrdering(false);}
+  };
+  const dropOrder = e => {
+    const start=reorderDrag.current;reorderDrag.current=null;setDragging(null);
+    if(!start)return;
+    const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('[data-word-id]');
+    if(target)reorder(start,+target.dataset.wordId);
+  };
   const moveCard = async direction => {
     const target = card+direction;
     if (animating.current || target<0 || target>=rows.length) { setDrag(0); return; }
@@ -68,15 +82,15 @@ export default function MyWords({onLookup}) {
   return <section className="mb-6 space-y-4 rounded-2xl border border-slate-700 bg-slate-900 p-4 sm:p-5">
     <header className="flex items-start justify-between gap-3">
       <div><p className="mb-1 text-xs font-semibold uppercase tracking-widest text-indigo-300">Bộ từ cá nhân</p><h2 className="text-xl font-semibold text-slate-100">Một tuần, một bước tiến</h2></div>
-      <button aria-label="Làm mới danh sách" title="Làm mới" disabled={busy} onClick={()=>load()} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-700 text-xl text-slate-400 hover:bg-slate-800 hover:text-white disabled:opacity-50">↻</button>
+      <button aria-label="Làm mới danh sách" title="Làm mới" disabled={busy||ordering} onClick={()=>load()} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-700 text-xl text-slate-400 hover:bg-slate-800 hover:text-white disabled:opacity-50">↻</button>
     </header>
     <div className="space-y-3">
-      <label className="block text-xs text-slate-400">Tuần học · giờ Việt Nam<select aria-label="Tuần ôn tập" value={week} onChange={e=>setWeek(e.target.value)} className="mt-2 block min-h-12 w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-3 text-sm font-medium text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">{[...new Set([weekStart(),...weeks.map(w=>w.week)])].sort().reverse().map(w=><option key={w} value={w}>{weekLabel(w)}{w===weekStart()?' · tuần này':''}</option>)}</select></label>
+      <label className="block text-xs text-slate-400">Tuần học · giờ Việt Nam<select aria-label="Tuần ôn tập" disabled={ordering||dragging!==null} value={week} onChange={e=>setWeek(e.target.value)} className="mt-2 block min-h-12 w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-3 text-sm font-medium text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">{[...new Set([weekStart(),...weeks.map(w=>w.week)])].sort().reverse().map(w=><option key={w} value={w}>{weekLabel(w)}{w===weekStart()?' · tuần này':''}</option>)}</select></label>
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-xl bg-indigo-500/10 px-4 py-3"><p className="text-2xl font-semibold tabular-nums text-indigo-200">{summary?.count || 0}</p><p className="mt-1 text-xs text-slate-400">Từ / cụm từ</p></div>
         <div className="rounded-xl bg-slate-800/60 px-4 py-3"><p className="text-2xl font-semibold tabular-nums text-slate-200">{summary?.searches || 0}</p><p className="mt-1 text-xs text-slate-400">Lượt tra / xem nghĩa trong tuần</p></div>
       </div>
-      <button disabled={!rows.length||busy} onClick={()=>{setReview(!review);setCard(0);}} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-950/30 hover:bg-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 disabled:opacity-40"><span aria-hidden="true">{review?'☰':'▷'}</span>{review?'Trở về danh sách':'Bắt đầu ôn tuần đã chọn'}</button>
+      <button disabled={!rows.length||busy||ordering} onClick={()=>{setReview(!review);setCard(0);}} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-950/30 hover:bg-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 disabled:opacity-40"><span aria-hidden="true">{review?'☰':'▷'}</span>{review?'Trở về danh sách':'Bắt đầu ôn tuần đã chọn'}</button>
     </div>
     {review && rows[card] && <div style={{overflowAnchor:"none"}} className="relative overflow-hidden px-1 pb-2 pt-2">
       <div ref={underCard} aria-hidden="true" className="pointer-events-none absolute inset-x-1 top-2 flex h-96 flex-col items-center justify-center rounded-3xl border border-indigo-400/30 bg-gradient-to-br from-indigo-950 to-slate-900 p-6 text-center"><p className="break-words text-3xl font-semibold text-indigo-100">{rows[under ?? Math.min(rows.length-1,card+1)]?.english}</p><span className="mt-8 text-sm text-indigo-200">Bấm thẻ để xem nghĩa chi tiết</span></div>
@@ -97,9 +111,10 @@ export default function MyWords({onLookup}) {
     {error && <p role="alert" className="rounded-xl bg-red-950/30 p-3 text-sm text-red-300">{error}</p>}
     {!busy&&!error&&!rows.length&&<div className="rounded-xl border border-dashed border-slate-700 px-4 py-8 text-center"><p className="font-medium text-slate-300">Chưa có từ đã tra</p><p className="mt-2 text-sm text-slate-500">Tra Anh–Việt hoặc Việt–Anh để thêm vào bộ từ của bạn.</p></div>}
     {!review && !!rows.length && <div className="flex items-center justify-between border-t border-slate-800 pt-4"><h3 className="text-sm font-semibold text-slate-300">Từ trong tuần</h3><span className="text-xs text-slate-500">↻ Số lần xem lại tổng cộng</span></div>}
-    {!review && <ul className="space-y-2">{rows.map(row=><li key={row.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-950/40 px-4 py-3 hover:bg-slate-800/60"><span className="min-w-0 break-words text-sm font-medium text-slate-200">{row.english}{row.searches>1&&<span title={`Xem lại ${row.searches-1} lần (tổng cộng)`} aria-label={`Xem lại ${row.searches-1} lần`} className="ml-2 inline-flex rounded-full bg-amber-500/10 px-2 py-1 text-xs text-amber-200">↻ {row.searches-1}</span>}</span><button onClick={()=>onLookup(row.english)} className="min-h-11 shrink-0 rounded-lg px-3 text-xs font-semibold text-indigo-200 hover:bg-indigo-500/10">Xem nghĩa</button></li>)}</ul>}
+    {!review && !!rows.length && <p role="status" className="text-xs text-slate-400">{ordering?"Đang lưu thứ tự…":dragging!==null?"Thả tay trên từ muốn đặt phía sau.":"Kéo tay nắm ⠿ để đặt từ lên trước. Hoặc dùng ↑ ↓. Thứ tự ôn lưu theo tuần."}</p>}
+    {!review && <ul className="space-y-2">{rows.map((row,index)=><li data-word-id={row.id} key={row.id} className="flex items-center justify-between gap-2 rounded-xl bg-slate-950/40 px-3 py-3 hover:bg-slate-800/60"><div className="flex shrink-0 flex-col"><button disabled={busy||ordering} aria-label={`Kéo ${row.english} đến trước từ khác`} onPointerDown={e=>{if(e.button!==0)return;e.preventDefault();reorderDrag.current=row.id;setDragging(row.id);e.currentTarget.setPointerCapture(e.pointerId);}} onPointerMove={e=>{if(reorderDrag.current===null)return;const y=e.clientY;if(y<90)window.scrollBy(0,-18);else if(y>window.innerHeight-90)window.scrollBy(0,18);}} onPointerUp={dropOrder} onPointerCancel={()=>{reorderDrag.current=null;setDragging(null);}} style={{touchAction:"none"}} className={`min-h-11 min-w-11 rounded-lg text-xl ${dragging===row.id?"bg-indigo-600 text-white":"text-slate-400"}`}>⠿</button><div className="flex"><button disabled={busy||ordering||index===0} aria-label={`Đưa ${row.english} lên`} onClick={()=>reorder(row.id,rows[index-1].id)} className="min-h-11 px-2 text-slate-400 disabled:opacity-30">↑</button><button disabled={busy||ordering||index===rows.length-1} aria-label={`Đưa ${row.english} xuống`} onClick={()=>reorder(rows[index+1].id,row.id)} className="min-h-11 px-2 text-slate-400 disabled:opacity-30">↓</button></div></div><span className="min-w-0 break-words text-sm font-medium text-slate-200">{row.english}{row.searches>1&&<span title={`Xem lại ${row.searches-1} lần (tổng cộng)`} aria-label={`Xem lại ${row.searches-1} lần`} className="ml-2 inline-flex rounded-full bg-amber-500/10 px-2 py-1 text-xs text-amber-200">↻ {row.searches-1}</span>}</span><button onClick={()=>onLookup(row.english)} className="min-h-11 shrink-0 rounded-lg px-3 text-xs font-semibold text-indigo-200 hover:bg-indigo-500/10">Xem nghĩa</button></li>)}</ul>}
     {busy&&<p role="status" className="text-sm text-slate-400">Đang tải…</p>}
-    {next&&<button disabled={busy} onClick={()=>load(next)} className="min-h-11 w-full rounded-xl bg-slate-800 text-sm text-indigo-200 hover:bg-slate-700 disabled:opacity-50">Tải thêm</button>}
+    {next&&<button disabled={busy||ordering} onClick={()=>load(next)} className="min-h-11 w-full rounded-xl bg-slate-800 text-sm text-indigo-200 hover:bg-slate-700 disabled:opacity-50">Tải thêm</button>}
   </section>;
 }
 export async function rememberEnglish(english) {
