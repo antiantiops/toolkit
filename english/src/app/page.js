@@ -1245,7 +1245,7 @@ export default function Home() {
                 <summary className="cursor-pointer text-sm text-slate-400 hover:text-blue-300 select-none">Xem ví dụ, mẹo dùng</summary>
                 <div className="mt-3 border-t border-slate-700 pt-3">
                   <div className="text-sm text-slate-300 mb-2">
-                    <span className="text-slate-500">Ví dụ:</span> {clickableText(w.example)}<CopyBtn text={w.example} /><SpeakBtn text={w.example} className="ml-2 inline-flex min-h-11 items-center rounded-lg bg-slate-700 px-3 text-xs hover:bg-slate-600 transition-colors">🔊 Nghe ví dụ</SpeakBtn>
+                    <span className="text-slate-500">Ví dụ:</span> {clickableText(w.example)}<CopyBtn text={w.example} /><SpeakBtn text={w.example} aria-label="Nghe ví dụ" title="Nghe ví dụ" className="ml-2 text-sm text-slate-300 hover:text-white">🔊</SpeakBtn>
                     {w.exampleVietnamese && <div className="text-slate-400 italic mt-1">{w.exampleVietnamese}</div>}
                   </div>
                   {w.pending && <div className="text-sm text-blue-300">Đang bổ sung nghĩa và mẹo dùng...</div>}
