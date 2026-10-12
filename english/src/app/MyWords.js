@@ -15,16 +15,14 @@ export default function MyWords({onLookup}) {
     fetch('/api/word',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({word}),signal:controller.signal})
       .then(parseApiResponse).then(data=>{
         const ipa = data.word.ipa || '';
-        const easy = data.word.easyReading || '';
-        const us = easy.match(/(?:🇺🇸\s*)?US\s*:\s*([\s\S]*?)(?=🇬🇧|$)/i)?.[1]?.trim();
-        const usIpa = ipa.match(/US[^/]*(\/[^/]+\/)/i)?.[1] || ipa.match(/(\/[^/]+\/)\s*\(US\)/i)?.[1] || ipa;
-        const value = { ipa: usIpa, easy: us || easy };
+        const usIpa = ipa.match(/US[^/]*(\/[^/]+\/)/i)?.[1] || ipa.match(/(\/[^/]+\/)\s*\(US\)/i)?.[1];
+        const value = { ipa: usIpa || (!/UK|US|🇬🇧|🇺🇸/.test(ipa) ? ipa : 'Chưa có IPA US xác định') };
         pronunciationCache.current.set(word,value);
         if (!controller.signal.aborted) setPronunciations(current=>({...current,[word]:value}));
       }).catch(()=>{ if(!controller.signal.aborted)setPronunciations(current=>({...current,[word]:{ipa:'Chưa tải được phiên âm. Bấm thẻ để thử tra chi tiết.',easy:''}})); });
     return ()=>controller.abort();
   }, [review,card,rows]);
-  const pronunciation = word => <div className="mt-3 space-y-2"><p className="text-sm italic text-purple-300">{pronunciations[word]?.ipa || 'Đang tải phiên âm…'}</p>{pronunciations[word]?.easy && <p className="max-w-sm text-sm leading-relaxed text-sky-200">🇺🇸 US: {pronunciations[word].easy}</p>}</div>;
+  const pronunciation = word => <p className="mt-3 text-sm italic text-purple-300" title="Phiên âm do AI cung cấp, chưa xác thực từ điển">{pronunciations[word]?.ipa ? `US · ${pronunciations[word].ipa}` : 'Đang tải IPA US…'}</p>;
   const requestVersion = useRef(0);
   const gesture = useRef(null), suppressClick = useRef(false);
   const [drag,setDrag] = useState(0);
