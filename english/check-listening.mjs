@@ -18,7 +18,7 @@ const joined = new Uint8Array(tag.length + mp3.length); joined.set(tag); joined.
 assert.deepEqual(stripId3(joined), mp3);
 assert.throws(() => stripId3(new Uint8Array([73,68,51,4,0,0,127,127,127,127])));
 const page = readFileSync('src/app/page.js', 'utf8');
-assert(page.indexOf('>Listening</button>') > page.indexOf('>✍️ Writing</button>'));
+assert(page.indexOf(' Listening</button>') > page.indexOf('>✍️ Writing</button>'));
 assert(page.includes('overflow-x-auto whitespace-nowrap'));
 assert(page.includes('<Listening key={JSON.stringify(words.map(w => w.word))} words={words} />'));
 const client = readFileSync('src/app/ListeningImage.js', 'utf8');

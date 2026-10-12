@@ -7,6 +7,7 @@ import Listening from "./Listening";
 import ListeningImage from "./ListeningImage";
 import Writing from "./Writing";
 import Account from "./Account";
+import ListeningAudio from "./ListeningAudio";
 import BusinessPractice from "./BusinessPractice";
 import MyWords, { rememberEnglish } from "./MyWords";
 import { meanings, complete } from "../lib/lookup/local";
@@ -98,6 +99,7 @@ function ErrorBanner({ message, onDismiss }) {
 export default function Home() {
   // --- Mode: "vocab" | "grammar" ---
   const [mode, setMode] = useState("vocab");
+  const [listeningSource,setListeningSource]=useState("image");
 
   // --- Vocab state ---
   const [image, setImage] = useState(null);
@@ -1659,7 +1661,7 @@ export default function Home() {
         {writing && <Writing writing={writing} cachedModelDraft={wModelDraft} onModelDraft={setWModelDraft} SpeakBtn={SpeakBtn} CopyBtn={CopyBtn} />}
       </>}
 
-      <div hidden={mode !== "listening"}><ListeningImage /></div>
+      <div hidden={mode !== "listening"}><div className="mb-4 flex gap-2">{[["image","Ảnh bài nghe"],["audio","File audio"]].map(([value,label])=><button key={value} onClick={()=>setListeningSource(value)} className={`min-h-11 flex-1 rounded-xl px-4 text-sm font-semibold ${listeningSource===value?"bg-teal-600 text-white":"bg-slate-800 text-slate-400"}`}>{label}</button>)}</div><div hidden={listeningSource!=="image"}><ListeningImage /></div><div hidden={listeningSource!=="audio"}><ListeningAudio /></div></div>
 
       {/* Lookup modal */}
       <LessonChat context={{ mode, lesson: mode === "grammar" ? grammar : mode === "writing" ? writing : words, practice: mode === "grammar" ? gPractice : practice, translation: quickResult, wordLookup: lookup && !lookup.loading && !lookup.error ? lookup : null }} />
