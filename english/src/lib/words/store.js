@@ -25,7 +25,7 @@ export function saveWord(owner, text) {
   db.exec('BEGIN IMMEDIATE');
   try {
     const row = db.prepare('INSERT INTO words(owner,english,updated,searches) VALUES(?,?,?,1) ON CONFLICT(owner,english) DO UPDATE SET updated=excluded.updated, searches=words.searches+1 RETURNING id').get(owner,english,Date.now());
-    db.prepare('INSERT INTO word_weeks(owner,week,word_id,searches,position) VALUES(?,?,?,1,(SELECT MAX(position)+1 FROM word_weeks WHERE owner=? AND week=?)) ON CONFLICT(owner,week,word_id) DO UPDATE SET searches=word_weeks.searches+1').run(owner,weekStart(),row.id,owner,weekStart());
+    db.prepare('INSERT INTO word_weeks(owner,week,word_id,searches,position) VALUES(?,?,?,1,(SELECT MIN(COALESCE(position,-word_id))-1 FROM word_weeks WHERE owner=? AND week=?)) ON CONFLICT(owner,week,word_id) DO UPDATE SET searches=word_weeks.searches+1').run(owner,weekStart(),row.id,owner,weekStart());
     db.exec('COMMIT');
   } catch(e) { db.exec('ROLLBACK'); throw e; }
 }

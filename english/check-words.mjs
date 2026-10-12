@@ -34,8 +34,10 @@ try {
  saveWord('alice',ordered[2].english);
  assert.equal(listWords('alice',Number.MAX_SAFE_INTEGER,week)[0].id,ordered[0].id);
  saveWord('alice','new after custom order');
- assert.equal(listWords('alice',Number.MAX_SAFE_INTEGER,week)[0].id,ordered[0].id);
- assert.equal(listWords('alice',50,week).at(-1).english,'new after custom order');
+ const withNew=listWords('alice',Number.MAX_SAFE_INTEGER,week);
+ assert.equal(withNew[0].english,'new after custom order');
+ assert.equal(withNew[1].id,ordered[0].id);
+ assert.deepEqual(withNew.slice(1).map(r=>r.id),ordered.slice(0,50).map(r=>r.id));
  assert.throws(()=>saveWord('alice','a'.repeat(501)));
  console.log('PASS SQLite deduplication, user isolation, cursor pagination, input ceiling');
 } finally {rmSync(dir,{recursive:true,force:true});}
