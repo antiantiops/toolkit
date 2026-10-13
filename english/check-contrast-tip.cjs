@@ -52,3 +52,7 @@ assert.ok(page.includes('data-testid="mobile-search"'));
 assert.ok(page.includes('window.visualViewport?.addEventListener("resize", keepSearchVisible)'));
 assert.ok(page.includes('max-h-[min(14rem,35dvh)] overflow-y-auto'));
 console.log('PASS: mobile search compact header, keyboard viewport scroll and bounded suggestions');
+
+for (const file of ['../lib/vocabulary/prompts.js', 'api/word/route.js']) assert.ok(read(file).includes('English term (short Vietnamese meaning): Vietnamese usage distinction'));
+assert.ok(page.includes('{vi && <span'));
+console.log('PASS: short Vietnamese meaning separate from usage distinction');
