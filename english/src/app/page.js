@@ -699,6 +699,7 @@ export default function Home() {
                           {clickableText(word)}
                         </span>
                         {vi && <span className="ml-1 font-normal text-amber-300">({vi})</span>}
+                        <SpeakBtn text={word} title={`Nghe ${word}`} aria-label={`Nghe ${word}`} className="ml-1 inline-flex h-9 w-9 items-center justify-center rounded-md text-sm text-slate-300 hover:bg-slate-800 hover:text-white" />
                       </div>
                       <p className="text-sm leading-relaxed text-slate-200">{desc}</p>
                       {example?.english && example?.vietnamese && (

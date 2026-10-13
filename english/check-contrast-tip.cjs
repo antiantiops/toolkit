@@ -56,3 +56,6 @@ console.log('PASS: mobile search compact header, keyboard viewport scroll and bo
 for (const file of ['../lib/vocabulary/prompts.js', 'api/word/route.js']) assert.ok(read(file).includes('English term (short Vietnamese meaning): Vietnamese usage distinction'));
 assert.ok(page.includes('{vi && <span'));
 console.log('PASS: short Vietnamese meaning separate from usage distinction');
+
+assert.ok(page.includes('<SpeakBtn text={word} title={`Nghe ${word}`} aria-label={`Nghe ${word}`}'));
+console.log('PASS: comparison speaker reads English term only with accessible label');
