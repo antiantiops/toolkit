@@ -19,6 +19,8 @@ function duration(url) {
 export default function ListeningImage() {
   const [crop, setCrop] = useState(null), [preview, setPreview] = useState(null), [upload, setUpload] = useState(null), [confirm, setConfirm] = useState(false);
   const [lesson, setLesson] = useState(null), [busy, setBusy] = useState(false), [error, setError] = useState(''), [stage, setStage] = useState('');
+  const fullAudio=useRef('');
+  const [audioUrl,setAudioUrl]=useState('');
   const [clips, setClips] = useState([]), [index, setIndex] = useState(0), [speed, setSpeed] = useState(.8), [audioBusy, setAudioBusy] = useState(false), [audioProgress, setAudioProgress] = useState(0);
   const [voices,setVoices]=useState({});
   const [dragging, setDragging] = useState(false);
@@ -32,7 +34,7 @@ export default function ListeningImage() {
     panel.scrollTo({ top: panel.scrollTop + line.getBoundingClientRect().top - panel.getBoundingClientRect().top - panel.clientHeight / 2 + line.clientHeight / 2, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
   }, [index, clips.length]);
   const audio = useRef(null), resources = useRef([]), fileInput = useRef(null), version = useRef(0), loaded = useRef(false), resume = useRef(false);
-  const release = () => { audio.current?.pause(); resume.current = false; seekTo.current = null; resources.current.forEach(c => URL.revokeObjectURL(c.url)); resources.current = []; setClips([]); setIndex(0); setElapsed(0); setPlaying(false); };
+  const release = () => { URL.revokeObjectURL(fullAudio.current);fullAudio.current='';setAudioUrl(''); audio.current?.pause(); resume.current = false; seekTo.current = null; resources.current.forEach(c => URL.revokeObjectURL(c.url)); resources.current = []; setClips([]); setIndex(0); setElapsed(0); setPlaying(false); };
   const analyze = async id => {
     setConfirm(false); setBusy(true); setError('');
     try { const data = await pollLesson('listening-image', id ? { imageId: id } : {}, d => setStage(d.stage)); const current = validateTranscript(data['listening-image']); setLesson(current); setVoices(dialogueVoices(current.sentences)); }
@@ -41,7 +43,7 @@ export default function ListeningImage() {
   useEffect(() => {
     fetch('/api/session').then(parseApiResponse).then(data => { if (!loaded.current && data.session?.listening) { const restored=validateTranscript(data.session.listening); setLesson(restored);setVoices(dialogueVoices(restored.sentences)); setPreview(data.session.lPreview || null); } }).catch(() => {});
     if (sessionStorage.getItem('listening-image-pending-job')) { loaded.current = true; analyze(); }
-    return () => { version.current++; resources.current.forEach(c => URL.revokeObjectURL(c.url)); };
+    return () => { version.current++; URL.revokeObjectURL(fullAudio.current); resources.current.forEach(c => URL.revokeObjectURL(c.url)); };
   }, []);
   const chooseFile = file => {
     if (!file) return;
@@ -77,6 +79,11 @@ export default function ListeningImage() {
           resources.current.push({ url, blob, duration: seconds }); setAudioProgress(i + 1);
         } catch (e) { URL.revokeObjectURL(url); throw e; }
       }
+      const bytes=await Promise.all(resources.current.map(async c=>stripId3(new Uint8Array(await c.blob.arrayBuffer()))));
+      const joined=URL.createObjectURL(new Blob(bytes,{type:'audio/mpeg'}));
+      await duration(joined).catch(e=>{URL.revokeObjectURL(joined);throw e;});
+      if(token!==version.current){URL.revokeObjectURL(joined);return;}
+      URL.revokeObjectURL(fullAudio.current);fullAudio.current=joined;setAudioUrl(joined);
       setClips([...resources.current]);
     } catch (e) { setError(formatErrorMessage(e)); } finally { setAudioBusy(false); }
   };
@@ -88,17 +95,20 @@ export default function ListeningImage() {
     } catch (e) { setError(formatErrorMessage(e)); }
   };
   const total = clips.reduce((n, c) => n + c.duration, 0);
-  const offset = clips.slice(0, index).reduce((n, c) => n + c.duration, 0);
   const clock = value => `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`;
-  const seek = value => {
-    let start = 0, target = clips.length - 1;
-    for (let i = 0; i < clips.length; i++) { if (value < start + clips[i].duration) { target = i; break; } start += clips[i].duration; }
-    if (target === clips.length - 1 && value >= total) start = total - clips[target].duration;
-    const seconds = Math.max(0, Math.min(value - start, clips[target].duration));
-    if (target === index) { audio.current.currentTime = seconds; setElapsed(seconds); }
-    else { seekTo.current = seconds; resume.current = !audio.current.paused; setElapsed(seconds); setIndex(target); }
+  const seek = value => {audio.current.currentTime=value;setElapsed(value);};
+  const selectSentence = i => {seek(clips.slice(0,i).reduce((n,c)=>n+c.duration,0));setIndex(i);};
+  const updateTime=()=>{
+    const value=audio.current.currentTime;setElapsed(value);let start=0;
+    const active=clips.findIndex(c=>{start+=c.duration;return value<start;});setIndex(active<0?clips.length-1:active);
   };
-  const selectSentence = i => { resume.current = !!audio.current && !audio.current.paused; if (i === index) { audio.current.currentTime = 0; } else setIndex(i); };
+  useEffect(()=>{
+    if(!audioUrl||!('mediaSession' in navigator))return;
+    const media=navigator.mediaSession;
+    const handlers={play:()=>audio.current?.play().catch(e=>setError(formatErrorMessage(e))),pause:()=>audio.current?.pause(),seekto:e=>seek(e.seekTime),seekbackward:e=>seek(Math.max(0,audio.current.currentTime-(e.seekOffset||10))),seekforward:e=>seek(Math.min(total,audio.current.currentTime+(e.seekOffset||10)))};
+    for(const [name,handler] of Object.entries(handlers))try{media.setActionHandler(name,handler);}catch{}
+    return ()=>{for(const name of Object.keys(handlers))try{media.setActionHandler(name,null);}catch{}};
+  },[audioUrl,total]);
   return <section id="image-listening" className="space-y-4">
     <h2 className="text-xl font-bold text-teal-200">Listening từ ảnh</h2>
     <p className="text-sm text-slate-400">Tạo bài nghe từ trang sách. Cắt ảnh, xác nhận rồi nghe cùng transcript Anh–Việt.</p>
@@ -140,14 +150,14 @@ export default function ListeningImage() {
         <p className="px-5 pb-4 text-xs text-slate-400">Bấm câu để nghe lại · Tự cuộn theo câu đang phát</p>
       </div>
       {!!clips.length && <div data-testid="listening-player" className="sticky bottom-2 z-10 space-y-4 rounded-2xl border border-white/10 bg-slate-900/95 px-4 py-5 shadow-2xl backdrop-blur-xl">
-        <audio ref={audio} src={clips[index]?.url} preload="auto"
-          onTimeUpdate={() => setElapsed(audio.current.currentTime)} onPause={() => setPlaying(false)}
-          onLoadedMetadata={() => { audio.current.playbackRate = speed; if (seekTo.current !== null) { audio.current.currentTime = seekTo.current; seekTo.current = null; } else setElapsed(0); if (resume.current) { resume.current = false; audio.current.play().catch(e => setError(formatErrorMessage(e))); } }}
+        <audio ref={audio} src={audioUrl} loop={repeat} preload="auto"
+          onTimeUpdate={updateTime} onPause={() => setPlaying(false)}
+          onLoadedMetadata={() => { audio.current.playbackRate = speed; }}
           onPlay={() => { setPlaying(true); if ('mediaSession' in navigator && typeof MediaMetadata !== 'undefined') navigator.mediaSession.metadata = new MediaMetadata({ title: lesson.title, artist: 'English Learner' }); }}
-          onEnded={() => { if (index + 1 < clips.length) { resume.current = true; setIndex(index + 1); } else if (repeat) { setElapsed(0); seekTo.current = null; if (index === 0) { audio.current.currentTime = 0; audio.current.play().catch(e => setError(formatErrorMessage(e))); } else { resume.current = true; setIndex(0); } } else setPlaying(false); }} />
+          onEnded={() => setPlaying(false)} />
         <div className="space-y-1">
-          <input aria-label="Vị trí phát toàn bài" type="range" min="0" max={total} step="0.1" value={Math.min(total, offset + elapsed)} onChange={e => seek(Number(e.target.value))} className="h-6 w-full cursor-pointer accent-teal-300" />
-          <div className="flex justify-between text-xs tabular-nums text-slate-400"><span>{clock(offset + elapsed)}</span><span>{clock(total)}</span></div>
+          <input aria-label="Vị trí phát toàn bài" type="range" min="0" max={total} step="0.1" value={Math.min(total, elapsed)} onChange={e => seek(Number(e.target.value))} className="h-6 w-full cursor-pointer accent-teal-300" />
+          <div className="flex justify-between text-xs tabular-nums text-slate-400"><span>{clock(elapsed)}</span><span>{clock(total)}</span></div>
         </div>
         <div className="flex items-center justify-between gap-2">
           <label className="text-sm text-slate-300"><span className="sr-only">Tốc độ</span><select aria-label="Tốc độ phát" value={speed} onChange={e => { const value = Number(e.target.value); setSpeed(value); audio.current.playbackRate = value; }} className="rounded-full border border-white/10 bg-slate-800 px-2 py-2">{[.6,.7,.8,1,1.2].map(v => <option key={v} value={v}>{v}×</option>)}</select></label>
