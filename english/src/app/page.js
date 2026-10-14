@@ -264,27 +264,44 @@ export default function Home() {
   // --- Vocab handlers ---
   // Load cached session from server on mount
   useEffect(() => {
-    fetch("/api/session")
-      .then((res) => res.json())
-      .then((res) => {
-        const cached = res.session;
-        setRestoreNotice(cached?.words?.length ? "restored" : null);
-        if (!skipVocabRestore.current && cached?.words?.length) {
-          setWords(cached.words);
-          if (cached.preview) setPreview(cached.preview);
+    let cancelled = false;
+    const get = async (type, offset = 0) => {
+      const response = await fetch(`/api/session?type=${type}&offset=${offset}`, { signal: controller.signal });
+      if (!response.ok) throw new Error(`Session HTTP ${response.status}`);
+      return response.json();
+    };
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const { available } = await get("manifest");
+        if (cancelled) return;
+        if (available?.vocab && !skipVocabRestore.current) {
+          setRestoreNotice("loading");
+          let offset = 0;
+          do {
+            const part = await get("vocab", offset);
+            if (cancelled || skipVocabRestore.current) break;
+            const first = offset === 0;
+            setWords(previous => first ? part.session.words : [...previous, ...part.session.words]);
+            offset = part.next;
+          } while (offset !== null);
+          if (!skipVocabRestore.current) setRestoreNotice("restored");
         }
-        if (cached?.grammar) {
-          setGrammar(cached.grammar);
-          if (cached.gPreview) setGPreview(cached.gPreview);
-        }
-        if (cached?.writing) {
-          setWriting(cached.writing);
-          if (cached.wPreview1) setWPreview1(cached.wPreview1);
-          if (cached.wPreview2) setWPreview2(cached.wPreview2);
-          if (cached.modelDraft) setWModelDraft(cached.modelDraft);
-        }
-      })
-      .catch(() => setRestoreNotice(null));
+        await Promise.all(["grammar", "writing"].filter(type => available?.[type]).map(async type => {
+          const { session: cached } = await get(type);
+          if (cancelled) return;
+          if (type === "grammar") setGrammar(previous => previous || cached.grammar);
+          else { setWriting(previous => previous || cached.writing); if (cached.modelDraft) setWModelDraft(previous => previous || cached.modelDraft); }
+        }));
+        const { session: previews } = await get("previews");
+        if (cancelled || !previews) return;
+        if (!skipVocabRestore.current && previews.preview) setPreview(previous => previous || previews.preview);
+        if (previews.gPreview) setGPreview(previous => previous || previews.gPreview);
+        if (previews.wPreview1) setWPreview1(previous => previous || previews.wPreview1);
+        if (previews.wPreview2) setWPreview2(previous => previous || previews.wPreview2);
+      } catch (error) { if (!cancelled) setRestoreNotice(null); }
+    })();
+    return () => { cancelled = true; controller.abort(); };
   }, []);
 
   const clearCachedLesson = async (type = "vocab") => {
@@ -873,7 +890,7 @@ export default function Home() {
 
       {mode === "vocab" && restoreNotice && !skipVocabRestore.current && (
         <aside role="status" aria-live="polite" className="fixed bottom-4 left-3 right-3 z-40 mx-auto max-w-lg rounded-xl border border-blue-500/50 bg-slate-900 p-4 shadow-xl">
-          <p className="text-sm text-slate-200">Đã khôi phục bài Vocabulary đã lưu. Bạn có thể học tiếp hoặc chọn ảnh mới.</p>
+          <p className="text-sm text-slate-200">{restoreNotice === "loading" ? "Có bài Vocabulary đã lưu. Đang tải từng phần… Bạn vẫn có thể chọn ảnh mới." : "Đã khôi phục bài Vocabulary đã lưu. Bạn có thể học tiếp hoặc chọn ảnh mới."}</p>
           <button type="button" onClick={() => setRestoreNotice(null)} className="mt-3 min-h-11 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white">OK</button>
         </aside>
       )}

@@ -41,7 +41,7 @@ export default function ListeningImage() {
     catch (e) { setError(formatErrorMessage(e)); } finally { setBusy(false); }
   };
   useEffect(() => {
-    fetch('/api/session').then(parseApiResponse).then(data => { if (!loaded.current && data.session?.listening) { const restored=validateTranscript(data.session.listening); setLesson(restored);setVoices(dialogueVoices(restored.sentences)); setPreview(data.session.lPreview || null); } }).catch(() => {});
+    fetch('/api/session?type=listening').then(parseApiResponse).then(data => { if (!loaded.current && data.session?.listening) { const restored=validateTranscript(data.session.listening); setLesson(restored);setVoices(dialogueVoices(restored.sentences)); fetch('/api/session?type=previews').then(parseApiResponse).then(p => { if (!loaded.current) setPreview(p.session?.lPreview || null); }).catch(() => {}); } }).catch(() => {});
     if (sessionStorage.getItem('listening-image-pending-job')) { loaded.current = true; analyze(); }
     return () => { version.current++; URL.revokeObjectURL(fullAudio.current); resources.current.forEach(c => URL.revokeObjectURL(c.url)); };
   }, []);
