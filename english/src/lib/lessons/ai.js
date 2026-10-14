@@ -1,6 +1,5 @@
-export async function callJson(content, { requestId, stage, maxTokens = 4096, shape = "array" } = {}) {
+export async function callJson(content, { requestId, stage, maxTokens = 4096, shape = "array", model = process.env.NINEROUTER_MODEL || 'ag/gemini-3.8-flash-high', fallbackModel } = {}) {
   const started = Date.now();
-  const model = process.env.NINEROUTER_MODEL || 'ag/gemini-3.8-flash-high';
   const headers = { 'Content-Type': 'application/json' };
   if (process.env.NINEROUTER_KEY) headers.Authorization = 'Bearer ' + process.env.NINEROUTER_KEY;
   const log = (event, details = {}) => console.info('[vocab-ai]', JSON.stringify({ requestId, stage, event, elapsedMs: Date.now() - started, ...details }));
@@ -13,6 +12,10 @@ export async function callJson(content, { requestId, stage, maxTokens = 4096, sh
     log('response', { status: res.status });
     const data = await res.json();
     if (!res.ok) throw new Error(`9router HTTP ${res.status}: ${String(data.error?.message || data.error || data.message || 'Unknown upstream error').slice(0, 600)}`);
+    if (fallbackModel && model.startsWith('ag/') && data.choices?.[0]?.finish_reason === 'recitation') {
+      log('fallback', { model, fallbackModel, reason: 'recitation' });
+      return await callJson(content, { requestId, stage, maxTokens, shape, model: fallbackModel });
+    }
     const text = data.choices?.[0]?.message?.content || '';
     const match = (shape === "array" ? text.match(/\[[\s\S]*\]/) : text.match(/\{[\s\S]*\}/));
     if (!match) throw new Error(`AI missing JSON array; finish_reason=${data.choices?.[0]?.finish_reason}; length=${text.length}`);
