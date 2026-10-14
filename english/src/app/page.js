@@ -100,7 +100,7 @@ function ErrorBanner({ message, onDismiss }) {
 export default function Home() {
   // --- Mode: "vocab" | "grammar" ---
   const [mode, setMode] = useState("vocab");
-  const [restoreNotice, setRestoreNotice] = useState("loading");
+  const [restoreNotice, setRestoreNotice] = useState(null);
   const skipVocabRestore = useRef(false);
   const [listeningSource,setListeningSource]=useState("image");
 
@@ -284,7 +284,7 @@ export default function Home() {
           if (cached.modelDraft) setWModelDraft(cached.modelDraft);
         }
       })
-      .catch(() => setRestoreNotice("failed"));
+      .catch(() => setRestoreNotice(null));
   }, []);
 
   const clearCachedLesson = async (type = "vocab") => {
@@ -873,7 +873,7 @@ export default function Home() {
 
       {mode === "vocab" && restoreNotice && !skipVocabRestore.current && (
         <aside role="status" aria-live="polite" className="fixed bottom-4 left-3 right-3 z-40 mx-auto max-w-lg rounded-xl border border-blue-500/50 bg-slate-900 p-4 shadow-xl">
-          <p className="text-sm text-slate-200">{restoreNotice === "loading" ? "Đang kiểm tra và tải bài Vocabulary đã lưu… Bạn vẫn có thể chọn ảnh mới." : restoreNotice === "restored" ? "Đã khôi phục bài Vocabulary đã lưu. Bạn có thể học tiếp hoặc chọn ảnh mới." : "Chưa tải được bài đã lưu. Bạn vẫn có thể chọn ảnh mới."}</p>
+          <p className="text-sm text-slate-200">Đã khôi phục bài Vocabulary đã lưu. Bạn có thể học tiếp hoặc chọn ảnh mới.</p>
           <button type="button" onClick={() => setRestoreNotice(null)} className="mt-3 min-h-11 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white">OK</button>
         </aside>
       )}
