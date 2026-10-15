@@ -1,4 +1,4 @@
-export async function callJson(content, { requestId, stage, maxTokens = 4096, shape = "array", model = process.env.NINEROUTER_MODEL || 'ag/gemini-3.8-flash-high', fallbackModel } = {}) {
+export async function callJson(content, { requestId, stage, maxTokens = 4096, shape = "array", model = process.env.NINEROUTER_MODEL || 'ag/gemini-3.8-flash-high', fallbackModel, timeoutMs = 120000 } = {}) {
   const started = Date.now();
   const headers = { 'Content-Type': 'application/json' };
   if (process.env.NINEROUTER_KEY) headers.Authorization = 'Bearer ' + process.env.NINEROUTER_KEY;
@@ -6,7 +6,7 @@ export async function callJson(content, { requestId, stage, maxTokens = 4096, sh
   log('start', { model });
   try {
     const res = await fetch(`${process.env.NINEROUTER_URL || 'http://192.168.101.36:20128'}/v1/chat/completions`, {
-      method: 'POST', headers, signal: AbortSignal.timeout(120000),
+      method: 'POST', headers, signal: AbortSignal.timeout(timeoutMs),
       body: JSON.stringify({ model, messages: [{ role: 'user', content }], stream: false, max_tokens: maxTokens, temperature: 0.2 }),
     });
     log('response', { status: res.status });
@@ -14,7 +14,7 @@ export async function callJson(content, { requestId, stage, maxTokens = 4096, sh
     if (!res.ok) throw new Error(`9router HTTP ${res.status}: ${String(data.error?.message || data.error || data.message || 'Unknown upstream error').slice(0, 600)}`);
     if (fallbackModel && model.startsWith('ag/') && data.choices?.[0]?.finish_reason === 'recitation') {
       log('fallback', { model, fallbackModel, reason: 'recitation' });
-      return await callJson(content, { requestId, stage, maxTokens, shape, model: fallbackModel });
+      return await callJson(content, { requestId, stage, maxTokens, shape, model: fallbackModel, timeoutMs });
     }
     const text = data.choices?.[0]?.message?.content || '';
     const match = (shape === "array" ? text.match(/\[[\s\S]*\]/) : text.match(/\{[\s\S]*\}/));

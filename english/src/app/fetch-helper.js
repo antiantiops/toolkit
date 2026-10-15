@@ -63,7 +63,7 @@ export async function pollLesson(mode, payload, onProgress) {
     if (!jobId) throw new Error('Missing jobId');
     sessionStorage.setItem(key, jobId);
   }
-  const deadline = Date.now() + 10 * 60 * 1000;
+  const deadline = Date.now() + (mode === "writing" ? 20 : 10) * 60 * 1000;
   while (Date.now() < deadline) {
     const res = await fetchWithRetry(`/api/${mode}?jobId=${encodeURIComponent(jobId)}`, { timeout: 15000, cache: 'no-store' }, 2);
     if (res.status === 404) sessionStorage.removeItem(key);
