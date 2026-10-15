@@ -1,6 +1,6 @@
 'use client';
 import { useEffect,useRef,useState } from 'react';
-import { parseApiResponse,formatErrorMessage } from './fetch-helper';
+import { fetchWithRetry,parseApiResponse,formatErrorMessage } from './fetch-helper';
 export default function ListeningAudio(){
  const [url,setUrl]=useState(''),[name,setName]=useState(''),[result,setResult]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[stage,setStage]=useState(''),[time,setTime]=useState(0),[playing,setPlaying]=useState(false),[repeat,setRepeat]=useState(false),[speed,setSpeed]=useState(.8),[duration,setDuration]=useState(0);
  const audio=useRef(null),objectUrl=useRef(''),version=useRef(0),panel=useRef(null),fileInput=useRef(null);
@@ -13,9 +13,9 @@ export default function ListeningAudio(){
   try{
    const seconds=await new Promise((resolve,reject)=>{const probe=new Audio(objectUrl.current);const timer=setTimeout(()=>reject(new Error('Không đọc được thời lượng audio')),10000);probe.onloadedmetadata=()=>{clearTimeout(timer);const d=probe.duration;probe.removeAttribute('src');probe.load();resolve(d);};probe.onerror=()=>{clearTimeout(timer);reject(new Error('Audio không đọc được'));};});
    if(!Number.isFinite(seconds)||seconds>900)throw new Error('Audio tối đa 15 phút');setDuration(seconds);
-   const body=new FormData();body.set('file',file);const started=await parseApiResponse(await fetch('/api/listening-audio',{method:'POST',body}));
+   const body=new FormData();body.set('file',file);const started=await parseApiResponse(await fetchWithRetry('/api/listening-audio',{method:'POST',body,timeout:60000},0));
    const deadline=Date.now()+10*60*1000;
-   while(token===version.current&&Date.now()<deadline){const job=await parseApiResponse(await fetch('/api/listening-audio?jobId='+started.jobId,{cache:'no-store'}));if(job.status==='failed')throw new Error(job.error);if(job.status==='completed'){setResult(job.result);return;}setStage(job.stage==='translate'?'Đang dịch transcript…':'Đang nhận dạng lời nói…');await new Promise(r=>setTimeout(r,3000));}
+   while(token===version.current&&Date.now()<deadline){let response;try{response=await fetchWithRetry('/api/listening-audio?jobId='+started.jobId,{cache:'no-store',timeout:15000},2);}catch(e){if(token!==version.current)return;setStage('Mất kết nối tạm thời. Đang kết nối lại để lấy transcript…');await new Promise(r=>setTimeout(r,5000));continue;}if(token!==version.current)return;const job=await parseApiResponse(response);if(job.status==='failed')throw new Error(job.error);if(job.status==='completed'){setResult(job.result);return;}setStage(job.stage==='translate'?'Đang dịch transcript…':'Đang nhận dạng lời nói…');await new Promise(r=>setTimeout(r,3000));}
    if(token===version.current)throw new Error('Xử lý quá lâu. Chọn file để thử lại.');
   }catch(e){if(token===version.current)setError(formatErrorMessage(e));}finally{if(token===version.current)setBusy(false);}
  };
