@@ -1,6 +1,7 @@
 import { NextResponse, after } from 'next/server';
 import { randomUUID } from 'node:crypto';
 import { callJson } from '../../../lib/lessons/ai';
+import { parseAudioTranscript } from '../../../lib/lessons/audio-transcript.js';
 const jobs = globalThis.listeningAudioJobs ||= new Map();
 const reply=(data,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
 export async function POST(request) {
@@ -22,13 +23,13 @@ export async function POST(request) {
         for (const candidate of ['gemini/gemini-3.6-flash', 'groq/whisper-large-v3-turbo']) {
           try {
             const body=new FormData();body.set('file',new Blob([bytes],{type:wav?'audio/wav':m4a?'audio/mp4':'audio/mpeg'}),wav?'audio.wav':m4a?'audio.m4a':'audio.mp3');body.set('model',candidate);body.set('language','en');body.set('response_format','verbose_json');
+            if(candidate.startsWith('gemini/'))body.set('prompt', 'Transcribe ALL speech in the supplied audio verbatim, in order, including the ending. Return ONLY JSON {"segments":[{"speaker":"Speaker 1","text":"exact spoken words"}]}. Each segment is one speaker turn. Distinguish speakers by their actual voices and keep labels consistent. Use neutral labels Speaker 1, Speaker 2; use an actual name only if explicitly established in the audio. Never guess gender or identity. If speaker is uncertain use an empty speaker string. Separate narrator/instructions when audibly distinct. Preserve hesitations and repetitions; never summarize, complete, or invent speech. No timestamps, no translation, no markdown.');
             const headers={};if(process.env.NINEROUTER_KEY)headers.Authorization='Bearer '+process.env.NINEROUTER_KEY;
             const res=await fetch((process.env.NINEROUTER_URL||'http://192.168.101.36:20128')+'/v1/audio/transcriptions',{method:'POST',headers,body,signal:AbortSignal.timeout(180000)});
             if(!res.ok)throw new Error('STT HTTP '+res.status);
             data=await res.json();
             if(candidate.startsWith('gemini/')) {
-              if(typeof data.text!=='string'||!data.text.trim()||data.text.length>100000)throw new Error('STT transcript rỗng hoặc quá dài');
-              segments=[{en:data.text.trim()}];timed=false;
+              segments=parseAudioTranscript(data.text);timed=false;
             } else {
               if(!Number.isFinite(data.duration)||data.duration>900||!Array.isArray(data.segments)||!data.segments.length||data.segments.length>500)throw new Error('Audio tối đa 15 phút và phải có lời nói nhận dạng được');
               segments=data.segments.map(s=>({en:String(s.text||'').trim(),start:s.start,end:s.end}));
