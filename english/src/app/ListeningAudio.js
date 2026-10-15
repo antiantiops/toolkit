@@ -2,6 +2,7 @@
 import { useEffect,useRef,useState } from 'react';
 import { fetchWithRetry,parseApiResponse,formatErrorMessage } from './fetch-helper';
 import LucianAudioPlayer from './LucianAudioPlayer';
+import LucianAudioUpload from './LucianAudioUpload';
 import './lucian.css';
 const formatTime=seconds=>Number.isFinite(seconds)&&seconds>=0?`${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,'0')}`:'--:--';
 export default function ListeningAudio(){
@@ -22,7 +23,7 @@ export default function ListeningAudio(){
    if(token===version.current)throw new Error('Xử lý quá lâu. Chọn file để thử lại.');
   }catch(e){if(token===version.current)setError(formatErrorMessage(e));}finally{if(token===version.current)setBusy(false);}
  };
- return <section className="space-y-4"><input ref={fileInput} type="file" accept=".mp3,.m4a,.wav,audio/mpeg,audio/mp4,audio/wav" className="hidden" onChange={e=>{choose(e.target.files?.[0]);e.target.value='';}}/><button disabled={busy} onClick={()=>fileInput.current.click()} className="min-h-48 w-full rounded-2xl border-2 border-dashed border-teal-700 bg-teal-950/20 p-6 text-center disabled:opacity-50"><span className="block text-lg font-semibold text-teal-200">Thêm file nghe</span><span className="mt-2 block text-sm text-slate-400">MP3, M4A, WAV · 25 MB · 15 phút<br/>Phát file gốc, transcript Anh–Việt</span></button>
+ return <section className="space-y-4"><LucianAudioUpload onFile={choose} busy={busy} stage={stage} error={error} cachedName={!busy&&url&&!objectUrl.current?name:''}/>
  {busy&&<p role="status" className="text-sm text-teal-200">{stage}</p>}{error&&<p role="alert" className="text-sm text-red-300">{error}</p>}
  {result&&!result.timed&&<p className="text-xs text-slate-400">Gemini trả transcript không có timestamp; vẫn phát/tua file gốc, không đồng bộ từng đoạn.</p>}
  {result&&<div ref={panel} className="max-h-96 space-y-2 overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-4">{result.segments.map((s,i)=><button key={i} disabled={!result.timed} aria-current={active===i?'true':undefined} onClick={()=>{audio.current.currentTime=s.start;setTime(s.start);}} className={`block w-full rounded-xl p-3 text-left ${active===i?'bg-teal-500/10 text-teal-100':'text-slate-400'}`}>{s.speaker&&<span className="mb-1 block text-xs font-semibold text-teal-300">{s.speaker}</span>}<span className="block text-lg">{s.en}</span><span className="mt-1 block text-sm text-slate-400">{s.vi}</span></button>)}</div>}
