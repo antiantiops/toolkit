@@ -901,13 +901,11 @@ export default function Home() {
 
       {saveError && <p role="alert" className="mb-2 text-xs text-red-300">{saveError}</p>}
       <Account />
-      {/* Mode tabs */}
-      <div role="navigation" aria-label="Chọn kỹ năng" className="flex gap-2 mb-3 sm:mb-6 overflow-x-auto whitespace-nowrap pb-2 [&>button]:shrink-0">
-        <button onClick={() => setMode("vocab")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "vocab" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>📖 Vocabulary</button>
-        <button onClick={() => setMode("grammar")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "grammar" ? "bg-purple-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>📐 Grammar</button>
-        <button onClick={() => setMode("writing")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "writing" ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>✍️ Writing</button>
-        <button onClick={() => setMode("listening")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "listening" ? "bg-teal-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}><span aria-hidden="true">🎧</span> Listening</button>
-        <button onClick={() => setMode("my-words")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "my-words" ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}><span aria-hidden="true">📚</span> My Words</button>
+      {/* Lucian UX/UI Prompt #039 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#039 */}
+      <div className="ux u039 u039-live mb-3 sm:mb-6" role="navigation" aria-label="Chọn kỹ năng">
+        <div className="u039-tabs" role="tablist" onKeyDown={e=>{const modes=["vocab","grammar","writing","listening","my-words"],i=modes.indexOf(mode),next={ArrowRight:i+1,ArrowLeft:i-1}[e.key];if(next!==undefined){e.preventDefault();const target=modes[(next+modes.length)%modes.length];setMode(target);e.currentTarget.querySelector(`[data-mode=\"${target}\"]`)?.focus();}}}>
+          {[["vocab","📖 Vocabulary"],["grammar","📐 Grammar"],["writing","✍️ Writing"],["listening","🎧 Listening"],["my-words","📚 My Words"]].map(([value,label])=><button key={value} data-mode={value} type="button" role="tab" aria-selected={mode===value} onClick={()=>{setMode(value);}} className="u039-tab">{label}</button>)}
+        </div>
       </div>
 
       {mode === "my-words" && <MyWords onLookup={word => lookupWord(word, "", false)} />}
