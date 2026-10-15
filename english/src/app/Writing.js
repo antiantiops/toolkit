@@ -167,12 +167,6 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
 
   return (
     <div className="space-y-5">
-      <label className="flex items-center gap-3 text-sm text-slate-200">Trình độ viết (CEFR)
-        <select value={level} disabled={loadingModel || reviewing} onChange={e => { setLevel(e.target.value); setModelDraft(null); onModelDraft?.(null); setReview(null); }} className="min-h-11 rounded-lg bg-slate-800 px-3 py-2">
-          {["A1", "A2", "B1", "B2", "C1", "C2"].map(value => <option key={value} value={value}>{value}</option>)}
-        </select>
-      </label>
-      <p className="text-xs text-slate-400">Áp dụng cho bài mẫu AI và chấm/sửa bài bạn viết. Không thay đổi thư mẫu gốc.</p>
       {/* Unit header */}
       <div className="rounded-2xl border border-emerald-700 bg-emerald-950/40 p-5 text-center">
         <div className="text-xs font-semibold uppercase tracking-wide text-emerald-300">
@@ -549,7 +543,13 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
                   Đoạn văn email tự nhiên (Bấm vào câu để tra chi tiết)
                 </h3>
               </div>
-              <div className="flex items-center gap-2">
+      <label className="flex items-center gap-3 text-sm text-slate-200">Trình độ viết (CEFR)
+        <select value={level} disabled={loadingModel || reviewing} onChange={e => { setLevel(e.target.value); setModelDraft(null); onModelDraft?.(null); setReview(null); }} className="min-h-11 rounded-lg bg-slate-800 px-3 py-2">
+          {["A1", "A2", "B1", "B2", "C1", "C2"].map(value => <option key={value} value={value}>{value}</option>)}
+        </select>
+      </label>
+      <p className="text-xs text-slate-400">Áp dụng cho bài mẫu AI và chấm/sửa bài bạn viết. Không thay đổi thư mẫu gốc.</p>
+              <div className="flex flex-wrap items-center gap-2">
                 {modelDraft && (
                   <div className="inline-flex rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs font-semibold">
                     <button
