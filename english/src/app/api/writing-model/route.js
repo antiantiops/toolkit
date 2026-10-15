@@ -7,7 +7,8 @@ const MODEL = process.env.NINEROUTER_MODEL || "ag/gemini-3.8-flash-high";
 
 export async function POST(request) {
   try {
-    const { task, title } = await request.json();
+    const { task, title, level = "A2" } = await request.json();
+    if (!["A1", "A2", "B1", "B2", "C1", "C2"].includes(level)) return NextResponse.json({ error: "Trình độ CEFR không hợp lệ" }, { status: 400 });
     const sid = request.cookies.get("vocab_sid")?.value;
     if (!task) {
       return NextResponse.json({ error: "Thiếu dữ liệu bài tập" }, { status: 400 });
@@ -28,18 +29,9 @@ Task Information:
 - Word Bank (Required vocabulary): ${JSON.stringify(task.wordBank || [])}
 
 GOAL:
-Write a SIMPLE, CLEAR, SHORT model email (~100-130 words) at A2-B1 level.
-CRITICAL RULES FOR LANGUAGE:
-1. DO NOT use fancy, overly formal C1/C2 words. Avoid words like "formally request", "sudden complications", "furthermore", "hereby", "undertake".
-2. Use SIMPLE, direct everyday workplace English (Subject + Verb + Object).
-   - BAD: "I am writing to formally request urgent sick leave due to sudden health complications."
-   - GOOD: "I am writing to ask for sick leave today because I am sick." or "I need to take today off because I caught a bad cold."
-3. Natural business structure with 4 short parts:
-   - Part 1: Subject Line & Greeting
-   - Part 2: Main reason / Direct request (simple sentence)
-   - Part 3: Details & coverage plan (who covers, work status)
-   - Part 4: Next step & Sign-off
-4. Naturally use words from the Word Bank in simple sentences.
+Write a clear model email at CEFR ${level}. Respect the task's word count; if absent use about 100-130 words.
+Use vocabulary, sentence complexity and grammar appropriate to ${level}, with a natural workplace tone. A1/A2: short sentences and common vocabulary. B1/B2: increasingly varied structures. C1/C2: nuanced, precise language without needless jargon.
+Preserve all task facts and requirements; never add unsupported facts. Use the provided Word Bank naturally. Organize subject, greeting, opening, body and closing appropriately.
 
 MAPPING REQUIREMENT:
 Break the email down sentence-by-sentence. For every single sentence:

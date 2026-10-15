@@ -24,6 +24,7 @@ const frame = (t = "") =>
   );
 
 export default function Writing({ writing: w, cachedModelDraft, onModelDraft, SpeakBtn, CopyBtn }) {
+  const [level, setLevel] = useState("A2");
   const [modelDraft, setModelDraft] = useState(cachedModelDraft || null);
   const [loadingModel, setLoadingModel] = useState(false);
   const [modelErr, setModelErr] = useState(null);
@@ -85,7 +86,7 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
       const res = await fetchWithRetry("/api/writing-model", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task, title: w.title }),
+        body: JSON.stringify({ task, title: w.title, level }),
       }, 2, 1000);
       const d = await parseApiResponse(res);
       setModelDraft(d.modelDraft);
@@ -148,7 +149,7 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
       const res = await fetch("/api/writing-review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task: { ...task, title: w.title }, draft }),
+        body: JSON.stringify({ task: { ...task, title: w.title }, draft, level }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Server error");
@@ -166,6 +167,12 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
 
   return (
     <div className="space-y-5">
+      <label className="flex items-center gap-3 text-sm text-slate-200">Trình độ viết (CEFR)
+        <select value={level} disabled={loadingModel || reviewing} onChange={e => { setLevel(e.target.value); setModelDraft(null); onModelDraft?.(null); setReview(null); }} className="min-h-11 rounded-lg bg-slate-800 px-3 py-2">
+          {["A1", "A2", "B1", "B2", "C1", "C2"].map(value => <option key={value} value={value}>{value}</option>)}
+        </select>
+      </label>
+      <p className="text-xs text-slate-400">Áp dụng cho bài mẫu AI và chấm/sửa bài bạn viết. Không thay đổi thư mẫu gốc.</p>
       {/* Unit header */}
       <div className="rounded-2xl border border-emerald-700 bg-emerald-950/40 p-5 text-center">
         <div className="text-xs font-semibold uppercase tracking-wide text-emerald-300">
@@ -718,7 +725,7 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
               </div>
             ) : !loadingModel ? (
               <div className="text-center py-6 text-slate-400 text-xs sm:text-sm">
-                Bấm nút <b className="text-teal-300">"Tạo bài mẫu email"</b> để AI viết bài đơn giản (A2-B1) dạng văn bản tự nhiên.
+                Bấm nút <b className="text-teal-300">"Tạo bài mẫu email"</b> để AI viết bài theo trình độ {level} dạng văn bản tự nhiên.
               </div>
             ) : null}
           </div>
