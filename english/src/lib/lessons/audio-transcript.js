@@ -15,3 +15,15 @@ export function parseAudioTranscript(text) {
   if (result.length > 500) throw new Error('Transcript vượt 500 đoạn');
   return result;
 }
+
+export function validateTimedTranscript(data) {
+  const segments=data?.segments;
+  if (!Array.isArray(segments) || !segments.length || segments.length>500) throw new Error('Transcript phải có 1–500 câu');
+  let lastStart=-1, total=0;
+  return segments.map(s=>{
+    if (!s || typeof s.text!=='string' || !s.text.trim() || typeof s.speaker!=='string' || s.speaker.length>100 || !Number.isFinite(s.start) || !Number.isFinite(s.end) || s.start<0 || s.end<=s.start || s.end>901 || s.start<lastStart) throw new Error('Transcript hoặc timestamp không hợp lệ');
+    lastStart=s.start; total+=s.text.length;
+    if(total>100000) throw new Error('Transcript quá dài');
+    return {en:s.text.trim(),speaker:s.speaker.trim(),start:s.start,end:s.end};
+  });
+}
