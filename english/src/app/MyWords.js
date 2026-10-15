@@ -5,6 +5,13 @@ import { parseApiResponse, formatErrorMessage } from './fetch-helper';
 export default function MyWords({onLookup}) {
   const [rows,setRows]=useState([]), [next,setNext]=useState(null), [busy,setBusy]=useState(false), [error,setError]=useState('');
   const [week,setWeek]=useState(weekStart()), [weeks,setWeeks]=useState([]), [review,setReview]=useState(false), [card,setCard]=useState(0);
+  const [tagging,setTagging]=useState(null);
+  const tagWord=async row=>{
+    if(tagging!==null)return;
+    const version=requestVersion.current;setTagging(row.id);setError('');
+    try{await parseApiResponse(await fetch('/api/my-words',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:row.id,needsReview:!row.needsReview})}));if(version===requestVersion.current)setRows(current=>current.map(r=>r.id===row.id?{...r,needsReview:!row.needsReview}:r));}
+    catch(e){if(version===requestVersion.current)setError(formatErrorMessage(e));}finally{setTagging(null);}
+  };
   const [pronunciations,setPronunciations] = useState({});
   const pronunciationCache = useRef(new Map());
   useEffect(() => {
@@ -149,7 +156,7 @@ export default function MyWords({onLookup}) {
         <button disabled={busy||ordering} aria-label={`Kéo ${row.english} đổi vị trí`} onPointerDown={startOrder} onPointerMove={moveOrder} onPointerUp={dropOrder} onPointerCancel={cancelOrder} style={{touchAction:'none'}} className="flex h-8 w-9 items-center justify-center rounded-lg text-lg text-slate-400 active:bg-indigo-500/20">⠿</button>
         <button disabled={busy||ordering||index===rows.length-1} aria-label={`Đưa ${row.english} xuống`} onClick={()=>reorder(rows[index+1].id,row.id)} className="h-6 w-9 rounded text-sm text-slate-400 hover:bg-indigo-500/10 disabled:opacity-25">↓</button>
       </div>
-      <div className="min-w-0 flex-1"><p className="break-words text-sm font-medium leading-6 text-slate-200">{row.english}</p>{row.searches>1&&<span className="mt-2 inline-block rounded-full bg-amber-500/10 px-2 py-1 text-xs text-amber-200">↻ {row.searches-1}</span>}</div>
+      <div className="min-w-0 flex-1"><p className="break-words text-sm font-medium leading-6 text-slate-200">{row.english}</p><div className="mt-2 flex flex-wrap items-center gap-2">{row.searches>1&&<span className="rounded-full bg-amber-500/10 px-2 py-1 text-xs text-amber-200">↻ {row.searches-1}</span>}<button type="button" disabled={tagging!==null} aria-pressed={!!row.needsReview} aria-label={`${row.needsReview?'Bỏ nhãn chưa nhớ':'Đánh dấu chưa nhớ'}: ${row.english}`} title={row.needsReview?'Bỏ nhãn chưa nhớ':'Đánh dấu từ chưa nhớ'} onClick={()=>tagWord(row)} className={`flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-lg px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 disabled:opacity-50 ${row.needsReview?'bg-indigo-500/20 text-indigo-200':'bg-slate-800 text-slate-400 hover:text-indigo-200'}`}><span aria-hidden="true">📖</span>{row.needsReview&&<span className="text-xs">Chưa nhớ</span>}</button></div></div>
       <button onClick={()=>viewMeaning(row.english)} className="min-h-11 shrink-0 rounded-lg bg-indigo-500/10 px-3 text-xs font-semibold text-indigo-200">Xem nghĩa</button>
     </li>)}</ul>}
     {floating&&<div aria-hidden="true" style={{position:'fixed',left:floating.left,top:floating.top,width:floating.width,minHeight:floating.height,zIndex:1000,pointerEvents:'none'}} className="flex items-center gap-3 rounded-xl border border-indigo-400 bg-slate-800 p-4 shadow-2xl shadow-black/60"><span className="text-xl text-indigo-300">⠿</span><p className="min-w-0 flex-1 break-words text-sm font-medium text-white">{floating.english}</p><span className="text-xs text-indigo-200">Đang kéo</span></div>}

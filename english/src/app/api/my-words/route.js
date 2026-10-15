@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { currentUser } from '../me/auth';
-import { saveWord, listWords, listWeeks, moveWord } from '../../../lib/words/store';
+import { saveWord, listWords, listWeeks, moveWord, tagWord } from '../../../lib/words/store';
 export const dynamic = 'force-dynamic';
 const reply = (data,status=200) => NextResponse.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
 export async function GET(request) {
@@ -33,7 +33,11 @@ export async function PATCH(request) {
  const origin=request.headers.get('origin');if(origin&&origin!=='https://english.nimtechnology.com')return reply({error:'Invalid origin'},403);
  if(Number(request.headers.get('content-length'))>4096)return reply({error:'Input too large'},413);
  try {
-  const {week,id,beforeId}=await request.json();
+  const {week,id,beforeId,needsReview}=await request.json();
+  if(needsReview!==undefined){
+   if(!Number.isSafeInteger(id)||id<=0||typeof needsReview!=='boolean')return reply({error:'Invalid tag'},400);
+   tagWord(user.id,id,needsReview);return reply({ok:true});
+  }
   if(typeof week!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(week)||!Number.isSafeInteger(id)||id<=0||!Number.isSafeInteger(beforeId)||beforeId<=0||id===beforeId)return reply({error:'Invalid move'},400);
   moveWord(user.id,week,id,beforeId);return reply({ok:true});
  }catch{return reply({error:'Không lưu được thứ tự. Làm mới rồi thử lại.'},400);}
