@@ -19,7 +19,7 @@ export async function POST(request) {
     after(async()=>{
       try {
         let data, model, timed = false, segments;
-        for (const candidate of ['gemini/gemini-3.8-flash', 'groq/whisper-large-v3-turbo']) {
+        for (const candidate of ['gemini/gemini-3.6-flash', 'groq/whisper-large-v3-turbo']) {
           try {
             const body=new FormData();body.set('file',new Blob([bytes],{type:wav?'audio/wav':m4a?'audio/mp4':'audio/mpeg'}),wav?'audio.wav':m4a?'audio.m4a':'audio.mp3');body.set('model',candidate);body.set('language','en');body.set('response_format','verbose_json');
             const headers={};if(process.env.NINEROUTER_KEY)headers.Authorization='Bearer '+process.env.NINEROUTER_KEY;
