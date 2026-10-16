@@ -100,7 +100,6 @@ function ErrorBanner({ message, onDismiss }) {
 export default function Home() {
   // --- Mode: "vocab" | "grammar" ---
   const [mode, setMode] = useState("vocab");
-  const [restoreNotice, setRestoreNotice] = useState(null);
   const skipVocabRestore = useRef(false);
   const [listeningSource,setListeningSource]=useState("image");
   const [audioChatContext,setAudioChatContext]=useState(null),[imageChatContext,setImageChatContext]=useState(null);
@@ -277,7 +276,6 @@ export default function Home() {
         const { available } = await get("manifest");
         if (cancelled) return;
         if (available?.vocab && !skipVocabRestore.current) {
-          setRestoreNotice("loading");
           let offset = 0;
           do {
             const part = await get("vocab", offset);
@@ -286,7 +284,6 @@ export default function Home() {
             setWords(previous => first ? part.session.words : [...previous, ...part.session.words]);
             offset = part.next;
           } while (offset !== null);
-          if (!skipVocabRestore.current) setRestoreNotice("restored");
         }
         await Promise.all(["grammar", "writing"].filter(type => available?.[type]).map(async type => {
           const { session: cached } = await get(type);
@@ -300,7 +297,7 @@ export default function Home() {
         if (previews.gPreview) setGPreview(previous => previous || previews.gPreview);
         if (previews.wPreview1) setWPreview1(previous => previous || previews.wPreview1);
         if (previews.wPreview2) setWPreview2(previous => previous || previews.wPreview2);
-      } catch (error) { if (!cancelled) setRestoreNotice(null); }
+      } catch {}
     })();
     return () => { cancelled = true; controller.abort(); };
   }, []);
@@ -344,7 +341,6 @@ export default function Home() {
   const handleFile = useCallback((file) => {
     if (!file || !file.type.startsWith("image/")) return;
     skipVocabRestore.current = true;
-    setRestoreNotice(null);
     setPreview(URL.createObjectURL(file));
     setImage(file);
     setVImageId(null);
@@ -887,13 +883,6 @@ export default function Home() {
             </div>
           </div>
         </div>
-      )}
-
-      {mode === "vocab" && restoreNotice && !skipVocabRestore.current && (
-        <aside role="status" aria-live="polite" className="fixed bottom-4 left-3 right-3 z-40 mx-auto max-w-lg rounded-xl border border-blue-500/50 bg-slate-900 p-4 shadow-xl">
-          <p className="text-sm text-slate-200">{restoreNotice === "loading" ? "Có bài Vocabulary đã lưu. Đang tải từng phần… Bạn vẫn có thể chọn ảnh mới." : "Đã khôi phục bài Vocabulary đã lưu. Bạn có thể học tiếp hoặc chọn ảnh mới."}</p>
-          <button type="button" onClick={() => setRestoreNotice(null)} className="mt-3 min-h-11 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white">OK</button>
-        </aside>
       )}
 
       <h1 className="text-lg sm:text-3xl font-bold text-center mb-2 sm:mb-8 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
