@@ -16,7 +16,7 @@ function duration(url) {
     probe.onerror = () => finish(new Error('Không đọc được MP3')); probe.src = url;
   });
 }
-export default function ListeningImage() {
+export default function ListeningImage({onContextChange}) {
   const [crop, setCrop] = useState(null), [preview, setPreview] = useState(null), [upload, setUpload] = useState(null), [confirm, setConfirm] = useState(false);
   const [lesson, setLesson] = useState(null), [busy, setBusy] = useState(false), [error, setError] = useState(''), [stage, setStage] = useState('');
   const fullAudio=useRef('');
@@ -26,6 +26,7 @@ export default function ListeningImage() {
   const [dragging, setDragging] = useState(false);
   const [playing, setPlaying] = useState(false), [elapsed, setElapsed] = useState(0);
   const [repeat, setRepeat] = useState(false);
+  useEffect(()=>{onContextChange?.({source:'image',lesson,activeIndex:index});},[lesson,index,onContextChange]);
   const seekTo = useRef(null);
   const lyricsRef = useRef(null);
   useEffect(() => {

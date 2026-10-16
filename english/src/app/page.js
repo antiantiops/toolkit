@@ -103,6 +103,7 @@ export default function Home() {
   const [restoreNotice, setRestoreNotice] = useState(null);
   const skipVocabRestore = useRef(false);
   const [listeningSource,setListeningSource]=useState("image");
+  const [audioChatContext,setAudioChatContext]=useState(null),[imageChatContext,setImageChatContext]=useState(null);
 
   // --- Vocab state ---
   const [image, setImage] = useState(null);
@@ -1691,10 +1692,10 @@ export default function Home() {
         {writing && <Writing writing={writing} cachedModelDraft={wModelDraft} onModelDraft={setWModelDraft} SpeakBtn={SpeakBtn} CopyBtn={CopyBtn} />}
       </>}
 
-      <div hidden={mode !== "listening"}><div className="mb-4 flex gap-2">{[["image","Ảnh bài nghe"],["audio","File audio"]].map(([value,label])=><button key={value} onClick={()=>setListeningSource(value)} className={`min-h-11 flex-1 rounded-xl px-4 text-sm font-semibold ${listeningSource===value?"bg-teal-600 text-white":"bg-slate-800 text-slate-400"}`}>{label}</button>)}</div><div hidden={listeningSource!=="image"}><ListeningImage /></div><div hidden={listeningSource!=="audio"}><ListeningAudio /></div></div>
+      <div hidden={mode !== "listening"}><div className="mb-4 flex gap-2">{[["image","Ảnh bài nghe"],["audio","File audio"]].map(([value,label])=><button key={value} onClick={()=>setListeningSource(value)} className={`min-h-11 flex-1 rounded-xl px-4 text-sm font-semibold ${listeningSource===value?"bg-teal-600 text-white":"bg-slate-800 text-slate-400"}`}>{label}</button>)}</div><div hidden={listeningSource!=="image"}><ListeningImage onContextChange={setImageChatContext} /></div><div hidden={listeningSource!=="audio"}><ListeningAudio onContextChange={setAudioChatContext} /></div></div>
 
       {/* Lookup modal */}
-      <LessonChat context={{ mode, lesson: mode === "grammar" ? grammar : mode === "writing" ? writing : words, practice: mode === "grammar" ? gPractice : practice, translation: quickResult, wordLookup: lookup && !lookup.loading && !lookup.error ? lookup : null }} />
+      <LessonChat context={{ mode, ...(mode === "listening" ? {source:listeningSource} : {}), lesson: mode === "listening" ? (listeningSource === "audio" ? audioChatContext : imageChatContext) : mode === "grammar" ? grammar : mode === "writing" ? writing : words, practice: mode === "listening" ? null : mode === "grammar" ? gPractice : practice, translation: mode === "listening" ? null : quickResult, wordLookup: mode !== "listening" && lookup && !lookup.loading && !lookup.error ? lookup : null }} />
       {lookup && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/75 p-3" onClick={() => setLookup(null)}>
           <div className="max-h-[85dvh] overflow-y-auto w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-slate-600 bg-slate-900 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>

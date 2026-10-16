@@ -2,12 +2,13 @@
 import { useEffect,useRef,useState } from 'react';
 import { fetchWithRetry,parseApiResponse,formatErrorMessage } from './fetch-helper';
 const formatTime=seconds=>Number.isFinite(seconds)&&seconds>=0?`${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,'0')}`:'--:--';
-export default function ListeningAudio(){
+export default function ListeningAudio({onContextChange}){
  const [url,setUrl]=useState(''),[name,setName]=useState(''),[result,setResult]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[stage,setStage]=useState(''),[time,setTime]=useState(0),[playing,setPlaying]=useState(false),[repeat,setRepeat]=useState(false),[speed,setSpeed]=useState(.8),[duration,setDuration]=useState(0);
  const audio=useRef(null),objectUrl=useRef(''),version=useRef(0),panel=useRef(null),fileInput=useRef(null);
  useEffect(()=>{let dead=false;(async()=>{try{const d=await parseApiResponse(await fetch('/api/session?type=listening',{cache:'no-store'}));const saved=d.session?.listening;if(!dead&&saved?.result&&saved?.audio){setResult(saved.result);setName(saved.audio.name);setUrl('/api/listening-audio/file');}}catch{}})();return()=>{dead=true;version.current++;URL.revokeObjectURL(objectUrl.current);};},[]);
  const active=result?.timed ? result.segments.findIndex(s=>time>=s.start&&time<s.end): -1;
  useEffect(()=>{const p=panel.current,line=p?.querySelector('[aria-current="true"]');if(p&&line)p.scrollTo({top:p.scrollTop+line.getBoundingClientRect().top-p.getBoundingClientRect().top-p.clientHeight/2+line.clientHeight/2,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});},[active]);
+ useEffect(()=>{onContextChange?.({source:'audio',name,transcript:result,activeSegment:active>=0?result.segments[active]:null});},[result,name,active,onContextChange]);
  const choose=async file=>{
   if(!file)return;if(!/\.(mp3|m4a|wav)$/i.test(file.name)||!file.size||file.size>25*1024*1024){setError('Chọn MP3, M4A hoặc WAV tối đa 25 MB');return;}
   const token=++version.current;audio.current?.pause();URL.revokeObjectURL(objectUrl.current);objectUrl.current=URL.createObjectURL(file);setUrl(objectUrl.current);setName(file.name);setResult(null);setTime(0);setDuration(0);setBusy(true);setError('');setStage('Đang upload…');
