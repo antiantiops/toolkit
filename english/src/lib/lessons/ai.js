@@ -26,7 +26,7 @@ export async function callJson(content, { requestId, stage, maxTokens = 4096, sh
     return result;
   } catch (e) {
     const error = new Error(`${e.name}: ${e.message}`.replace(/Bearer\s+\S+/gi, 'Bearer [redacted]'));
-    log('failed', { error: error.message });
+    log('failed', { error: error.message, causeCode: String(e.cause?.code || '').slice(0, 80), causeName: String(e.cause?.name || '').slice(0, 80), timeoutMs });
     throw error;
   }
 }

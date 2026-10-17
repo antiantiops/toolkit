@@ -65,7 +65,15 @@ export async function pollLesson(mode, payload, onProgress) {
   }
   const deadline = Date.now() + (mode === "writing" ? 20 : 10) * 60 * 1000;
   while (Date.now() < deadline) {
-    const res = await fetchWithRetry(`/api/${mode}?jobId=${encodeURIComponent(jobId)}`, { timeout: 15000, cache: 'no-store' }, 2);
+    let res;
+    try {
+      res = await fetchWithRetry(`/api/${mode}?jobId=${encodeURIComponent(jobId)}`, { timeout: 15000, cache: 'no-store' }, 2);
+    } catch (e) {
+      // ponytail: retain pending job through mobile disconnects; total deadline bounds recovery.
+      onProgress({ stage: 'reconnecting', jobId });
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      continue;
+    }
     if (res.status === 404) sessionStorage.removeItem(key);
     const data = await parseApiResponse(res);
     onProgress(data);
