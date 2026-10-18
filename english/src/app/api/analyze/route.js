@@ -1,3 +1,4 @@
+import { cacheOwner } from '../session/owner';
 import { NextResponse, after } from 'next/server';
 import { randomUUID } from 'crypto';
 import { saveSession } from '../session/storage';
@@ -23,9 +24,10 @@ function schedule(job) {
   });
 }
 export async function POST(request) {
+ if (!cacheOwner(request)) return NextResponse.json({error:"Cần đăng nhập qua Kong"},{status:401});
   let body;
   try { body = await request.json(); } catch { return response({ error: 'Expected JSON { imageId } or { jobId, retry: true }' }, 400); }
-  const owner = request.cookies.get('vocab_sid')?.value || randomUUID();
+  const owner = cacheOwner(request);
   for (const [id, job] of jobs) if (Date.now() - job.createdAt > TTL && job.status !== 'running') jobs.delete(id);
   let job;
   if (body.retry === true) {
@@ -48,8 +50,9 @@ export async function POST(request) {
   return res;
 }
 export async function GET(request) {
+ if (!cacheOwner(request)) return NextResponse.json({error:"Cần đăng nhập qua Kong"},{status:401});
   const id = new URL(request.url).searchParams.get('jobId');
   const job = jobs.get(id);
-  if (!job || job.owner !== request.cookies.get('vocab_sid')?.value) return response({ error: 'Tác vụ hết hạn hoặc server đã restart. Phân tích lại ảnh.' }, 404);
+  if (!job || job.owner !== cacheOwner(request)) return response({ error: 'Tác vụ hết hạn hoặc server đã restart. Phân tích lại ảnh.' }, 404);
   return response({ jobId: id, requestId: id, status: job.status, stage: job.stage, elapsedMs: Date.now() - job.createdAt, progress: progress(job), words: job.words, error: job.error, failures: job.batches.filter(b => b.status === 'failed').map(b => ({ offset: b.offset, error: b.error })) });
 }

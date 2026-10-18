@@ -1,3 +1,4 @@
+import { cacheOwner } from '../session/owner';
 import { NextResponse, after } from 'next/server';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -13,7 +14,8 @@ const reply=(data,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Co
 function clean(){try{fs.mkdirSync(AUDIO_DIR,{recursive:true});for(const name of fs.readdirSync(AUDIO_DIR)){const file=path.join(AUDIO_DIR,name);if(Date.now()-fs.statSync(file).mtimeMs>TTL)fs.unlinkSync(file);}}catch{}}
 function ext(name,mime){return /\.m4a$/i.test(name)?'m4a':/\.wav$/i.test(name)?'wav':mime==='audio/mp4'?'m4a':mime==='audio/wav'?'wav':'mp3';}
 export async function POST(request) {
-  const owner=request.cookies.get('vocab_sid')?.value||randomUUID(); clean();
+ if (!cacheOwner(request)) return NextResponse.json({error:"Cần đăng nhập qua Kong"},{status:401});
+  const owner=cacheOwner(request); clean();
   for(const [id,j] of jobs)if(Date.now()-j.created>TTL)jobs.delete(id);
   if([...jobs.values()].filter(j=>j.status==='running').length>=2)return reply({error:'Đang bận, thử lại sau'},429);
   try {
@@ -39,4 +41,5 @@ export async function POST(request) {
     const response=reply({jobId:job.id},202);response.cookies.set('vocab_sid',owner,{httpOnly:true,sameSite:'lax',path:'/',maxAge:86400});return response;
   }catch{return reply({error:'Upload audio thất bại'},400);}
 }
-export async function GET(request){clean();const job=jobs.get(new URL(request.url).searchParams.get('jobId'));if(!job||job.owner!==request.cookies.get('vocab_sid')?.value)return reply({error:'Job hết hạn'},404);return reply({status:job.status,stage:job.stage,result:job.result,error:job.error});}
+export async function GET(request){
+ if (!cacheOwner(request)) return NextResponse.json({error:"Cần đăng nhập qua Kong"},{status:401});clean();const job=jobs.get(new URL(request.url).searchParams.get('jobId'));if(!job||job.owner!==cacheOwner(request))return reply({error:'Job hết hạn'},404);return reply({status:job.status,stage:job.stage,result:job.result,error:job.error});}

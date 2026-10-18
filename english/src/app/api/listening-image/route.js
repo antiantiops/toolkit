@@ -1,3 +1,4 @@
+import { cacheOwner } from '../session/owner';
 import { NextResponse, after } from 'next/server';
 import { randomUUID } from 'crypto';
 import { getUploadedFile } from '../upload/storage';
@@ -7,10 +8,11 @@ import { validateTranscript } from '../../../lib/listening/transcript';
 const jobs = globalThis.listeningImageJobs ||= new Map();
 const reply = (data, status = 200) => NextResponse.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 export async function POST(request) {
+ if (!cacheOwner(request)) return NextResponse.json({error:"Cần đăng nhập qua Kong"},{status:401});
   let body;
   try { body = await request.json(); } catch { return reply({ error: 'Expected JSON' }, 400); }
   if (!body || typeof body.imageId !== 'string' || !/^[a-f0-9-]{36}\.(jpg|jpeg|png|webp)$/.test(body.imageId)) return reply({ error: 'Invalid image ID' }, 400);
-  const owner = request.cookies.get('vocab_sid')?.value || randomUUID();
+  const owner = cacheOwner(request);
   for (const [id, job] of jobs) if (Date.now() - job.createdAt > 7200000) jobs.delete(id);
   let job = [...jobs.values()].find(j => j.owner === owner && j.imageId === body.imageId && j.status !== 'failed');
   if (!job) {
@@ -39,7 +41,8 @@ export async function POST(request) {
   return res;
 }
 export async function GET(request) {
+ if (!cacheOwner(request)) return NextResponse.json({error:"Cần đăng nhập qua Kong"},{status:401});
   const job = jobs.get(new URL(request.url).searchParams.get('jobId'));
-  if (!job || Date.now() - job.createdAt > 7200000 || job.owner !== request.cookies.get('vocab_sid')?.value) return reply({ error: 'Job hết hạn hoặc server đã restart' }, 404);
+  if (!job || Date.now() - job.createdAt > 7200000 || job.owner !== cacheOwner(request)) return reply({ error: 'Job hết hạn hoặc server đã restart' }, 404);
   return reply({ jobId: job.id, status: job.status, stage: job.stage, 'listening-image': job.result || null, error: job.error, requestId: job.id });
 }

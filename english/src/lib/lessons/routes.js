@@ -1,3 +1,4 @@
+import { cacheOwner } from '../../app/api/session/owner';
 import { NextResponse, after } from 'next/server';
 import { randomUUID } from 'crypto';
 import { getUploadedFile } from '../../app/api/upload/storage';
@@ -16,9 +17,10 @@ export function lessonRoutes(mode) {
   };
   return {
     async POST(request) {
+      if (!cacheOwner(request)) return reply({error:"Cần đăng nhập qua Kong"},401);
       let body;
       try { body = await request.json(); } catch { return reply({ error: 'Expected JSON' }, 400); }
-      const owner = request.cookies.get('vocab_sid')?.value || randomUUID();
+      const owner = cacheOwner(request);
       for (const [id, j] of jobs) if (j.status !== 'running' && Date.now() - j.createdAt > 7200000) jobs.delete(id);
       let job;
       if (body.retry === true) {
@@ -43,8 +45,9 @@ export function lessonRoutes(mode) {
       return res;
     },
     async GET(request) {
+      if (!cacheOwner(request)) return reply({error:"Cần đăng nhập qua Kong"},401);
       const job = jobs.get(new URL(request.url).searchParams.get('jobId'));
-      if (!job || job.owner !== request.cookies.get('vocab_sid')?.value || job.mode !== mode) return reply({ error: 'Job hết hạn hoặc server đã restart' }, 404);
+      if (!job || job.owner !== cacheOwner(request) || job.mode !== mode) return reply({ error: 'Job hết hạn hoặc server đã restart' }, 404);
       return reply({ jobId: job.id, status: job.status, stage: job.stage, progress: { completed: (job.parts || []).filter(p => p.status === 'completed').length, total: 2 }, [mode]: job.status === 'completed' ? job.result : null, error: job.error || job.parts?.filter(p => p.status === 'failed').map(p => `Phần ${p.index + 1}: ${p.error}`).join('\n') });
     },
   };

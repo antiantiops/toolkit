@@ -1,3 +1,4 @@
+import { cacheOwner } from '../session/owner';
 import { NextResponse } from "next/server";
 import { saveSession } from "../session/storage";
 
@@ -6,10 +7,11 @@ const NINEROUTER_KEY = process.env.NINEROUTER_KEY || "";
 const MODEL = process.env.NINEROUTER_MODEL || "ag/gemini-3.8-flash-high";
 
 export async function POST(request) {
+ if (!cacheOwner(request)) return NextResponse.json({error:"Cần đăng nhập qua Kong"},{status:401});
   try {
     const { task, title, level = "A2" } = await request.json();
     if (!["A1", "A2", "B1", "B2", "C1", "C2"].includes(level)) return NextResponse.json({ error: "Trình độ CEFR không hợp lệ" }, { status: 400 });
-    const sid = request.cookies.get("vocab_sid")?.value;
+    const sid = cacheOwner(request);
     if (!task) {
       return NextResponse.json({ error: "Thiếu dữ liệu bài tập" }, { status: 400 });
     }
