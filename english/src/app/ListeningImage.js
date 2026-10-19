@@ -18,6 +18,7 @@ function duration(url) {
 }
 export default function ListeningImage({onContextChange}) {
   const [crop, setCrop] = useState(null), [preview, setPreview] = useState(null), [upload, setUpload] = useState(null), [confirm, setConfirm] = useState(false);
+  const [sections,setSections]=useState([]),[selected,setSelected]=useState([]);
   const [lesson, setLesson] = useState(null), [busy, setBusy] = useState(false), [error, setError] = useState(''), [stage, setStage] = useState('');
   const fullAudio=useRef('');
   const [audioUrl,setAudioUrl]=useState('');
@@ -38,11 +39,11 @@ export default function ListeningImage({onContextChange}) {
   const release = () => { URL.revokeObjectURL(fullAudio.current);fullAudio.current='';setAudioUrl(''); audio.current?.pause(); resume.current = false; seekTo.current = null; resources.current.forEach(c => URL.revokeObjectURL(c.url)); resources.current = []; setClips([]); setIndex(0); setElapsed(0); setPlaying(false); };
   const analyze = async id => {
     setConfirm(false); setBusy(true); setError('');
-    try { const data = await pollLesson('listening-image', id ? { imageId: id } : {}, d => setStage(d.stage)); const current = validateTranscript(data['listening-image']); setLesson(current); setVoices(dialogueVoices(current.sentences)); }
+    try { const data = await pollLesson('listening-image', id ? { imageId: id } : {}, d => setStage(d.stage)); const page=data['listening-image'];setSections(page.sections||[]);setSelected(page.selected||[0]);const current=page.sentences?.length?validateTranscript(page):null;setLesson(current);setVoices(current?dialogueVoices(current.sentences):{}); }
     catch (e) { setError(formatErrorMessage(e)); } finally { setBusy(false); }
   };
   useEffect(() => {
-    fetch('/api/session?type=listening').then(parseApiResponse).then(data => { if (!loaded.current && data.session?.listening) { const restored=validateTranscript(data.session.listening); setLesson(restored);const restoredVoices=dialogueVoices(restored.sentences);setVoices(restoredVoices);createAudio(restored,restoredVoices); fetch('/api/session?type=previews').then(parseApiResponse).then(p => { if (!loaded.current) setPreview(p.session?.lPreview || null); }).catch(() => {}); } }).catch(() => {});
+    fetch('/api/session?type=listening').then(parseApiResponse).then(data => { if (!loaded.current && data.session?.listening) { const saved=data.session.listening;setSections(saved.sections||[]);setSelected(saved.selected||[0]);if(!saved.sentences?.length)return;const restored=validateTranscript(saved); setLesson(restored);const restoredVoices=dialogueVoices(restored.sentences);setVoices(restoredVoices); fetch('/api/session?type=previews').then(parseApiResponse).then(p => { if (!loaded.current) setPreview(p.session?.lPreview || null); }).catch(() => {}); } }).catch(() => {});
     if (sessionStorage.getItem('listening-image-pending-job')) { loaded.current = true; analyze(); }
     return () => { version.current++; URL.revokeObjectURL(fullAudio.current); resources.current.forEach(c => URL.revokeObjectURL(c.url)); };
   }, []);
@@ -53,7 +54,7 @@ export default function ListeningImage({onContextChange}) {
   };
   const stageFile = async file => {
     const token = ++version.current; loaded.current = true;
-    release(); setLesson(null); setError(''); setConfirm(true); setUpload({ file, loading: true, id: null, size: file.size });
+    release(); setSections([]);setSelected([]);setLesson(null); setError(''); setConfirm(true); setUpload({ file, loading: true, id: null, size: file.size });
     const reader = new FileReader(); reader.onload = () => { if (token === version.current) setPreview(reader.result); }; reader.readAsDataURL(file);
     sessionStorage.removeItem('listening-image-pending-job');
     try {
@@ -62,6 +63,13 @@ export default function ListeningImage({onContextChange}) {
       if (!data.id) throw new Error('Missing upload ID');
       if (token === version.current) setUpload({ file, loading: false, id: data.id, size: data.size });
     } catch (e) { if (token === version.current) setUpload({ file, loading: false, error: formatErrorMessage(e), size: file.size }); }
+  };
+  const applySelection=async()=>{
+    setAudioBusy(true);setError('');
+    try{
+      const data=await parseApiResponse(await fetch('/api/listening-image/selection',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({selected})}));
+      version.current++;release();const current=validateTranscript(data.listening);setLesson(current);setVoices(dialogueVoices(current.sentences));
+    }catch(e){setError(formatErrorMessage(e));}finally{setAudioBusy(false);}
   };
   const createAudio = async (current = lesson, selectedVoices = voices) => {
     setAudioBusy(true); setError(''); setAudioProgress(0);
@@ -112,7 +120,7 @@ export default function ListeningImage({onContextChange}) {
   },[audioUrl,total]);
   return <section id="image-listening" className="space-y-4">
     <h2 className="text-xl font-bold text-teal-200">Listening từ ảnh</h2>
-    <p className="text-sm text-slate-400">Tạo bài nghe từ trang sách. Cắt ảnh, xác nhận rồi nghe cùng transcript Anh–Việt.</p>
+    <p className="text-sm text-slate-400">Tạo bài nghe từ trang sách. Khoanh vùng một đoạn hoặc giữ toàn ảnh để chọn bài sau phân tích. Chỉ tạo audio khi bấm nút.</p>
     <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; chooseFile(file); }} />
     <button type="button" data-testid="listening-upload-card" disabled={busy || audioBusy || upload?.loading}
       onClick={() => fileInput.current.click()}
@@ -129,12 +137,13 @@ export default function ListeningImage({onContextChange}) {
       <span className="text-xs text-slate-500">JPG, PNG, WebP · Tối đa 25 MB</span>
     </button>
     <div className="flex flex-wrap gap-3">
-      {(preview || lesson) && <button disabled={busy || audioBusy || upload?.loading} onClick={() => { version.current++; loaded.current = true; release(); setLesson(null); setPreview(null); setUpload(null); setError(''); sessionStorage.removeItem('listening-image-pending-job'); fetch('/api/session?type=listening', { method: 'DELETE' }).catch(() => {}); }} className="rounded-xl bg-slate-800 px-4 py-3 disabled:opacity-50">Xóa bài</button>}
+      {(preview || lesson) && <button disabled={busy || audioBusy || upload?.loading} onClick={() => { version.current++; loaded.current = true; release(); setSections([]);setSelected([]);setLesson(null); setPreview(null); setUpload(null); setError(''); sessionStorage.removeItem('listening-image-pending-job'); fetch('/api/session?type=listening', { method: 'DELETE' }).catch(() => {}); }} className="rounded-xl bg-slate-800 px-4 py-3 disabled:opacity-50">Xóa bài</button>}
     </div>
     {preview && <img src={preview} alt="Ảnh bài Listening" className="mx-auto max-h-72 max-w-full rounded-xl" />}
     {upload?.id && !lesson && !busy && <button onClick={() => analyze(upload.id)} className="w-full rounded-xl bg-teal-600 p-3">Phân tích ảnh đã lưu</button>}
     {busy && <p role="status" className="text-teal-200">Đang phân tích nền: {stage || 'read-image'}. Có thể đổi tab, tải lại để tiếp tục.</p>}
     {error && <div role="alert" className="whitespace-pre-wrap break-words rounded-xl bg-red-950 p-3 text-sm text-red-200">{error}</div>}
+    {sections.length>1&&<section className="space-y-3 rounded-2xl border border-teal-800 p-4" aria-label="Chọn đoạn muốn nghe"><h3 className="font-bold text-teal-200">Chọn đoạn muốn nghe</h3><p className="text-sm text-slate-400">Chọn một đoạn để nghe riêng hoặc nhiều đoạn để ghép. Đổi lựa chọn không cần đọc ảnh lại. Tối đa 30 câu mỗi bài nghe.</p>{sections.map((part,i)=><div key={i} className="rounded-xl bg-slate-900 p-3"><label className="flex min-h-11 items-center gap-3"><input type="checkbox" disabled={audioBusy||busy} checked={selected.includes(i)} onChange={e=>setSelected(ids=>e.target.checked?[...ids,i]:ids.filter(n=>n!==i))}/><span>{part.title} · {part.sentences.length} câu</span></label><p className="truncate text-sm text-slate-400">{part.sentences[0]?.en}</p><details className="mt-2 text-sm"><summary>Xem transcript</summary>{part.sentences.map((line,j)=><p key={j} className="mt-2">{line.speaker&&`${line.speaker}: `}{line.en}<br/><span className="text-slate-400">{line.vi}</span></p>)}</details></div>)}<button disabled={!selected.length||busy||audioBusy} onClick={applySelection} className="rounded-xl bg-teal-600 p-3 disabled:opacity-50">Dùng {selected.length} đoạn đã chọn</button></section>}
     {lesson && <div className="space-y-4 rounded-3xl border border-white/10 bg-slate-950 p-3 sm:p-5">
       <h3 className="font-bold text-teal-200">{lesson.title}</h3>
       {!!Object.keys(voices).length && <div className="space-y-2 rounded-xl bg-slate-900 p-3"><p className="text-sm text-teal-200">Giọng từng nhân vật · US</p><p className="text-xs text-slate-400">Chưa rõ giới tính: gán giọng khác nhau, không đoán từ tên. Tên chỉ hiện trong transcript, không đọc thành tiếng.</p>{Object.entries(voices).map(([name,voice])=><label key={name} className="flex items-center justify-between gap-3 text-sm"><span className="min-w-0 break-words text-slate-300">{name}</span><select aria-label={`Giọng ${name}`} disabled={audioBusy||busy} value={voice} onChange={e=>{version.current++;release();setVoices(current=>({...current,[name]:e.target.value}));}} className="min-h-11 rounded-lg bg-slate-800 px-2 text-teal-100">{speakerVoices.map(v=><option key={v.id} value={v.id}>{v.label}</option>)}</select></label>)}</div>}
