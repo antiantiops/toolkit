@@ -41,9 +41,9 @@ export default function LessonChat({ context }) {
   const end = useRef(null);
   const sending = useRef(false);
   useEffect(() => { if (open) end.current?.scrollIntoView({ block: "nearest" }); }, [messages, busy, open]);
-  const send = async e => {
+  const send = async (e, question) => {
     e.preventDefault();
-    const text = input.trim();
+    const text = question || input.trim();
     if (!text || sending.current) return;
     sending.current = true;
     setBusy(true); setError("");
@@ -85,14 +85,40 @@ export default function LessonChat({ context }) {
       </header>
       <div role="log" aria-live="polite" className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 text-sm">
         {!messages.length && <p className="text-slate-400">Hỏi thêm về câu, từ hoặc quy tắc đang học. Nội dung bài hiện tại được gửi cùng câu hỏi; không gửi ảnh hay toàn màn hình.</p>}
-        {messages.map((m, i) => <div key={i} className={m.role === "user" ? "chat-message-in ml-6 whitespace-pre-wrap break-words rounded-xl bg-blue-900/60 p-3 text-white" : "chat-message-in mr-3 whitespace-pre-wrap break-words rounded-xl bg-slate-800 p-3 leading-relaxed text-slate-100"}><div className="mb-1 text-xs font-semibold text-sky-300">{m.role === "user" ? "Bạn" : "AI"}</div>{m.content}</div>)}
+        {messages.map((m, i) => <div key={i} className={m.role === "user" ? "chat-message-in ml-6 whitespace-pre-wrap break-words rounded-xl bg-blue-900/60 p-3 text-white" : "chat-message-in mr-3 whitespace-pre-wrap break-words rounded-xl bg-slate-800 p-3 leading-relaxed text-slate-100"}><div className="mb-1 text-xs font-semibold text-sky-300">{m.role === "user" ? "Bạn" : "AI"}</div>{m.role === "assistant" ? <ChatAnswer text={m.content} /> : m.content}</div>)}
         {busy && <div role="status" className="flex items-center gap-2 text-sky-300"><span className="chat-typing flex gap-1" aria-hidden="true"><i /><i /><i /></span><span>AI đang trả lời...</span></div>}
         {error && <p role="alert" className="text-red-300">{error}</p>}<div ref={end} />
       </div>
+      <button type="button" disabled={busy} onClick={e => send(e, "Tạo một prompt tự chứa để tôi copy sang AI khác luyện tập đúng bài hiện tại. Đưa đủ kiến thức liên quan từ ngữ cảnh bài, không nói ‘bài trên’. Yêu cầu AI hỏi từng câu, chờ tôi trả lời, chấm và giải thích ngắn rồi mới hỏi tiếp; tổng 10 câu. Đặt toàn bộ prompt trong một khối ```prompt riêng; lời dẫn ngoài khối thật ngắn.")} className="mx-3 mb-2 rounded-lg border border-sky-700 px-3 py-2 text-sm text-sky-200 disabled:opacity-40">Tạo prompt luyện tập</button>
       <form onSubmit={send} className="flex shrink-0 items-end gap-2 border-t border-slate-700 p-3">
         <textarea aria-label="Câu hỏi cho AI" value={input} onChange={e => setInput(e.target.value)} maxLength={4000} rows={2} placeholder="Vì sao câu này dùng thì đó?" className="min-w-0 flex-1 resize-none rounded-lg border border-slate-600 bg-slate-950 p-2 text-sm text-white" />
         <button disabled={busy || !input.trim()} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold disabled:opacity-40">Gửi</button>
       </form>
     </section>}
   </>;
+}
+
+function ChatAnswer({ text }) {
+  const parts = text.split(/(```[^\n`]*\n[\s\S]*?```)/g);
+  return parts.map((part, i) => part.startsWith("```") && part.endsWith("```")
+    ? <PromptBlock key={i} text={part.replace(/^```[^\n`]*\n/, "").slice(0, -3).replace(/\n$/, "")} />
+    : <span key={i}>{part}</span>);
+}
+
+function PromptBlock({ text }) {
+  const [copied, setCopied] = useState(false);
+  const [manual, setManual] = useState(false);
+  const area = useRef(null);
+  useEffect(() => { if (manual) { area.current?.focus(); area.current?.select(); } }, [manual]);
+  useEffect(() => { if (!copied) return; const timer = setTimeout(() => setCopied(false), 2500); return () => clearTimeout(timer); }, [copied]);
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(text); setCopied(true); setManual(false); }
+    catch { setManual(true); }
+  };
+  return <section data-prompt-block className="my-3 min-w-0 max-w-full rounded-xl border border-sky-700 bg-slate-950 p-3">
+    <div className="mb-2 flex flex-wrap items-center justify-between gap-2"><strong className="text-xs text-sky-200">Prompt / nội dung sao chép</strong><button type="button" onClick={copy} className="rounded-lg bg-blue-600 px-3 py-2 text-xs text-white">{copied ? "Đã sao chép" : "Copy prompt"}</button></div>
+    <div role="status" className="sr-only">{copied ? "Đã sao chép nội dung" : ""}</div>
+    {manual ? <><p className="mb-2 text-xs text-amber-200">Trình duyệt chặn clipboard. Nội dung đã được chọn; nhấn giữ và chọn Sao chép.</p><textarea ref={area} aria-label="Nội dung prompt để sao chép thủ công" readOnly value={text} rows={8} onFocus={e => e.target.select()} className="w-full min-w-0 rounded border border-slate-600 bg-slate-900 p-2 text-sm" /></>
+      : <details><summary className="cursor-pointer text-xs text-slate-300">Xem nội dung đầy đủ</summary><pre className="mt-2 max-h-64 overflow-y-auto whitespace-pre-wrap break-words font-sans text-sm [overflow-wrap:anywhere]">{text}</pre></details>}
+  </section>;
 }

@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const source = readFileSync(new URL('../src/app/LessonChat.js', import.meta.url), 'utf8');
+const regex = /(```[^\n`]*\n[\s\S]*?```)/g;
+const prompt = 'Bạn là giáo viên.\nHỏi từng câu.\n';
+const parts = `Lời dẫn\n\`\`\`prompt\n${prompt}\`\`\`\nLời cuối`.split(regex);
+const result = parts[1].replace(/^```[^\n`]*\n/, '').slice(0, -3).replace(/\n$/, '');
+assert.equal(result, prompt.trimEnd());
+assert.equal('Không có khối'.split(regex).length, 1);
+assert.equal('```text\nA\n```\n```prompt\nB\n```'.split(regex).filter(x => x.startsWith('```')).length, 2);
+assert(source.includes('navigator.clipboard.writeText(text)'));
+assert(source.includes('setManual(true)'));
+assert(source.includes('readOnly value={text}'));
+console.log('chat prompt checks passed');
