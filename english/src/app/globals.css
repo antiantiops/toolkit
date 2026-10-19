@@ -66,10 +66,14 @@ details[open] > summary .example-chevron { transform: rotate(180deg); }
 /* Alternate hints without changing composer geometry. */
 .chat-tools-dots { animation: chat-tools-dots 9s ease-in-out infinite; }
 .chat-tools-bulb { opacity: 0; animation: chat-tools-bulb 9s ease-in-out infinite; }
-@keyframes chat-tools-dots { 0%, 55%, 95%, 100% { opacity: 1; } 65%, 85% { opacity: 0; } }
+@keyframes chat-tools-dots {
+  0%, 55%, 100% { opacity: 1; transform: rotate(0deg); }
+  65%, 85% { opacity: 0; transform: rotate(90deg); }
+  95% { opacity: 1; transform: rotate(180deg); }
+}
 @keyframes chat-tools-bulb {
-  0%, 55%, 95%, 100% { opacity: 0; transform: scale(.85); filter: none; }
-  65%, 85% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 4px #fbbf2480); }
+  0%, 55%, 95%, 100% { opacity: 0; transform: rotate(-90deg) scale(.85); filter: none; }
+  65%, 85% { opacity: 1; transform: rotate(0deg) scale(1); filter: drop-shadow(0 0 4px #fbbf2480); }
 }
 .chat-tools-hint[data-tools-open="true"] .chat-tools-dots { animation: none; opacity: 1; }
 .chat-tools-hint[data-tools-open="true"] .chat-tools-bulb { animation: none; opacity: 0; }
