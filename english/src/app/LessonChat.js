@@ -3,6 +3,18 @@ import { useEffect, useRef, useState } from "react";
 
 export default function LessonChat({ context }) {
   const [open, setOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const tools = useRef(null);
+  const toolsButton = useRef(null);
+  const inputArea = useRef(null);
+  useEffect(() => {
+    if (!toolsOpen) return;
+    const outside = e => { if (!tools.current?.contains(e.target)) setToolsOpen(false); };
+    const escape = e => { if (e.key === "Escape") { setToolsOpen(false); toolsButton.current?.focus(); } };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    return () => { document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", escape); };
+  }, [toolsOpen]);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -36,6 +48,7 @@ export default function LessonChat({ context }) {
       setOrigin(`${b.left + 28 - left}px ${b.top + 28 - top}px`);
     }
     setOpen(next);
+    setToolsOpen(false);
     if (!next) bubble.current?.focus();
   };
   const end = useRef(null);
@@ -81,7 +94,7 @@ export default function LessonChat({ context }) {
     {<section ref={panel} inert={!open} aria-hidden={!open} data-open={open} style={{ transformOrigin: origin }} id="lesson-chat-panel" role="dialog" aria-label="Chat với AI về bài học" className="lesson-chat-motion fixed bottom-3 right-3 z-40 flex h-[min(70dvh,600px)] w-[calc(100%-1.5rem)] max-w-sm flex-col overflow-hidden rounded-2xl border border-slate-600 bg-slate-900 shadow-2xl">
       <header className="flex shrink-0 items-center justify-between border-b border-slate-700 p-3">
         <div><h2 className="font-semibold text-sky-200">Hỏi AI về bài học</h2><p className="text-xs text-slate-400">Ngữ cảnh: {context.mode === "listening" ? "Listening" : context.mode === "grammar" ? "Grammar" : context.mode === "writing" ? "Writing" : "Vocabulary"}</p></div>
-        <div className="flex gap-1"><button disabled={busy} onClick={() => { setMessages([]); setError(""); }} className="rounded-lg px-2 py-1 text-xs text-slate-300 disabled:opacity-40">Xóa chat</button><button aria-label="Thu nhỏ chat" onClick={() => toggleChat(false)} className="rounded-lg px-2 py-1 text-slate-300">✕</button></div>
+        <button aria-label="Thu nhỏ chat" onClick={() => toggleChat(false)} className="rounded-lg px-2 py-1 text-slate-300">✕</button>
       </header>
       <div role="log" aria-live="polite" className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 text-sm">
         {!messages.length && <p className="text-slate-400">Hỏi thêm về câu, từ hoặc quy tắc đang học. Nội dung bài hiện tại được gửi cùng câu hỏi; không gửi ảnh hay toàn màn hình.</p>}
@@ -89,9 +102,16 @@ export default function LessonChat({ context }) {
         {busy && <div role="status" className="flex items-center gap-2 text-sky-300"><span className="chat-typing flex gap-1" aria-hidden="true"><i /><i /><i /></span><span>AI đang trả lời...</span></div>}
         {error && <p role="alert" className="text-red-300">{error}</p>}<div ref={end} />
       </div>
-      <button type="button" disabled={busy} onClick={e => send(e, "Tạo một prompt tự chứa để tôi copy sang AI khác luyện tập đúng bài hiện tại. Đưa đủ kiến thức liên quan từ ngữ cảnh bài, không nói ‘bài trên’. Yêu cầu AI hỏi từng câu, chờ tôi trả lời, chấm và giải thích ngắn rồi mới hỏi tiếp; tổng 10 câu. Đặt toàn bộ prompt trong một khối ```prompt riêng; lời dẫn ngoài khối thật ngắn.")} className="mx-3 mb-2 rounded-lg border border-sky-700 px-3 py-2 text-sm text-sky-200 disabled:opacity-40">Tạo prompt luyện tập</button>
-      <form onSubmit={send} className="flex shrink-0 items-end gap-2 border-t border-slate-700 p-3">
-        <textarea aria-label="Câu hỏi cho AI" value={input} onChange={e => setInput(e.target.value)} maxLength={4000} rows={2} placeholder="Vì sao câu này dùng thì đó?" className="min-w-0 flex-1 resize-none rounded-lg border border-slate-600 bg-slate-950 p-2 text-sm text-white" />
+      <form onSubmit={send} className="relative flex shrink-0 items-end gap-2 border-t border-slate-700 p-3">
+        <div ref={tools} className="shrink-0">
+          <button ref={toolsButton} type="button" aria-label="Công cụ và câu hỏi gợi ý" aria-expanded={toolsOpen} aria-controls="lesson-chat-tools" onClick={() => setToolsOpen(v => !v)} className="h-10 w-9 rounded-lg border border-slate-600 text-xl text-sky-200">⋯</button>
+          {toolsOpen && <div id="lesson-chat-tools" aria-label="Công cụ chat" className="absolute bottom-full left-3 right-3 z-10 mb-2 max-h-[40dvh] overflow-y-auto rounded-xl border border-slate-600 bg-slate-950 p-1 shadow-xl">
+            <button type="button" disabled={busy} onClick={e => { setToolsOpen(false); send(e, "Tạo một prompt tự chứa để tôi copy sang AI khác luyện tập đúng bài hiện tại. Đưa đủ kiến thức liên quan từ ngữ cảnh bài, không nói ‘bài trên’. Yêu cầu AI hỏi từng câu, chờ tôi trả lời, chấm và giải thích ngắn rồi mới hỏi tiếp; tổng 10 câu. Đặt toàn bộ prompt trong một khối ```prompt riêng; lời dẫn ngoài khối thật ngắn."); }} className="w-full rounded-lg px-3 py-3 text-left text-sm text-sky-200 hover:bg-slate-800 disabled:opacity-40">Tạo prompt luyện với AI khác</button>
+            {["Giải thích bài hiện tại dễ hiểu hơn, kèm ví dụ tiếng Anh và nghĩa tiếng Việt.", "Cho tôi ví dụ khác về kiến thức đang học, kèm giải thích ngắn.", "Hỏi tôi từng câu để luyện bài hiện tại. Chờ tôi trả lời trước khi nhận xét và hỏi tiếp."].map((text, i) => <button key={text} type="button" disabled={busy} onClick={() => { setInput(text); setToolsOpen(false); inputArea.current?.focus(); }} className="w-full rounded-lg px-3 py-3 text-left text-sm text-slate-200 hover:bg-slate-800 disabled:opacity-40">{["Giải thích bài dễ hiểu hơn", "Cho ví dụ khác", "Hỏi tôi từng câu"][i]}</button>)}
+            <button type="button" disabled={busy} onClick={() => { setMessages([]); setError(""); setToolsOpen(false); toolsButton.current?.focus(); }} className="w-full border-t border-slate-700 px-3 py-3 text-left text-sm text-red-300 disabled:opacity-40">Xóa chat</button>
+          </div>}
+        </div>
+        <textarea ref={inputArea} aria-label="Câu hỏi cho AI" value={input} onChange={e => setInput(e.target.value)} maxLength={4000} rows={2} placeholder="Vì sao câu này dùng thì đó?" className="min-w-0 flex-1 resize-none rounded-lg border border-slate-600 bg-slate-950 p-2 text-sm text-white" />
         <button disabled={busy || !input.trim()} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold disabled:opacity-40">Gửi</button>
       </form>
     </section>}
