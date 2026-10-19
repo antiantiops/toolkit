@@ -1,3 +1,4 @@
+import { speechText } from "../../../lib/listening/speech-text.mjs";
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
@@ -22,7 +23,7 @@ export async function POST(request) {
       if(fs.existsSync(file)&&Date.now()-fs.statSync(file).mtimeMs<86400000)return new Response(fs.readFileSync(file),{headers:audioHeaders});
       // ponytail: local persistent cache; use shared storage when running multiple hosts.
       for(const name of fs.readdirSync(dir))if(/^[a-f0-9]{64}\.mp3$/.test(name)){try{const old=path.join(dir,name);if(Date.now()-fs.statSync(old).mtimeMs>=86400000)fs.unlinkSync(old);}catch{}}
-      const res = await fetch(`${base}/v1/audio/speech`, { method: "POST", headers, signal: AbortSignal.timeout(90000), body: JSON.stringify({ model: `edge-tts/${voice}`, input: paragraph, response_format: "mp3" }) });
+      const res = await fetch(`${base}/v1/audio/speech`, { method: "POST", headers, signal: AbortSignal.timeout(90000), body: JSON.stringify({ model: `edge-tts/${voice}`, input: speechText(paragraph), response_format: "mp3" }) });
       if (!res.ok) throw new Error(`Tạo MP3 lỗi (${res.status})`);
       const audio = await res.arrayBuffer();
       if (audio.byteLength < 1000) throw new Error("Audio không hợp lệ");
