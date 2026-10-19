@@ -42,7 +42,7 @@ export default function ListeningImage({onContextChange}) {
     catch (e) { setError(formatErrorMessage(e)); } finally { setBusy(false); }
   };
   useEffect(() => {
-    fetch('/api/session?type=listening').then(parseApiResponse).then(data => { if (!loaded.current && data.session?.listening) { const restored=validateTranscript(data.session.listening); setLesson(restored);setVoices(dialogueVoices(restored.sentences)); fetch('/api/session?type=previews').then(parseApiResponse).then(p => { if (!loaded.current) setPreview(p.session?.lPreview || null); }).catch(() => {}); } }).catch(() => {});
+    fetch('/api/session?type=listening').then(parseApiResponse).then(data => { if (!loaded.current && data.session?.listening) { const restored=validateTranscript(data.session.listening); setLesson(restored);const restoredVoices=dialogueVoices(restored.sentences);setVoices(restoredVoices);createAudio(restored,restoredVoices); fetch('/api/session?type=previews').then(parseApiResponse).then(p => { if (!loaded.current) setPreview(p.session?.lPreview || null); }).catch(() => {}); } }).catch(() => {});
     if (sessionStorage.getItem('listening-image-pending-job')) { loaded.current = true; analyze(); }
     return () => { version.current++; URL.revokeObjectURL(fullAudio.current); resources.current.forEach(c => URL.revokeObjectURL(c.url)); };
   }, []);
@@ -63,13 +63,13 @@ export default function ListeningImage({onContextChange}) {
       if (token === version.current) setUpload({ file, loading: false, id: data.id, size: data.size });
     } catch (e) { if (token === version.current) setUpload({ file, loading: false, error: formatErrorMessage(e), size: file.size }); }
   };
-  const createAudio = async (current = lesson) => {
+  const createAudio = async (current = lesson, selectedVoices = voices) => {
     setAudioBusy(true); setError(''); setAudioProgress(0);
     const token = version.current;
     // ponytail: sequential sentence MP3s, measured browser durations. Upgrade to provider timestamps for gapless audio.
     try {
       for (let i = resources.current.length; i < current.sentences.length; i++) {
-        const res = await fetchWithRetry('/api/listening', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paragraph: spokenSentence(current.sentences[i]), voice: voices[current.sentences[i].speaker] || "en-US-AriaNeural" }), timeout: 100000 }, 0);
+        const res = await fetchWithRetry('/api/listening', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paragraph: spokenSentence(current.sentences[i]), voice: selectedVoices[current.sentences[i].speaker] || "en-US-AriaNeural" }), timeout: 100000 }, 0);
         if (!res.ok) await parseApiResponse(res);
         if (!res.headers.get('content-type')?.includes('audio/')) throw new Error('TTS response không phải audio');
         const blob = await res.blob(); if (blob.size < 1000) throw new Error('MP3 rỗng');
