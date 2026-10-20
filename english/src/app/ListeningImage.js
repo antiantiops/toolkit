@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
 import ImageCrop from './ImageCrop';
+import { transcriptParagraph } from '../lib/transcript-paragraph.mjs';
 import { fetchWithRetry, parseApiResponse, formatErrorMessage, pollLesson } from './fetch-helper';
 import { validateTranscript, stripId3, lyricsTag, measuredLrc, dialogueVoices, speakerVoices, spokenSentence } from '../lib/listening/transcript';
 function download(blob, name) {
@@ -16,7 +17,7 @@ function duration(url) {
     probe.onerror = () => finish(new Error('Không đọc được MP3')); probe.src = url;
   });
 }
-export default function ListeningImage({onContextChange}) {
+export default function ListeningImage({onContextChange,clickableText=text=>text}) {
   const [crop, setCrop] = useState(null), [preview, setPreview] = useState(null), [upload, setUpload] = useState(null), [confirm, setConfirm] = useState(false);
   const [lesson, setLesson] = useState(null), [busy, setBusy] = useState(false), [error, setError] = useState(''), [stage, setStage] = useState('');
   const fullAudio=useRef('');
@@ -26,14 +27,16 @@ export default function ListeningImage({onContextChange}) {
   const [dragging, setDragging] = useState(false);
   const [playing, setPlaying] = useState(false), [elapsed, setElapsed] = useState(0);
   const [repeat, setRepeat] = useState(false);
+  const [paragraphView,setParagraphView]=useState(false);
   useEffect(()=>{onContextChange?.({source:'image',lesson,activeIndex:index});},[lesson,index,onContextChange]);
   const seekTo = useRef(null);
   const lyricsRef = useRef(null);
   useEffect(() => {
+    if(paragraphView)return;
     const panel = lyricsRef.current, line = panel?.querySelector('[aria-current="true"]');
     if (!panel || !line) return;
     panel.scrollTo({ top: panel.scrollTop + line.getBoundingClientRect().top - panel.getBoundingClientRect().top - panel.clientHeight / 2 + line.clientHeight / 2, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
-  }, [index, clips.length]);
+  }, [index, clips.length, paragraphView]);
   const audio = useRef(null), resources = useRef([]), fileInput = useRef(null), version = useRef(0), loaded = useRef(false), resume = useRef(false);
   const release = () => { URL.revokeObjectURL(fullAudio.current);fullAudio.current='';setAudioUrl(''); audio.current?.pause(); resume.current = false; seekTo.current = null; resources.current.forEach(c => URL.revokeObjectURL(c.url)); resources.current = []; setClips([]); setIndex(0); setElapsed(0); setPlaying(false); };
   const analyze = async id => {
@@ -141,14 +144,16 @@ export default function ListeningImage({onContextChange}) {
       {!clips.length && <button disabled={audioBusy} onClick={() => createAudio()} className="rounded-xl bg-teal-600 p-3 disabled:opacity-50">{audioBusy ? `Đang tạo MP3 ${audioProgress}/${lesson.sentences.length} câu…` : resources.current.length ? 'Thử lại các câu chưa tạo' : 'Tạo audio Listening'}</button>}
       <div className="overflow-hidden rounded-2xl border border-teal-900/60 bg-gradient-to-b from-teal-950/50 to-slate-950">
         <div className="flex items-center justify-between px-5 pt-4 text-xs font-semibold uppercase tracking-widest text-teal-300"><span>Transcript</span><span>{clips.length ? `${index + 1} / ${lesson.sentences.length}` : 'Chưa có audio'}</span></div>
-        <div ref={lyricsRef} data-testid="listening-lyrics" aria-label="Transcript Listening" className="relative max-h-[48dvh] min-h-64 overflow-y-auto overscroll-contain px-5 py-24 sm:px-8">
+        <div role="group" aria-label="Cách hiển thị transcript ảnh" className="mx-5 mt-3 flex w-fit gap-1 rounded-lg bg-slate-950 p-1">{[[false,'Theo câu'],[true,'Đoạn văn']].map(([value,label])=><button key={label} type="button" aria-pressed={paragraphView===value} onClick={()=>setParagraphView(value)} className={`min-h-11 rounded-md px-3 text-xs ${paragraphView===value?'bg-teal-300 text-slate-950':'text-slate-300'}`}>{label}</button>)}</div>
+        {paragraphView?<div data-image-transcript-paragraph className="max-h-[48dvh] space-y-4 overflow-y-auto px-5 py-4 text-base leading-relaxed sm:px-8"><p className="whitespace-pre-wrap text-slate-100">{clickableText(transcriptParagraph(lesson.sentences,'en'))}</p><div className="border-t border-slate-700 pt-3"><h4 className="mb-2 text-xs font-semibold text-teal-300">Bản dịch tiếng Việt</h4><p className="whitespace-pre-wrap text-sm text-slate-300">{transcriptParagraph(lesson.sentences,'vi')}</p></div></div>:<div ref={lyricsRef} data-testid="listening-lyrics" aria-label="Transcript Listening" className="relative max-h-[48dvh] min-h-64 overflow-y-auto overscroll-contain px-5 py-24 sm:px-8">
           {lesson.sentences.map((s, i) => <button key={i} disabled={!clips.length} aria-current={clips.length && i === index ? 'true' : undefined} onClick={() => selectSentence(i)} className={`block w-full py-5 text-left transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 disabled:opacity-100 motion-reduce:transition-none ${clips.length && i === index ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}>
             {s.speaker&&<span className="mb-2 block text-xs font-medium text-teal-400">{s.speaker}</span>}
             <span className="block break-words text-[25px] font-semibold leading-relaxed tracking-tight sm:text-3xl">{s.en}</span>
             <span className={`mt-3 block text-base leading-relaxed ${clips.length && i === index ? 'text-teal-200' : 'text-slate-600'}`}>{s.vi}</span>
           </button>)}
         </div>
-        <p className="px-5 pb-4 text-xs text-slate-400">Bấm câu để nghe lại · Tự cuộn theo câu đang phát</p>
+        }
+        <p className="px-5 pb-4 text-xs text-slate-400">{paragraphView?'Bấm từ tiếng Anh để tra nghĩa':'Bấm câu để nghe lại · Tự cuộn theo câu đang phát'}</p>
       </div>
       {!!clips.length && <div data-testid="listening-player" className="sticky bottom-2 z-10 space-y-4 rounded-2xl border border-white/10 bg-slate-900/95 px-4 py-5 shadow-2xl backdrop-blur-xl">
         <audio ref={audio} src={audioUrl} loop={repeat} preload="auto"

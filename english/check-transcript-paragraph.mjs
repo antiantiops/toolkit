@@ -15,3 +15,9 @@ assert.ok(audio.includes("clickableText(transcriptParagraph(result.segments,'en'
 assert.ok(audio.includes('clickableText(s.en)'));
 assert.ok(audio.includes('aria-label={`Nghe lại câu ${i+1}`}'));
 assert.ok(!audio.includes('map((s,i)=><button'));
+
+const image=readFileSync(new URL('./src/app/ListeningImage.js',import.meta.url),'utf8');
+assert.ok(image.includes('data-image-transcript-paragraph'));
+assert.ok(image.includes('if(paragraphView)return;'));
+assert.ok(image.includes("clickableText(transcriptParagraph(lesson.sentences,'en'))"));
+assert.ok(page.includes('<ListeningImage onContextChange={setImageChatContext} clickableText={clickableText} />'));
