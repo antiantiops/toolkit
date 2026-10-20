@@ -21,3 +21,9 @@ assert.ok(image.includes('data-image-transcript-paragraph'));
 assert.ok(image.includes('if(paragraphView)return;'));
 assert.ok(image.includes("clickableText(transcriptParagraph(lesson.sentences,'en'))"));
 assert.ok(page.includes('<ListeningImage onContextChange={setImageChatContext} clickableText={clickableText} />'));
+
+const toggle=readFileSync(new URL('./src/app/TranscriptSwitch.js',import.meta.url),'utf8');
+assert.ok(toggle.includes('role="switch" aria-checked={paragraphView}'));
+assert.ok(toggle.includes('ml-auto'));
+assert.ok(toggle.includes('<svg aria-hidden="true"'));
+for(const source of [audio,image])assert.ok(source.includes('<TranscriptSwitch paragraphView={paragraphView} onChange={setParagraphView} />'));
