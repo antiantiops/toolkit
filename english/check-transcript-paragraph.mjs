@@ -29,5 +29,8 @@ assert.ok(toggle.includes('<svg aria-hidden="true"'));
 for(const source of [audio,image])assert.ok(source.includes('<TranscriptSwitch paragraphView={paragraphView} onChange={setParagraphView} />'));
 
 assert.ok(!toggle.includes("{paragraphView?'Đoạn văn':'Theo câu'}"));
-assert.ok(toggle.indexOf('h-7 w-7')<toggle.indexOf('<svg'));
-assert.ok(toggle.includes('translate-x-7'));
+assert.ok(toggle.indexOf('h-5 w-5')<toggle.indexOf('<svg'));
+assert.ok(toggle.includes('translate-x-4'));
+
+assert.ok(toggle.includes('h-6 w-10'));
+assert.ok(toggle.includes('min-h-11 min-w-11'));
