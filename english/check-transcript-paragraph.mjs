@@ -27,3 +27,7 @@ assert.ok(toggle.includes('role="switch" aria-checked={paragraphView}'));
 assert.ok(toggle.includes('ml-auto'));
 assert.ok(toggle.includes('<svg aria-hidden="true"'));
 for(const source of [audio,image])assert.ok(source.includes('<TranscriptSwitch paragraphView={paragraphView} onChange={setParagraphView} />'));
+
+assert.ok(!toggle.includes("{paragraphView?'Đoạn văn':'Theo câu'}"));
+assert.ok(toggle.indexOf('h-7 w-7')<toggle.indexOf('<svg'));
+assert.ok(toggle.includes('translate-x-7'));
