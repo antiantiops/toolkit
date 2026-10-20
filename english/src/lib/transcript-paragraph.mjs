@@ -6,5 +6,5 @@ export function transcriptParagraph(segments, language) {
   if(previous&&previous.speaker===speaker)previous.text+=' '+segment[language];
   else turns.push({speaker,text:segment[language]});
  }
- return turns.map(({speaker,text})=>speaker?`${speaker}: ${text}`:text).join('\n\n');
+ return turns.map(({speaker,text})=>speaker?`${speaker}: ${text}`:text).join('\n');
 }
