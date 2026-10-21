@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 export default function ImageCrop({ file, onCancel, onApply, multiple = false }) {
   const [url, setUrl] = useState("");
   const [regions,setRegions]=useState([]);
+  const [active,setActive]=useState(null);
   const [box, setBox] = useState(null);
   const [error, setError] = useState("");
   const [ready, setReady] = useState(false);
@@ -39,63 +40,68 @@ export default function ImageCrop({ file, onCancel, onApply, multiple = false })
       onApply(new File([blob], "cropped.jpg", { type: "image/jpeg" }));
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   };
-  const selection = box || { x: 0, y: 0, w: 1, h: 1 };
-  const begin = (e, corner) => {
+  const selection = (multiple&&active!==null?regions[active]:box) || { x: 0, y: 0, w: 1, h: 1 };
+  const begin = (e, corner, index = null) => {
     if (!ready || busy) return;
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
-    const b = selection;
-    start.current = corner ? { anchor: { x: corner.includes("l") ? b.x + b.w : b.x, y: corner.includes("t") ? b.y + b.h : b.y } } : { anchor: point(e) };
+    const b = index!==null?regions[index]:selection;
+    if(multiple)setActive(index);
+    start.current = corner === "move" ? { index, original:b, origin:point(e) } : corner ? { anchor: { x: corner.includes("l") ? b.x + b.w : b.x, y: corner.includes("t") ? b.y + b.h : b.y } , index } : { anchor: point(e), index };
     setError("");
   };
   const move = e => {
     if (!start.current) return;
-    const p = point(e), a = start.current.anchor;
-    setBox({ x: Math.min(a.x, p.x), y: Math.min(a.y, p.y), w: Math.abs(p.x - a.x), h: Math.abs(p.y - a.y) });
+    const p=point(e), g=start.current,a=g.anchor;
+    const next=g.original?{...g.original,x:Math.max(0,Math.min(1-g.original.w,g.original.x+p.x-g.origin.x)),y:Math.max(0,Math.min(1-g.original.h,g.original.y+p.y-g.origin.y))}:{x:Math.min(a.x,p.x),y:Math.min(a.y,p.y),w:Math.abs(p.x-a.x),h:Math.abs(p.y-a.y)};
+    if(multiple&&g.index!==null)setRegions(r=>r.map((b,i)=>i===g.index?next:b));else setBox(next);
   };
   const finish=e=>{
     if(!start.current)return;
-    const a=start.current.anchor,p=point(e);start.current=null;
+    const gesture=start.current;
+    if(multiple&&gesture.index!==null){start.current=null;return;}
+    const a=gesture.anchor,p=point(e);start.current=null;
     if(!multiple)return;
     const next={x:Math.min(a.x,p.x),y:Math.min(a.y,p.y),w:Math.abs(p.x-a.x),h:Math.abs(p.y-a.y)};
     setBox(null);
     if(next.w<.01||next.h<.01){setError('Vùng quá nhỏ. Kéo chọn lại.');return;}
     if(regions.length>=8){setError('Tối đa 8 vùng mỗi bài nghe.');return;}
-    setRegions(r=>[...r,next]);
+    setActive(regions.length);setRegions(r=>[...r,next]);
   };
   return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3" onKeyDown={e => { if (e.key === "Escape" && !busy) onCancel(); }}>
     <section role="dialog" aria-modal="true" aria-labelledby="crop-title" className="flex max-h-[95dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-900">
       <header className="shrink-0 p-4 pb-2">
         <div className="flex items-center justify-between gap-3"><h2 id="crop-title" className="text-lg font-semibold">Cắt vùng cần đọc</h2><button autoFocus aria-label="Đóng chọn vùng ảnh" disabled={busy} onClick={onCancel} className="flex h-12 w-12 items-center justify-center rounded-xl text-xl text-slate-300 hover:bg-slate-800">✕</button></div>
-        <p className="text-sm text-slate-400">{multiple?"Kéo khoanh rồi thả tay để lưu vùng. Tiếp tục vẽ vùng khác; ghép theo thứ tự chọn. Tối đa 8 vùng.":"Kéo các góc hoặc khoanh trên ảnh để chọn vùng chữ."}</p>
+        <p className="text-sm text-slate-400">{multiple?"Chạm vùng để chỉnh: kéo bên trong để di chuyển, kéo góc để đổi kích thước. Khoanh ngoài vùng để thêm; tối đa 8 vùng.":"Kéo các góc hoặc khoanh trên ảnh để chọn vùng chữ."}</p>
       </header>
       <div className="min-h-0 overflow-auto p-4">
         <div className="relative mx-auto w-fit max-w-full touch-none select-none overflow-hidden rounded-lg"
           onPointerDown={e => begin(e)} onPointerMove={move} onPointerUp={finish} onPointerCancel={() => { start.current = null; }}>
           <img ref={img} src={url} alt="Ảnh gốc để chọn vùng đọc" draggable={false} onLoad={() => setReady(true)} onError={() => { setReady(false); setError("Không đọc được ảnh. Chọn ảnh JPEG hoặc PNG."); }} className="block max-h-[55dvh] max-w-full" />
-          {multiple&&regions.map((b,i)=><div key={i} className="pointer-events-none absolute border-2 border-green-400 bg-green-400/10" style={{left:`${b.x*100}%`,top:`${b.y*100}%`,width:`${b.w*100}%`,height:`${b.h*100}%`}}><span className="bg-green-600 px-2 text-white">{i+1}</span></div>)}
-          {ready && (!multiple||box) && <div className="pointer-events-none absolute border-2 border-cyan-300" style={{ left: `${selection.x * 100}%`, top: `${selection.y * 100}%`, width: `${selection.w * 100}%`, height: `${selection.h * 100}%`, boxShadow: multiple ? "none" : "0 0 0 9999px rgba(0,0,0,.55)" }}>
-            {["tl", "tr", "bl", "br"].map(corner => <button key={corner} aria-label={`Chỉnh góc ${corner}`} className="pointer-events-auto absolute flex h-12 w-12 touch-none items-center justify-center" style={{ left: corner.includes("l") ? 0 : "100%", top: corner.includes("t") ? 0 : "100%", transform: "translate(-50%, -50%)" }} onPointerDown={e => { e.stopPropagation(); begin(e, corner); }} onKeyDown={e => {
+          {multiple&&regions.map((b,i)=><div key={i} onPointerDown={e=>{e.stopPropagation();begin(e,"move",i);}} className="absolute touch-none border-2 border-green-400 bg-green-400/10" style={{left:`${b.x*100}%`,top:`${b.y*100}%`,width:`${b.w*100}%`,height:`${b.h*100}%`}}><span className="bg-green-600 px-2 text-white">{i+1}</span></div>)}
+          {ready && (!multiple||box||active!==null) && <div className="pointer-events-none absolute border-2 border-cyan-300" style={{ left: `${selection.x * 100}%`, top: `${selection.y * 100}%`, width: `${selection.w * 100}%`, height: `${selection.h * 100}%`, boxShadow: multiple ? "none" : "0 0 0 9999px rgba(0,0,0,.55)" }}>
+            {["tl", "tr", "bl", "br"].map(corner => <button key={corner} aria-label={`Chỉnh góc ${corner}`} className="pointer-events-auto absolute flex h-12 w-12 touch-none items-center justify-center" style={{ left: corner.includes("l") ? 0 : "100%", top: corner.includes("t") ? 0 : "100%", transform: "translate(-50%, -50%)" }} onPointerDown={e => { e.stopPropagation(); begin(e, corner, multiple?active:null); }} onKeyDown={e => {
               const delta = { ArrowLeft: [-.01, 0], ArrowRight: [.01, 0], ArrowUp: [0, -.01], ArrowDown: [0, .01] }[e.key];
               if (!delta || busy) return;
               e.preventDefault();
               const anchor = { x: corner.includes("l") ? selection.x + selection.w : selection.x, y: corner.includes("t") ? selection.y + selection.h : selection.y };
               const x = Math.max(0, Math.min(1, (corner.includes("l") ? selection.x : selection.x + selection.w) + delta[0]));
               const y = Math.max(0, Math.min(1, (corner.includes("t") ? selection.y : selection.y + selection.h) + delta[1]));
-              setBox({ x: Math.min(anchor.x, x), y: Math.min(anchor.y, y), w: Math.abs(anchor.x - x), h: Math.abs(anchor.y - y) });
+              const next={x:Math.min(anchor.x,x),y:Math.min(anchor.y,y),w:Math.abs(anchor.x-x),h:Math.abs(anchor.y-y)};
+              if(multiple&&active!==null)setRegions(r=>r.map((b,i)=>i===active?next:b));else setBox(next);
             }}><span className="h-4 w-4 rounded-full border-2 border-white bg-cyan-400 shadow" /></button>)}
           </div>}
         </div>
       </div>
       <footer className="shrink-0 border-t border-slate-800 p-4">
         {error && <p role="alert" className="mb-2 text-sm text-red-300">{error}</p>}
-        {multiple&&<>{regions.length>0&&<div className="my-2 flex flex-wrap gap-2">{regions.map((_,i)=><button key={i} disabled={busy} aria-label={`Xóa vùng ${i+1}`} onClick={()=>setRegions(r=>r.filter((_,j)=>j!==i))} className="rounded bg-slate-700 px-3 py-2">Vùng {i+1} ×</button>)}</div>}</>}
+        {multiple&&<>{regions.length>0&&<div className="my-2 flex flex-wrap gap-2">{regions.map((_,i)=><button key={i} disabled={busy} aria-label={`Xóa vùng ${i+1}`} onClick={()=>{setActive(null);setRegions(r=>r.filter((_,j)=>j!==i));}} className="rounded bg-slate-700 px-3 py-2">Vùng {i+1} ×</button>)}</div>}</>}
         {box && <button disabled={busy} onClick={() => setBox(null)} className="mb-2 min-h-12 w-full text-sm text-slate-300 hover:text-white">Đặt lại vùng chọn</button>}
         <button disabled={busy || !ready} onClick={crop} className="min-h-12 w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold hover:bg-blue-500 disabled:opacity-40">{busy ? "Đang cắt..." : (multiple&&(regions.length||box)?`Ghép và dùng ${regions.length+(box?1:0)} vùng` : box ? "Dùng vùng đã chọn" : "Dùng ảnh này")}</button>
         <button disabled={busy} onClick={() => onApply(file)} type="button" className="mt-2 min-h-11 w-full rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-2 text-xs sm:text-sm font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
           📁 Dùng nguyên ảnh gốc (Giữ 100% chất lượng)
         </button>
-        <p className="mt-2 text-center text-xs text-slate-400">{box ? "Chỉ vùng đã chọn được gửi AI" : "Chưa chỉnh vùng: dùng toàn ảnh"}</p>
+        <p className="mt-2 text-center text-xs text-slate-400">{(box||regions.length) ? "Chỉ vùng đã chọn được gửi AI" : "Chưa chỉnh vùng: dùng toàn ảnh"}</p>
       </footer>
     </section>
   </div>;
