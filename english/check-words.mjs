@@ -38,6 +38,12 @@ try {
  assert.equal(withNew[0].english,'new after custom order');
  assert.equal(withNew[1].id,ordered[0].id);
  assert.deepEqual(withNew.slice(1).map(r=>r.id),ordered.slice(0,50).map(r=>r.id));
+ const moved=withNew[0].id;
+ moveWord('alice',week,moved,undefined,'bottom');
+ assert.equal(listWords('alice',50,week).at(-1).id,moved);
+ moveWord('alice',week,moved,undefined,'top');
+ assert.equal(listWords('alice',Number.MAX_SAFE_INTEGER,week)[0].id,moved);
+ assert.throws(()=>moveWord('bob',week,moved,undefined,'bottom'));
  assert.throws(()=>saveWord('alice','a'.repeat(501)));
  console.log('PASS SQLite deduplication, user isolation, cursor pagination, input ceiling');
 } finally {rmSync(dir,{recursive:true,force:true});}

@@ -38,12 +38,12 @@ export function listWeeks(owner) {
   return database().prepare('SELECT week,COUNT(*) AS count,SUM(searches) AS searches FROM word_weeks WHERE owner=? GROUP BY week ORDER BY week DESC').all(owner);
 }
 
-export function moveWord(owner,week,id,beforeId) {
+export function moveWord(owner,week,id,beforeId,edge) {
  const db=database();db.exec('BEGIN IMMEDIATE');
  try {
   const ids=db.prepare('SELECT ww.word_id AS id FROM word_weeks ww JOIN words w ON w.id=ww.word_id WHERE ww.owner=? AND w.owner=? AND ww.week=? ORDER BY COALESCE(ww.position,-w.id),w.id DESC').all(owner,owner,week).map(r=>r.id);
-  if(!ids.includes(id)||!ids.includes(beforeId)||id===beforeId)throw new Error('Invalid move');
-  ids.splice(ids.indexOf(id),1);ids.splice(ids.indexOf(beforeId),0,id);
+  if(!ids.includes(id)||(!edge&&(!ids.includes(beforeId)||id===beforeId)))throw new Error('Invalid move');
+  ids.splice(ids.indexOf(id),1);ids.splice(edge==='top'?0:edge==='bottom'?ids.length:ids.indexOf(beforeId),0,id);
   const update=db.prepare('UPDATE word_weeks SET position=? WHERE owner=? AND week=? AND word_id=?');
   ids.forEach((wordId,i)=>update.run(i,owner,week,wordId));db.exec('COMMIT');
  }catch(e){db.exec('ROLLBACK');throw e;}

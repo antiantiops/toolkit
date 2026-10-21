@@ -33,12 +33,12 @@ export async function PATCH(request) {
  const origin=request.headers.get('origin');if(origin&&origin!=='https://english.nimtechnology.com')return reply({error:'Invalid origin'},403);
  if(Number(request.headers.get('content-length'))>4096)return reply({error:'Input too large'},413);
  try {
-  const {week,id,beforeId,needsReview}=await request.json();
+  const {week,id,beforeId,needsReview,edge}=await request.json();
   if(needsReview!==undefined){
    if(!Number.isSafeInteger(id)||id<=0||typeof needsReview!=='boolean')return reply({error:'Invalid tag'},400);
    tagWord(user.id,id,needsReview);return reply({ok:true});
   }
-  if(typeof week!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(week)||!Number.isSafeInteger(id)||id<=0||!Number.isSafeInteger(beforeId)||beforeId<=0||id===beforeId)return reply({error:'Invalid move'},400);
-  moveWord(user.id,week,id,beforeId);return reply({ok:true});
+  if(typeof week!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(week)||!Number.isSafeInteger(id)||id<=0||(edge!==undefined? !['top','bottom'].includes(edge):(!Number.isSafeInteger(beforeId)||beforeId<=0||id===beforeId)))return reply({error:'Invalid move'},400);
+  moveWord(user.id,week,id,beforeId,edge);return reply({ok:true});
  }catch{return reply({error:'Không lưu được thứ tự. Làm mới rồi thử lại.'},400);}
 }
