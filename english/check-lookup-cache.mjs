@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+const dir=mkdtempSync(`${tmpdir()}/lookup-cache-`);
+process.env.LOOKUP_DB_PATH=`${dir}/cache.sqlite`;
+const {cachedLookup,cacheLookup,lookupKey,LOOKUP_TTL}=await import('./src/lib/lookup/cache.js');
+const key=lookupKey(' Cover ',''),value={word:'cover',meaning:'che phủ',ipa:'/ˈkʌvər/'};
+cacheLookup('a',key,value,1000);
+assert.deepEqual(cachedLookup('a',key,1000+LOOKUP_TTL-1),value);
+assert.equal(cachedLookup('a',key,1000+LOOKUP_TTL),null);
+assert.equal(cachedLookup('b',key,1001),null);
+assert.equal(cachedLookup('',key,1001),null);
+assert.equal(cachedLookup('a',lookupKey('cover','Pull the covers'),1001),null);
+cacheLookup('a',key,{...value,meaning:'bìa'},2000);
+assert.equal(cachedLookup('a',key,2001).meaning,'bìa');
+rmSync(dir,{recursive:true,force:true});
+console.log('PASS seven-day boundary, account isolation, context isolation and refresh');

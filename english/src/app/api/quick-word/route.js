@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { currentUser } from "../me/auth";
+import { cachedLookup, lookupKey } from "../../../lib/lookup/cache";
 import { meanings } from "../../../lib/lookup/local";
 const cache = globalThis.quickMeaningCache ||= new Map();
 
@@ -12,6 +14,8 @@ export async function POST(request) {
     if (typeof word !== "string" || !/^[A-Za-z][A-Za-z\s'’.,!?;:()-]{0,199}$/.test(word) || typeof context !== "string" || context.length > 4000) {
       return NextResponse.json({ error: "Từ không hợp lệ" }, { status: 400 });
     }
+    const full = cachedLookup(currentUser(request)?.id, lookupKey(word, context));
+    if (full) return NextResponse.json({ meaning: full.meaning, source: "cache" }, { headers: { "Cache-Control": "private, no-store" } });
     if (!context && meanings[word.toLowerCase()]) return NextResponse.json({ meaning: meanings[word.toLowerCase()], source: 'local' });
     const cacheKey = JSON.stringify([word.toLowerCase(), context]);
     const cached = cache.get(cacheKey);

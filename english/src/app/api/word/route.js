@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { currentUser } from "../me/auth";
+import { cachedLookup, cacheLookup, lookupKey } from "../../../lib/lookup/cache";
 
 const NINEROUTER_URL = process.env.NINEROUTER_URL || "http://192.168.101.36:20128";
 const NINEROUTER_KEY = process.env.NINEROUTER_KEY || "";
@@ -11,6 +13,10 @@ export async function POST(request) {
       return NextResponse.json({ error: "Từ không hợp lệ" }, { status: 400 });
     }
 
+    const owner = currentUser(request)?.id;
+    const key = lookupKey(word, context);
+    const cached = cachedLookup(owner, key);
+    if (cached) return NextResponse.json({ word: cached }, { headers: { "Cache-Control": "private, no-store", "X-Lookup-Cache": "HIT" } });
     const headers = { "Content-Type": "application/json" };
     if (NINEROUTER_KEY) headers.Authorization = "Bearer " + NINEROUTER_KEY;
 
@@ -49,7 +55,10 @@ If context is empty, use common sense and mention ambiguity if needed.`;
     const text = data.choices?.[0]?.message?.content || "";
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) return NextResponse.json({ error: "AI trả dữ liệu không hợp lệ" }, { status: 502 });
-    return NextResponse.json({ word: JSON.parse(match[0]) });
+    const result = JSON.parse(match[0]);
+    if (!result || typeof result.word !== "string" || typeof result.meaning !== "string" || !result.meaning.trim()) return NextResponse.json({ error: "AI trả dữ liệu không hợp lệ" }, { status: 502 });
+    cacheLookup(owner, key, result);
+    return NextResponse.json({ word: result }, { headers: { "Cache-Control": "private, no-store", "X-Lookup-Cache": "MISS" } });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
