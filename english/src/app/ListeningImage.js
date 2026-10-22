@@ -1,4 +1,5 @@
 "use client";
+import {joinImages} from '../lib/listening/join-images.mjs';
 import TranscriptSwitch from './TranscriptSwitch';
 import { useEffect, useRef, useState } from 'react';
 import ImageCrop from './ImageCrop';
@@ -19,6 +20,7 @@ function duration(url) {
   });
 }
 export default function ListeningImage({onContextChange,clickableText=text=>text}) {
+  const [pages,setPages]=useState([]), [croppedPages,setCroppedPages]=useState([]), [pageIndex,setPageIndex]=useState(0), [joining,setJoining]=useState(false);
   const [crop, setCrop] = useState(null), [preview, setPreview] = useState(null), [upload, setUpload] = useState(null), [confirm, setConfirm] = useState(false);
   const [lesson, setLesson] = useState(null), [busy, setBusy] = useState(false), [error, setError] = useState(''), [stage, setStage] = useState('');
   const fullAudio=useRef('');
@@ -50,11 +52,19 @@ export default function ListeningImage({onContextChange,clickableText=text=>text
     if (sessionStorage.getItem('listening-image-pending-job')) { loaded.current = true; analyze(); }
     return () => { version.current++; URL.revokeObjectURL(fullAudio.current); resources.current.forEach(c => URL.revokeObjectURL(c.url)); };
   }, []);
-  const chooseFile = file => {
-    if (!file) return;
-    if (!['image/jpeg','image/png','image/webp'].includes(file.type) || !file.size || file.size > 25 * 1024 * 1024) { setError('Chọn JPEG, PNG hoặc WebP dưới 25 MB.'); return; }
-    version.current++; loaded.current = true; release(); setAudioBusy(false); setAudioProgress(0);
-    setError(''); setCrop(file);
+  const chooseFiles = files => {
+    if (!files.length) return;
+    if (files.length>2 || files.some(file=>!['image/jpeg','image/png','image/webp'].includes(file.type)||!file.size||file.size>25*1024*1024)) {setError('Chọn tối đa 2 ảnh JPEG, PNG hoặc WebP, mỗi ảnh dưới 25 MB.');return;}
+    version.current++;loaded.current=true;release();setAudioBusy(false);setAudioProgress(0);setError('');setPages(files);setCroppedPages([]);setPageIndex(0);
+  };
+  const applyPage = async file => {
+    setCrop(null);
+    const selected=[...croppedPages,file];setCroppedPages(selected);
+    if(pageIndex+1<pages.length){setPageIndex(pageIndex+1);setCrop(pages[pageIndex+1]);return;}
+    const token=version.current;setJoining(true);
+    try {const combined=selected.length===1?selected[0]:await joinImages(selected);if(token===version.current){setPages([]);setCroppedPages([]);await stageFile(combined);}}
+    catch(e){if(token===version.current)setError(formatErrorMessage(e));}
+    finally{setJoining(false);}
   };
   const stageFile = async file => {
     const token = ++version.current; loaded.current = true; setAudioBusy(false); setAudioProgress(0);
@@ -120,12 +130,12 @@ export default function ListeningImage({onContextChange,clickableText=text=>text
   return <section id="image-listening" className="space-y-4">
     <h2 className="text-xl font-bold text-teal-200">Listening từ ảnh</h2>
     <p className="text-sm text-slate-400">Tạo bài nghe từ trang sách. Khoanh một hoặc nhiều vùng theo thứ tự đọc, ghép thành một bài nghe. Chỉ vùng chọn được gửi AI.</p>
-    <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; chooseFile(file); }} />
-    <button type="button" data-testid="listening-upload-card" disabled={busy || upload?.loading}
+    <input ref={fileInput} type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e => { const files = Array.from(e.target.files || []); e.target.value = ''; chooseFiles(files); }} />
+    <button type="button" data-testid="listening-upload-card" disabled={busy || joining || upload?.loading}
       onClick={() => fileInput.current.click()}
-      onDragOver={e => { e.preventDefault(); if (!busy && !upload?.loading) setDragging(true); }}
+      onDragOver={e => { e.preventDefault(); if (!busy && !joining && !upload?.loading) setDragging(true); }}
       onDragLeave={() => setDragging(false)}
-      onDrop={e => { e.preventDefault(); setDragging(false); if (!busy && !upload?.loading) chooseFile(e.dataTransfer.files?.[0]); }}
+      onDrop={e => { e.preventDefault(); setDragging(false); if (!busy && !joining && !upload?.loading) chooseFiles(Array.from(e.dataTransfer.files || [])); }}
       className={`group flex min-h-56 w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-5 py-7 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none ${dragging ? 'border-teal-400 bg-teal-950/60' : 'border-slate-600 bg-slate-900/50 hover:border-teal-500 hover:bg-teal-950/30'}`}>
       <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-teal-700/50 bg-teal-950/60 text-teal-300" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-7 w-7"><path strokeLinecap="round" strokeLinejoin="round" d="M15 8h5m-2.5-2.5v5M20 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7M4 16l5-5 5 5 2-2 4 4"/><circle cx="9" cy="8" r="1"/></svg>
@@ -133,10 +143,10 @@ export default function ListeningImage({onContextChange,clickableText=text=>text
       <span className="text-base font-semibold text-slate-100">{dragging ? 'Thả ảnh để bắt đầu' : preview || lesson ? 'Chọn ảnh bài nghe khác' : 'Thêm ảnh bài nghe'}</span>
       <span className="text-sm leading-relaxed text-slate-400">Chạm để chọn ảnh hoặc kéo thả vào đây</span>
       <span className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white group-hover:bg-teal-500">Chọn ảnh</span>
-      <span className="text-xs text-slate-500">JPG, PNG, WebP · Tối đa 25 MB</span>
+      <span className="text-xs text-slate-500">1–2 ảnh JPG, PNG, WebP · Tối đa 25 MB mỗi ảnh</span>
     </button>
     <div className="flex flex-wrap gap-3">
-      {(preview || lesson) && <button disabled={busy || upload?.loading} onClick={() => { version.current++; loaded.current = true; release(); setLesson(null); setPreview(null); setUpload(null); setError(''); sessionStorage.removeItem('listening-image-pending-job'); fetch('/api/session?type=listening', { method: 'DELETE' }).catch(() => {}); }} className="rounded-xl bg-slate-800 px-4 py-3 disabled:opacity-50">Xóa bài</button>}
+      {(preview || lesson) && <button disabled={busy || joining || upload?.loading} onClick={() => { version.current++; loaded.current = true; release(); setLesson(null); setPreview(null); setUpload(null); setError(''); sessionStorage.removeItem('listening-image-pending-job'); fetch('/api/session?type=listening', { method: 'DELETE' }).catch(() => {}); }} className="rounded-xl bg-slate-800 px-4 py-3 disabled:opacity-50">Xóa bài</button>}
     </div>
     {preview && <img src={preview} alt="Ảnh bài Listening" className="mx-auto max-h-72 max-w-full rounded-xl" />}
     {upload?.id && !lesson && !busy && <button onClick={() => analyze(upload.id)} className="w-full rounded-xl bg-teal-600 p-3">Phân tích ảnh đã lưu</button>}
@@ -186,7 +196,9 @@ export default function ListeningImage({onContextChange,clickableText=text=>text
       <button onClick={() => download(new Blob([lesson.title + '\n\n' + lesson.sentences.map(s => `${s.en}\n${s.vi}`).join('\n\n')], { type: 'text/plain;charset=utf-8' }), 'listening-transcript.txt')} className="text-sm text-teal-200 underline">Tải transcript Anh–Việt</button>
 
     </div>}
-    {crop && <ImageCrop multiple file={crop} onCancel={() => setCrop(null)} onApply={file => { setCrop(null); stageFile(file); }} />}
+    {joining&&<p role="status">Đang ghép 2 ảnh theo thứ tự đọc…</p>}
+    {!!pages.length&&!crop&&!joining&&<div data-testid="listening-pages" className="space-y-3 rounded-xl border border-slate-700 p-4"><p>Thứ tự bài nghe: {pages.map((p,i)=>`${i+1}. ${p.name}`).join(' → ')}</p><p className="text-sm text-slate-400">Khoanh phần đầu trước, phần tiếp nối sau. Hai ảnh sẽ thành một bài nghe.</p>{pages.length===2&&<button className="rounded-lg bg-slate-800 p-3" onClick={()=>setPages([...pages].reverse())}>Đổi thứ tự 2 ảnh</button>}<button className="rounded-lg bg-teal-600 p-3" onClick={()=>{setPageIndex(0);setCroppedPages([]);setCrop(pages[0]);}}>Khoanh vùng ảnh 1/{pages.length}</button><button className="p-3" onClick={()=>{setPages([]);setCroppedPages([]);}}>Hủy chọn</button></div>}
+    {crop && <ImageCrop key={pageIndex} multiple file={crop} onCancel={() => {setCrop(null);setPages([]);setCroppedPages([]);}} onApply={applyPage} />}
     {confirm && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => { if (!upload?.loading) setConfirm(false); }} onKeyDown={e => { if (e.key === "Escape" && !upload?.loading) setConfirm(false); }}><div onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="listening-upload-title" className="w-full max-w-sm space-y-4 rounded-2xl border border-slate-700 bg-slate-900 p-6"><h3 id="listening-upload-title" className="font-bold">Xác nhận ảnh Listening</h3><p role="status" className="break-words text-sm">{upload?.loading ? `Đang tải lên server (${(upload.size / 1048576).toFixed(1)} MB)…` : upload?.error || `✓ Đã lưu ảnh trên server (${(upload.size / 1048576).toFixed(1)} MB)`}</p><div className="flex gap-3"><button disabled={upload?.loading} onClick={() => setConfirm(false)} className="flex-1 rounded-xl bg-slate-800 p-3 disabled:opacity-50">Để sau</button>{upload?.error ? <button onClick={() => stageFile(upload.file)} className="flex-1 rounded-xl bg-amber-600 p-3">Thử lại</button> : <button autoFocus disabled={!upload?.id || upload?.loading} onClick={() => analyze(upload.id)} className="flex-1 rounded-xl bg-teal-600 p-3 disabled:opacity-50">OK, phân tích</button>}</div></div></div>}
   </section>;
 }

@@ -6,5 +6,5 @@ assert(!restore.includes('createAudio('),'restore must not trigger TTS');
 assert(!s.includes('disabled={busy || audioBusy || upload?.loading}'));
 assert(s.includes('if (token !== version.current) return;'));
 assert(s.includes('finally { if (token === version.current) setAudioBusy(false); }'));
-assert(s.includes('version.current++; loaded.current = true; release(); setAudioBusy(false);'));
+assert(s.replaceAll(' ','').includes('version.current++;loaded.current=true;release();setAudioBusy(false);'));
 console.log('PASS restored lesson requires explicit audio; replacement invalidates stale generation');

@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {imageLayout,joinImages} from '../src/lib/listening/join-images.mjs';
+assert.deepEqual(imageLayout([{width:400,height:600},{width:300,height:200}]),{width:400,height:824});
+for(const input of [[],Array(3).fill({width:1,height:1}),[{width:0,height:1}],[{width:10000,height:10000}]])assert.throws(()=>imageLayout(input));
+let closed=0;const draws=[];
+globalThis.createImageBitmap=async f=>({...f,close(){closed++;}});
+globalThis.document={createElement:()=>({getContext:()=>({fillRect(){},drawImage(i,x,y){draws.push([i.name,x,y]);}}),toBlob(fn){fn(new Blob(['jpg'],{type:'image/jpeg'}));}})};
+await joinImages([{name:'first',width:400,height:600},{name:'second',width:300,height:200}]);
+assert.deepEqual(draws,[['first',0,0],['second',0,624]]);assert.equal(closed,2);
+console.log('PASS ordered two-page composition, bounds, bitmap cleanup');
