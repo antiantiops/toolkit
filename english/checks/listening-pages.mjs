@@ -8,3 +8,7 @@ globalThis.document={createElement:()=>({getContext:()=>({fillRect(){},drawImage
 await joinImages([{name:'first',width:400,height:600},{name:'second',width:300,height:200}]);
 assert.deepEqual(draws,[['first',0,0],['second',0,624]]);assert.equal(closed,2);
 console.log('PASS ordered two-page composition, bounds, bitmap cleanup');
+
+const source=(await import('node:fs')).readFileSync(new URL('../src/app/ListeningImage.js',import.meta.url),'utf8');
+assert(source.includes('aria-labelledby="listening-pages-title"'));
+assert(source.includes('fixed inset-0 z-50 flex items-center justify-center'));
