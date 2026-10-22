@@ -1,0 +1,10 @@
+import {readFileSync} from 'node:fs';
+import assert from 'node:assert/strict';
+const s=readFileSync(new URL('../src/app/ListeningImage.js',import.meta.url),'utf8');
+const restore=s.slice(s.indexOf("fetch('/api/session?type=listening')"),s.indexOf('const chooseFile'));
+assert(!restore.includes('createAudio('),'restore must not trigger TTS');
+assert(!s.includes('disabled={busy || audioBusy || upload?.loading}'));
+assert(s.includes('if (token !== version.current) return;'));
+assert(s.includes('finally { if (token === version.current) setAudioBusy(false); }'));
+assert(s.includes('version.current++; loaded.current = true; release(); setAudioBusy(false);'));
+console.log('PASS restored lesson requires explicit audio; replacement invalidates stale generation');

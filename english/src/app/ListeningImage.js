@@ -46,17 +46,18 @@ export default function ListeningImage({onContextChange,clickableText=text=>text
     catch (e) { setError(formatErrorMessage(e)); } finally { setBusy(false); }
   };
   useEffect(() => {
-    fetch('/api/session?type=listening').then(parseApiResponse).then(data => { if (!loaded.current && data.session?.listening?.sentences?.length) { const restored=validateTranscript(data.session.listening); setLesson(restored);const restoredVoices=dialogueVoices(restored.sentences);setVoices(restoredVoices);createAudio(restored,restoredVoices); fetch('/api/session?type=previews').then(parseApiResponse).then(p => { if (!loaded.current) setPreview(p.session?.lPreview || null); }).catch(() => {}); } }).catch(() => {});
+    fetch('/api/session?type=listening').then(parseApiResponse).then(data => { if (!loaded.current && data.session?.listening?.sentences?.length) { const restored=validateTranscript(data.session.listening); setLesson(restored);const restoredVoices=dialogueVoices(restored.sentences);setVoices(restoredVoices); fetch('/api/session?type=previews').then(parseApiResponse).then(p => { if (!loaded.current) setPreview(p.session?.lPreview || null); }).catch(() => {}); } }).catch(() => {});
     if (sessionStorage.getItem('listening-image-pending-job')) { loaded.current = true; analyze(); }
     return () => { version.current++; URL.revokeObjectURL(fullAudio.current); resources.current.forEach(c => URL.revokeObjectURL(c.url)); };
   }, []);
   const chooseFile = file => {
     if (!file) return;
     if (!['image/jpeg','image/png','image/webp'].includes(file.type) || !file.size || file.size > 25 * 1024 * 1024) { setError('Chọn JPEG, PNG hoặc WebP dưới 25 MB.'); return; }
+    version.current++; loaded.current = true; release(); setAudioBusy(false); setAudioProgress(0);
     setError(''); setCrop(file);
   };
   const stageFile = async file => {
-    const token = ++version.current; loaded.current = true;
+    const token = ++version.current; loaded.current = true; setAudioBusy(false); setAudioProgress(0);
     release(); setLesson(null); setError(''); setConfirm(true); setUpload({ file, loading: true, id: null, size: file.size });
     const reader = new FileReader(); reader.onload = () => { if (token === version.current) setPreview(reader.result); }; reader.readAsDataURL(file);
     sessionStorage.removeItem('listening-image-pending-job');
@@ -73,7 +74,9 @@ export default function ListeningImage({onContextChange,clickableText=text=>text
     // ponytail: sequential sentence MP3s, measured browser durations. Upgrade to provider timestamps for gapless audio.
     try {
       for (let i = resources.current.length; i < current.sentences.length; i++) {
+        if (token !== version.current) return;
         const res = await fetchWithRetry('/api/listening', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paragraph: spokenSentence(current.sentences[i]), voice: selectedVoices[current.sentences[i].speaker] || "en-US-AriaNeural" }), timeout: 100000 }, 0);
+        if (token !== version.current) return;
         if (!res.ok) await parseApiResponse(res);
         if (!res.headers.get('content-type')?.includes('audio/')) throw new Error('TTS response không phải audio');
         const blob = await res.blob(); if (blob.size < 1000) throw new Error('MP3 rỗng');
@@ -90,7 +93,7 @@ export default function ListeningImage({onContextChange,clickableText=text=>text
       if(token!==version.current){URL.revokeObjectURL(joined);return;}
       URL.revokeObjectURL(fullAudio.current);fullAudio.current=joined;setAudioUrl(joined);
       setClips([...resources.current]);
-    } catch (e) { setError(formatErrorMessage(e)); } finally { setAudioBusy(false); }
+    } catch (e) { if (token === version.current) setError(formatErrorMessage(e)); } finally { if (token === version.current) setAudioBusy(false); }
   };
   const saveAudio = async () => {
     try {
@@ -118,11 +121,11 @@ export default function ListeningImage({onContextChange,clickableText=text=>text
     <h2 className="text-xl font-bold text-teal-200">Listening từ ảnh</h2>
     <p className="text-sm text-slate-400">Tạo bài nghe từ trang sách. Khoanh một hoặc nhiều vùng theo thứ tự đọc, ghép thành một bài nghe. Chỉ vùng chọn được gửi AI.</p>
     <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; chooseFile(file); }} />
-    <button type="button" data-testid="listening-upload-card" disabled={busy || audioBusy || upload?.loading}
+    <button type="button" data-testid="listening-upload-card" disabled={busy || upload?.loading}
       onClick={() => fileInput.current.click()}
-      onDragOver={e => { e.preventDefault(); if (!busy && !audioBusy && !upload?.loading) setDragging(true); }}
+      onDragOver={e => { e.preventDefault(); if (!busy && !upload?.loading) setDragging(true); }}
       onDragLeave={() => setDragging(false)}
-      onDrop={e => { e.preventDefault(); setDragging(false); if (!busy && !audioBusy && !upload?.loading) chooseFile(e.dataTransfer.files?.[0]); }}
+      onDrop={e => { e.preventDefault(); setDragging(false); if (!busy && !upload?.loading) chooseFile(e.dataTransfer.files?.[0]); }}
       className={`group flex min-h-56 w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-5 py-7 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none ${dragging ? 'border-teal-400 bg-teal-950/60' : 'border-slate-600 bg-slate-900/50 hover:border-teal-500 hover:bg-teal-950/30'}`}>
       <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-teal-700/50 bg-teal-950/60 text-teal-300" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-7 w-7"><path strokeLinecap="round" strokeLinejoin="round" d="M15 8h5m-2.5-2.5v5M20 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7M4 16l5-5 5 5 2-2 4 4"/><circle cx="9" cy="8" r="1"/></svg>
@@ -133,7 +136,7 @@ export default function ListeningImage({onContextChange,clickableText=text=>text
       <span className="text-xs text-slate-500">JPG, PNG, WebP · Tối đa 25 MB</span>
     </button>
     <div className="flex flex-wrap gap-3">
-      {(preview || lesson) && <button disabled={busy || audioBusy || upload?.loading} onClick={() => { version.current++; loaded.current = true; release(); setLesson(null); setPreview(null); setUpload(null); setError(''); sessionStorage.removeItem('listening-image-pending-job'); fetch('/api/session?type=listening', { method: 'DELETE' }).catch(() => {}); }} className="rounded-xl bg-slate-800 px-4 py-3 disabled:opacity-50">Xóa bài</button>}
+      {(preview || lesson) && <button disabled={busy || upload?.loading} onClick={() => { version.current++; loaded.current = true; release(); setLesson(null); setPreview(null); setUpload(null); setError(''); sessionStorage.removeItem('listening-image-pending-job'); fetch('/api/session?type=listening', { method: 'DELETE' }).catch(() => {}); }} className="rounded-xl bg-slate-800 px-4 py-3 disabled:opacity-50">Xóa bài</button>}
     </div>
     {preview && <img src={preview} alt="Ảnh bài Listening" className="mx-auto max-h-72 max-w-full rounded-xl" />}
     {upload?.id && !lesson && !busy && <button onClick={() => analyze(upload.id)} className="w-full rounded-xl bg-teal-600 p-3">Phân tích ảnh đã lưu</button>}
