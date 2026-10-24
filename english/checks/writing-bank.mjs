@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {bankParts} from '../src/lib/writing-bank.mjs';
+const bank=[{word:'lead'},{word:'in charge of'},{word:'C++'}];
+const text='Lead the leader. IN charge of work. C++ and misleading.';
+const parts=bankParts(text,bank);
+assert.equal(parts.map(x=>x.text).join(''),text);
+assert.deepEqual(parts.filter(x=>x.matched).map(x=>x.text),['Lead','IN charge of','C++']);
+assert.equal(bankParts('leads',bank).some(x=>x.matched),false);
+assert.equal(bankParts('<script>',[])[0].text,'<script>');
+assert.equal(bankParts('in  charge of',[{word:'in charge of'}])[0].matched,true);
+console.log('PASS exact words, phrases, case, punctuation, boundaries, preserved source');

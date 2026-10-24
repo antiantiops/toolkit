@@ -1,6 +1,7 @@
 "use client";
 import { fetchWithRetry, parseApiResponse, formatErrorMessage } from "./fetch-helper";
 import { useState } from "react";
+import { bankParts } from "../lib/writing-bank.mjs";
 
 const COLORS = [
   ["border-sky-600", "bg-sky-950/40", "text-sky-300"],
@@ -108,6 +109,11 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
   const sample = isDual ? w.sample || {} : isSample ? w : {};
   const task = isDual ? w.task || {} : isTask ? w.task || {} : {};
 
+  const bankText = (text = "") => bankParts(text, task.wordBank || []).map((part, i) => part.matched
+    ? <mark key={i} data-writing-bank className="rounded bg-amber-300/20 px-0.5 font-semibold text-amber-200" title="Từ trong Word Bank">{part.text}</mark>
+    : part.text);
+  const bankFrame = (text = "") => text.split(/(\[[^\]]+\])/g).map((part, i) => /^\[[^\]]+\]$/.test(part)
+    ? <mark key={i} className="rounded bg-amber-300/20 px-1 font-semibold text-amber-200">{part}</mark> : bankText(part));
   const defaultView = isDual ? "sample" : isTask ? "brief" : "map";
   const [view, setView] = useState(defaultView);
 
@@ -252,13 +258,13 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
                             onClick={() => setOpen(isOpen ? null : id)}
                             className="flex-1 text-left text-sm leading-relaxed text-slate-100 hover:text-white"
                           >
-                            {x.english}
+                            {bankText(x.english)}
                           </button>
                           <SpeakBtn
-                            text={x.english}
+                            text={bankText(x.english)}
                             className="shrink-0 rounded-md bg-slate-800 px-2 py-1 text-xs hover:bg-slate-700"
                           />
-                          <CopyBtn text={x.english} />
+                          <CopyBtn text={bankText(x.english)} />
                         </div>
                         {isOpen && (
                           <div className="mt-2 space-y-1 border-t border-slate-700 pt-2 text-sm">
@@ -519,7 +525,7 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
                 {step.starter && (
                   <div className="mt-3 rounded-lg bg-slate-950/70 p-3 text-sm">
                     <div className="flex items-start gap-2">
-                      <div className="flex-1 font-medium leading-relaxed text-slate-100">{frame(step.starter)}</div>
+                      <div className="flex-1 font-medium leading-relaxed text-slate-100">{bankFrame(step.starter)}</div>
                       <SpeakBtn
                         text={(step.starter || "").replace(/[\[\]]/g, "")}
                         className="shrink-0 rounded-md bg-slate-800 px-2 py-1 text-xs hover:bg-slate-700"
@@ -626,12 +632,12 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">🇬🇧 Tiếng Anh:</span>
                       <div className="flex items-center gap-1">
-                        <SpeakBtn text={selectedSentence.en} className="rounded-lg bg-teal-900/80 px-2.5 py-1 text-xs text-white hover:bg-teal-800" />
-                        <CopyBtn text={selectedSentence.en} />
+                        <SpeakBtn text={bankText(selectedSentence.en)} className="rounded-lg bg-teal-900/80 px-2.5 py-1 text-xs text-white hover:bg-teal-800" />
+                        <CopyBtn text={bankText(selectedSentence.en)} />
                       </div>
                     </div>
                     <p className="text-base font-semibold text-teal-200 leading-relaxed m-0">
-                      {selectedSentence.en}
+                      {bankText(selectedSentence.en)}
                     </p>
                   </div>
 
@@ -714,7 +720,7 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
                               className="inline cursor-pointer rounded px-1.5 py-0.5 transition-colors hover:bg-teal-900/60 hover:text-teal-200 underline decoration-teal-500/40 decoration-dotted underline-offset-4 focus:outline-none"
                               title="Bấm để xem đối chiếu song ngữ"
                             >
-                              {displayText}{" "}
+                              {draftLang === "en" ? bankText(displayText) : displayText}{" "}
                             </span>
                           );
                         })}
@@ -868,7 +874,7 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
                   <div className="mb-2 flex items-center justify-between font-semibold text-purple-300">
                     <span>Bản viết lại hoàn chỉnh (tham khảo):</span>
                     <span className="flex items-center gap-1">
-                      <CopyBtn text={review.improved} />
+                      <CopyBtn text={bankText(review.improved)} />
                       <SpeakBtn
                         text={review.improved.slice(0, 900)}
                         className="rounded-md bg-purple-900 px-2 py-1 text-xs hover:bg-purple-800"
@@ -876,7 +882,7 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
                     </span>
                   </div>
                   <div className="whitespace-pre-wrap leading-relaxed text-slate-100 bg-slate-950/70 p-3 rounded-lg border border-slate-800">
-                    {review.improved}
+                    {bankText(review.improved)}
                   </div>
                 </div>
               )}
@@ -978,12 +984,12 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
                   {(s.sentences || []).map((x, sj) => (
                     <div key={sj} className="rounded-lg bg-slate-950/70 p-3">
                       <div className="flex items-start gap-2">
-                        <span className="flex-1 text-sm text-slate-100">{frame(x.english)}</span>
+                        <span className="flex-1 text-sm text-slate-100">{bankFrame(x.english)}</span>
                         <SpeakBtn
                           text={(x.english || "").replace(/[\[\]]/g, "")}
                           className="shrink-0 rounded-md bg-slate-800 px-2 py-1 text-xs hover:bg-slate-700"
                         />
-                        <CopyBtn text={x.english} />
+                        <CopyBtn text={bankText(x.english)} />
                       </div>
                       <div className="mt-1 text-xs text-slate-400">{x.vietnamese}</div>
                     </div>
@@ -1030,13 +1036,13 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
                             onClick={() => setOpen(isOpen ? null : id)}
                             className="flex-1 text-left text-sm leading-relaxed text-slate-100 hover:text-white"
                           >
-                            {x.english}
+                            {bankText(x.english)}
                           </button>
                           <SpeakBtn
-                            text={x.english}
+                            text={bankText(x.english)}
                             className="shrink-0 rounded-md bg-slate-800 px-2 py-1 text-xs hover:bg-slate-700"
                           />
-                          <CopyBtn text={x.english} />
+                          <CopyBtn text={bankText(x.english)} />
                         </div>
                         {isOpen && (
                           <div className="mt-2 space-y-1 border-t border-slate-700 pt-2 text-sm">
