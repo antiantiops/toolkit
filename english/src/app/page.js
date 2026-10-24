@@ -117,6 +117,7 @@ export default function Home() {
   const [suggestIndex, setSuggestIndex] = useState(-1);
   const suggestionCache = useRef(new Map());
   const lookupCache = useRef(new Map());
+  const pronunciationCache = useRef(new Map());
   const translationCache = useRef(new Map());
   const lookupRequest = useRef(0);
   const translationRequest = useRef(0);
@@ -603,10 +604,21 @@ export default function Home() {
     const requestId = ++lookupRequest.current;
     const key = JSON.stringify([word.toLowerCase(), context]);
     const cached = lookupCache.current.get(key);
-    if (cached) { setLookup({ ...cached, loading: false, detailLoading: false }); return; }
+    if (cached) { setLookup({ ...cached, pronunciation: pronunciationCache.current.get(word.toLowerCase()), loading: false, detailLoading: false }); return; }
     const meaning = meanings[word.toLowerCase()];
     const body = JSON.stringify({ word, context });
-    setLookup({ word, meaning, loading: !meaning, detailLoading: true });
+    const pronunciationKey = word.toLowerCase();
+    const knownPronunciation = pronunciationCache.current.get(pronunciationKey);
+    setLookup({ word, meaning, pronunciation: knownPronunciation, loading: !meaning, detailLoading: true });
+    if (!knownPronunciation && /^[A-Za-z][A-Za-z'-]{0,63}$/.test(word)) {
+      fetch('/api/pronunciation?word=' + encodeURIComponent(word))
+        .then(parseApiResponse).then(data => {
+          if (!data.pronunciation) return;
+          if (pronunciationCache.current.size >= 500) pronunciationCache.current.delete(pronunciationCache.current.keys().next().value);
+          pronunciationCache.current.set(pronunciationKey, data.pronunciation);
+          if (requestId === lookupRequest.current) setLookup(current => current ? { ...current, pronunciation: data.pronunciation } : current);
+        }).catch(() => {});
+    }
     const quick = meaning ? Promise.resolve() : fetch("/api/quick-word", { method: "POST", headers: { "Content-Type": "application/json" }, body })
       .then(parseApiResponse)
       .then(data => setLookup(current => requestId === lookupRequest.current && current?.word === word && current.detailLoading ? { ...current, meaning: data.meaning, loading: false, quick: true } : current))
@@ -616,7 +628,7 @@ export default function Home() {
       const data = await parseApiResponse(res);
       if (lookupCache.current.size >= 100) lookupCache.current.delete(lookupCache.current.keys().next().value);
       lookupCache.current.set(key, data.word);
-      if (requestId === lookupRequest.current) setLookup(current => current ? { ...data.word, loading: false, detailLoading: false } : null);
+      if (requestId === lookupRequest.current) setLookup(current => current ? { ...data.word, pronunciation: current.pronunciation, loading: false, detailLoading: false } : null);
     } catch (e) {
       await quick;
       if (requestId === lookupRequest.current) setLookup(current => !current ? null : current.meaning ? { ...current, loading: false, detailLoading: false } : { word, error: formatErrorMessage(e), loading: false, detailLoading: false });
@@ -1695,9 +1707,10 @@ export default function Home() {
               </div>
               <button onClick={() => setLookup(null)} className="rounded-lg px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-white" aria-label="Đóng">✕</button>
             </div>
+            {lookup.pronunciation && <div data-testid="lookup-pronunciation" className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-violet-300"><span>🇬🇧 UK: {lookup.pronunciation.uk || "Chưa có"}</span><span>🇺🇸 US: {lookup.pronunciation.us || "Chưa có"}</span><small className="w-full text-xs text-slate-400">Nguồn: {lookup.pronunciation.source} · Phiên âm từ điển; có thể khác theo từ loại/ngữ cảnh.</small></div>}
             {lookup.loading && !lookup.meaning ? <div className="mt-5 text-slate-400">Đang tra nghĩa tiếng Việt...</div> : lookup.error ? <div className="mt-4 text-red-300">{lookup.error}</div> : <>
               {lookup.partOfSpeech && <div className="mt-2"><span className="inline-block max-w-full rounded-lg border border-amber-500/40 bg-amber-950/50 px-2.5 py-1 text-xs font-semibold leading-relaxed text-amber-200">{lookup.partOfSpeech}</span></div>}
-              <div className="mt-1 text-violet-300 italic">{lookup.ipa}</div>
+              {!lookup.pronunciation && <div className="mt-1 text-violet-300 italic">{lookup.ipa}</div>}
               {lookup.easyReading && <div className="mt-4 rounded-xl border border-sky-900 bg-sky-950/50 p-3 text-sm leading-relaxed text-sky-100"><span className="font-semibold text-sky-300">Dễ đọc: </span>{lookup.easyReading}</div>}
               <div data-testid="lookup-meaning" className="mt-4 text-lg font-medium text-white">{lookup.meaning}</div>
               {lookup.detailLoading && <div data-testid="lookup-detail-loading" className="mt-2 flex items-center gap-2 text-xs text-slate-400"><span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-slate-600 border-t-sky-300" />Đang bổ sung giải thích, ví dụ…</div>}
