@@ -1304,6 +1304,13 @@ export default function Home() {
           ))}
         </div>}
         {words.length > 0 && !words.some(w => w.pending) && !practice && <Listening key={JSON.stringify(words.map(w => w.word))} words={words} />}
+        {!loading && !practice && words.length >= 2 && words.every(w => !w.pending) && <section data-vocab-game-entry className="mt-6 overflow-hidden rounded-3xl border border-teal-700/60 bg-gradient-to-br from-teal-950 via-slate-900 to-indigo-950 p-5 sm:p-7">
+          <span className="text-xs font-bold uppercase tracking-widest text-teal-300">Chơi để nhớ từ</span>
+          <h2 className="mt-2 text-2xl font-black text-white">Word Quest · Thử trí nhớ của bạn</h2>
+          <p className="mt-3 max-w-xl text-sm leading-7 text-slate-300">Chọn nghĩa, tự nhớ từ và chinh phục lại từ sai. Dùng từ trong bài vừa học, không ép thời gian, không mất mạng.</p>
+          <a href="/games" className="mt-5 inline-flex min-h-12 items-center rounded-xl bg-teal-500 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-teal-400">Vào trang chơi game →</a>
+          <p className="mt-3 text-xs text-slate-400">Luyện truy hồi + phản hồi đáp án · Không cần gọi AI để bắt đầu.</p>
+        </section>}
       </>}
 
       {/* ============ GRAMMAR MODE ============ */}
