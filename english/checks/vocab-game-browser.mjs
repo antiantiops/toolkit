@@ -23,18 +23,19 @@ try {const page=await browser.newPage({viewport:{width:390,height:844}});
    await page.getByRole('button',{name:'Kiểm tra',exact:true}).click();
   }else {await page.getByRole('button',{name:words.find(w=>w.word===title).meaning,exact:true}).click();}
   await page.getByRole('status').waitFor();
-  const repairButton=page.getByRole('button',{name:'Luyện lại từ này · 3 lượt'});
+  const repairButton=page.getByRole('button',{name:'Luyện lại từ này · 5 lượt'});
   if(await repairButton.count()){
    assert.equal(await page.locator('[data-buddy-mood]').getAttribute('data-buddy-mood'),'encourage');
    const target=words.find(w=>w.meaning===title).word;
    await repairButton.click();assert.equal(await page.locator('[data-buddy-mood]').getAttribute('data-buddy-mood'),'coach');
-   for(let n=1;n<=3;n++){
+   for(let n=1;n<=5;n++){
     assert(await page.locator('[data-repair-round]').count());
-    if(n===2){await page.locator('#repair-answer').fill('still wrong');await page.getByRole('button',{name:'Xác nhận lượt 2/3'}).click();assert(await page.getByText('Chưa đúng. Đáp án:',{exact:false}).count());}
-    assert.equal(await page.locator('.repair-ghost').innerText(),target);
-    await page.locator('#repair-answer').fill(target);
+    if(n===2){await page.locator('#repair-answer').fill('still wrong');await page.getByRole('button',{name:'Xác nhận lượt 2/5'}).click();assert(await page.getByText('Chưa đúng. Đáp án:',{exact:false}).count());}
+    const expected=n%2===1?target:title;
+    assert.equal(await page.locator('.repair-ghost').innerText(),expected);
+    await page.locator('#repair-answer').fill(expected);
     assert(await page.locator('.repair-ghost').isVisible());
-    await page.getByRole('button',{name:`Xác nhận lượt ${n}/3`}).click();
+    await page.getByRole('button',{name:`Xác nhận lượt ${n}/5`}).click();
    }
    assert.equal(await page.locator('[data-repair-round]').count(),0);
   }

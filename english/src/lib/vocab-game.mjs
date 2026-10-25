@@ -9,3 +9,5 @@ export function choices(words,index){return shuffle([...new Set([words[index].me
 export function retryQueue(queue,position,question,correct){if(correct || question.retry)return queue;const result=[...queue];result.splice(Math.min(position+4,result.length),0,{...question,mode:'recall',retry:true});return result;}
 
 export function prioritizeWords(words,memory={}) {return [...words].sort((a,b)=>(memory[normalize(b.word)]?.debt||0)-(memory[normalize(a.word)]?.debt||0));}
+
+export function repairTarget(word,round){return round%2===0?word.word:word.meaning;}
