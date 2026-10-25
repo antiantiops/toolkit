@@ -1,3 +1,4 @@
+export function hasSpeech(text){return /[\p{L}\p{N}]/u.test(text);}
 // ponytail: trim only near-silent edges; keep internal pauses and all spoken content.
 export function speechBounds(samples,rate){
  const threshold=0.002,keep=Math.round(rate*0.012);let start=0,end=samples.length;

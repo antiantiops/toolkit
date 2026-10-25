@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import {joinSpeech} from '../lib/join-speech.mjs';
+import {joinSpeech,hasSpeech} from '../lib/join-speech.mjs';
 import {validSegments} from '../lib/speech-segments.mjs';
 const tts = { audio: null, cache: new Map(), segments: new Map(), joined: new Map(), run: 0, cancel: null };
 function stop(){tts.run++;tts.cancel?.();tts.cancel=null;tts.audio?.pause();globalThis.speechSynthesis?.cancel();return tts.run;}
@@ -38,7 +38,7 @@ async function speak(text,lang,ready){
    try{
     const parts=[];
     // Two requests at a time: fetch ahead without flooding the TTS provider.
-    const audible=segments.filter(s=>s.text.trim());
+    const audible=segments.filter(s=>hasSpeech(s.text));
     for(let i=0;i<audible.length;i+=2){
      const batch=await Promise.all(audible.slice(i,i+2).map(async segment=>{
       const source=await audioUrl(segment.text,segment.lang);
