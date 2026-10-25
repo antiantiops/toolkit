@@ -8,6 +8,7 @@ import LessonChat from "./LessonChat";
 import Listening from "./Listening";
 import ListeningImage from "./ListeningImage";
 import Writing from "./Writing";
+import SpeakBtn from "./SpeakBtn";
 import FeatureNotice from "./FeatureNotice";
 import Account from "./Account";
 import ListeningAudio from "./ListeningAudio";
@@ -16,46 +17,6 @@ import MyWords, { rememberEnglish } from "./MyWords";
 import { meanings, complete } from "../lib/lookup/local";
 
 const AiTag = () => <span title="Sách không có, AI tự tạo 100%" className="ml-1 rounded bg-fuchsia-900/60 px-1.5 py-0.5 text-[10px] font-semibold text-fuchsia-200">🤖 AI</span>;
-
-// Neural TTS via /api/tts (Edge voices); fallback to browser voice on failure.
-const tts = { audio: null, cache: new Map() };
-async function speak(text, lang = "en-US") {
-  tts.audio?.pause();
-  speechSynthesis.cancel();
-  try {
-    const k = lang + "|" + text;
-    let url = tts.cache.get(k);
-    if (!url) {
-      const res = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, lang }) });
-      if (!res.ok) throw new Error("tts");
-      url = URL.createObjectURL(await res.blob());
-      tts.cache.set(k, url);
-    }
-    tts.audio = new Audio(url);
-    tts.audio.playbackRate = lang === "en-US" ? 0.85 : 1;
-    await tts.audio.play();
-  } catch {
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = lang;
-    u.rate = lang === "en-US" ? 0.68 : 0.85;
-    speechSynthesis.speak(u);
-  }
-}
-
-// Speaker button: spinner + disabled while audio is being fetched, re-enabled once playback starts.
-function SpeakBtn({ text, lang = "en-US", className = "", children = "🔊", ...rest }) {
-  const [loading, setLoading] = useState(false);
-  const click = async () => {
-    if (loading) return;
-    setLoading(true);
-    try { await speak(text, lang); } finally { setLoading(false); }
-  };
-  return (
-    <button type="button" onClick={click} disabled={loading} aria-busy={loading} className={`${className} disabled:cursor-wait disabled:opacity-70`} {...rest}>
-      {loading ? <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-white align-middle" /> : children}
-    </button>
-  );
-}
 
 const SpeakViBtn = ({ text }) => <SpeakBtn text={text} lang="vi-VN" className="ml-2 mt-1 inline-flex items-center rounded-md bg-slate-800 px-2 py-1 text-xs text-slate-300 hover:bg-slate-700 hover:text-white" title="Đọc tiếng Việt" aria-label="Đọc tiếng Việt" />;
 
