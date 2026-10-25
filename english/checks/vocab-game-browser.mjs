@@ -14,6 +14,18 @@ try {const page=await browser.newPage({viewport:{width:390,height:844}});
    await page.getByRole('button',{name:'Kiểm tra',exact:true}).click();
   }else {await page.getByRole('button',{name:words.find(w=>w.word===title).meaning,exact:true}).click();}
   await page.getByRole('status').waitFor();
+  const repairButton=page.getByRole('button',{name:'Luyện lại từ này · 3 lượt'});
+  if(await repairButton.count()){
+   const target=words.find(w=>w.meaning===title).word;
+   await repairButton.click();
+   for(let n=1;n<=3;n++){
+    assert(await page.locator('[data-repair-round]').count());
+    if(n===2){await page.locator('#repair-answer').fill('still wrong');await page.getByRole('button',{name:'Xác nhận lượt 2/3'}).click();assert(await page.getByText('Chưa đúng. Đáp án:',{exact:false}).count());}
+    await page.locator('#repair-answer').fill(target);
+    await page.getByRole('button',{name:`Xác nhận lượt ${n}/3`}).click();
+   }
+   assert.equal(await page.locator('[data-repair-round]').count(),0);
+  }
   await page.getByRole('button',{name:/^(Tiếp tục|Xem kết quả)$/}).click();
   assert(++count<=9);
  }
