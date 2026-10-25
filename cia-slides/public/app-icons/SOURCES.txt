@@ -1,0 +1,3 @@
+Apple app icons: macOS 26 (Tahoe) assets collected at https://github.com/zagnut531/macOS-26-Icons
+Chrome and VS Code: https://github.com/homarr-labs/dashboard-icons
+Application icons and trademarks belong to their respective owners. Used for application identification in this educational illustration; no endorsement.

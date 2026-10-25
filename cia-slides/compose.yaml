@@ -1,0 +1,6 @@
+services:
+  cia-slides:
+    build: .
+    ports:
+      - "127.0.0.1:8090:3000"
+    restart: unless-stopped
