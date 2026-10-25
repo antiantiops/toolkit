@@ -7,6 +7,7 @@ import LessonChat from "./LessonChat";
 import Listening from "./Listening";
 import ListeningImage from "./ListeningImage";
 import Writing from "./Writing";
+import FeatureNotice from "./FeatureNotice";
 import Account from "./Account";
 import ListeningAudio from "./ListeningAudio";
 import BusinessPractice from "./BusinessPractice";
@@ -173,6 +174,7 @@ export default function Home() {
   const [wSkipSlot1, setWSkipSlot1] = useState(false);
   const [wUpload1, setWUpload1] = useState({ loading: false, id: null, size: 0, error: null });
   const [wUpload2, setWUpload2] = useState({ loading: false, id: null, size: 0, error: null });
+  const [writingTourStep, setWritingTourStep] = useState(0);
   const [writing, setWriting] = useState(null);
   const [wModelDraft, setWModelDraft] = useState(null);
   const [wLoading, setWLoading] = useState(false);
@@ -807,6 +809,7 @@ export default function Home() {
 
   return (
     <div className="max-w-5xl mx-auto px-3 py-4 sm:px-5 sm:py-8">
+      <FeatureNotice onNavigate={() => { setMode("writing"); setWritingTourStep(n => n + 1); }} hasWriting={Boolean(writing)} />
       {cropPending && <ImageCrop file={cropPending.file} onCancel={() => setCropPending(null)} onApply={file => {
         const target = cropPending.target;
         setCropPending(null);
@@ -1464,7 +1467,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div id="writing-upload-tour" className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           {/* Slot 1: Sample Writing */}
           <div className={`rounded-2xl border-2 border-dashed p-4 sm:p-5 bg-slate-900/60 transition-all flex flex-col justify-between ${
             wUpload1.id ? "border-emerald-500 shadow-md shadow-emerald-950/40" : wUpload1.error ? "border-red-500/70" : "border-emerald-600/50 hover:border-emerald-400"
@@ -1690,7 +1693,7 @@ export default function Home() {
         {wJob && <p role="status" className="mb-3 text-sm text-blue-200">{wJob.stage === "reconnecting" ? `Mất kết nối tạm thời. Đang tự nối lại, không cần gửi lại ảnh. Mã hỗ trợ: ${wJob.jobId}` : wJob.stage === "extract" ? "Đang đọc ảnh..." : `Đã xử lý ${wJob.progress?.completed || 0}/2 phần`}</p>}
         {wRetry && !wLoading && <button onClick={() => analyzeWriting()} className="mb-3 rounded-lg bg-amber-600 px-4 py-2">Thử lại phần lỗi</button>}
         <ErrorBanner message={wError} onDismiss={() => setWError(null)} />
-        {writing && <Writing writing={writing} cachedModelDraft={wModelDraft} onModelDraft={setWModelDraft} SpeakBtn={SpeakBtn} CopyBtn={CopyBtn} />}
+        {writing && <Writing tourStep={writingTourStep} writing={writing} cachedModelDraft={wModelDraft} onModelDraft={setWModelDraft} SpeakBtn={SpeakBtn} CopyBtn={CopyBtn} />}
       </>}
 
       <div hidden={mode !== "listening"}><div className="mb-4 flex gap-2">{[["image","Ảnh bài nghe"],["audio","File audio"]].map(([value,label])=><button key={value} onClick={()=>setListeningSource(value)} className={`min-h-11 flex-1 rounded-xl px-4 text-sm font-semibold ${listeningSource===value?"bg-teal-600 text-white":"bg-slate-800 text-slate-400"}`}>{label}</button>)}</div><div hidden={listeningSource!=="image"}><ListeningImage onContextChange={setImageChatContext} clickableText={clickableText} /></div><div hidden={listeningSource!=="audio"}><ListeningAudio onContextChange={setAudioChatContext} clickableText={clickableText} /></div></div>

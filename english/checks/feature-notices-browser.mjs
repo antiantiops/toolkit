@@ -2,31 +2,20 @@ import {chromium} from '/usr/local/lib/node_modules/playwright/index.mjs';
 import assert from 'node:assert/strict';
 const browser=await chromium.launch({args:['--no-sandbox']});
 try {
- const page=await browser.newPage({viewport:{width:390,height:844}});
- await page.route('**/api/session?*',r=>{const type=new URL(r.request().url()).searchParams.get('type');return r.fulfill({json:type==='manifest'?{available:{writing:true}}:type==='writing'?{session:{writing:{kind:'dual',sample:{},title:'Test email',task:{scenario:'Introduce yourself to a client',requirements:[],wordBank:['honor','existing'],suggestedOutline:[]}}}}:{session:{}}});});
- let claimed=false;
- await page.route('**/api/feature-notices',r=>{const show=!claimed;claimed=true;return r.fulfill({json:{show}});});
- let savedPrompt; let payload;
- await page.route('**/api/writing-preferences',r=>{if(r.request().method()==='PUT')savedPrompt=r.request().postDataJSON().customPrompt;return r.fulfill({json:{customPrompt:savedPrompt || 'Prompt riêng đã lưu'}});});
- await page.route('**/api/writing-model',r=>{payload=r.request().postDataJSON();return r.fulfill({json:{modelDraft:{title:'Test',paragraphs:[{part:'Email',sentences:[{id:'s1',en:'Dear client,',vi:'Kính gửi khách hàng,',phrases:[]}]}]}}});});
- await page.goto('http://192.168.101.36:8085');
- await page.getByRole('button',{name:'✍️ Writing',exact:true}).click();
- await page.getByRole('button',{name:'🧭 3. Dàn ý gợi ý',exact:true}).click();
- await page.locator('[data-feature-notice-anchor]').scrollIntoViewIfNeeded();
- await page.getByRole('complementary',{name:'Tính năng mới'}).waitFor();
- await page.getByRole('button',{name:'Mở phần tùy chỉnh bên dưới'}).click();
- await page.locator('#writing-prompt-text').waitFor();
- assert(await page.locator('#writing-prompt-text').evaluate(e=>e===document.activeElement));
- const input=page.locator('#writing-prompt-text');assert.equal(await input.inputValue(),'Prompt riêng đã lưu');
- await input.fill('Use common collocations.');await page.getByLabel('Trình độ viết (CEFR)').selectOption('B2');
- await page.getByRole('button',{name:'Áp dụng & tạo lại bài mẫu',exact:true}).click();
- await page.getByRole('button',{name:'🇬🇧 English',exact:true}).waitFor();
- assert.equal(payload.level,'B2');assert.equal(payload.customPrompt,'Use common collocations.');
- assert(await page.locator('[data-writing-custom-prompt]').evaluate(e=>e.scrollWidth<=e.clientWidth));
- await page.getByRole('button',{name:'Lưu prompt cho tài khoản',exact:true}).click();
- await page.getByRole('status').filter({hasText:'Đã lưu cho tài khoản của bạn'}).waitFor();assert.equal(savedPrompt,'Use common collocations.');
- await page.getByRole('button',{name:'Khôi phục prompt mặc định',exact:true}).click();assert.doesNotMatch(await input.inputValue(),/\b[ABC][12]\b/);
- await page.screenshot({path:'/root/.openclaw/workspace-nim/media/writing-custom-prompt.png'});
- await page.reload();await page.getByRole('button',{name:'✍️ Writing',exact:true}).click();await page.getByRole('button',{name:'🧭 3. Dàn ý gợi ý',exact:true}).click();await page.locator('[data-feature-notice-anchor]').scrollIntoViewIfNeeded();await page.waitForTimeout(300);assert.equal(await page.getByRole('complementary',{name:'Tính năng mới'}).count(),0);
- console.log('PASS notice guidance, editor focus, no repeat on reload; live mobile prompt expand/edit/reset, regeneration payload and no overflow; lesson and AI response mocked');
-} finally {await browser.close();}
+ for(const hasLesson of [true,false]){
+  const page=await browser.newPage({viewport:{width:390,height:844}});let claimed=false;
+  await page.route('**/api/feature-notices',r=>{const show=!claimed;claimed=true;return r.fulfill({json:{show}});});
+  await page.route('**/api/writing-preferences',r=>r.fulfill({json:{customPrompt:'Viết dễ hiểu.'}}));
+  await page.route('**/api/session?*',r=>{const type=new URL(r.request().url()).searchParams.get('type');return r.fulfill({json:type==='manifest'?{available:{writing:hasLesson}}:type==='writing'?{session:{writing:{kind:'dual',sample:{},title:'Test email',task:{scenario:'Introduce yourself',requirements:[],wordBank:[],suggestedOutline:[]}}}}:{session:{}}});});
+  await page.goto('http://192.168.101.36:8085');
+  const tour=page.getByRole('dialog',{name:'AI viết theo cách bạn muốn'});await tour.waitFor();
+  assert(await tour.evaluate(e=>e.open));
+  await page.getByRole('button',{name:'Dẫn tôi tới tính năng'}).click();
+  await page.getByRole('button',{name:'Đã hiểu, bắt đầu dùng'}).click();
+  if(hasLesson){await page.locator('#writing-prompt-text').waitFor();assert.equal(await page.locator('#writing-prompt-text').inputValue(),'Viết dễ hiểu.');}
+  else {assert(await page.locator('#writing-upload-tour').isVisible());}
+  await page.reload();await page.waitForTimeout(400);assert.equal(await page.locator('dialog[open]').count(),0);
+  await page.close();
+ }
+ console.log('PASS automatic entry tour before Writing use, navigation and editor open with lesson, upload guidance without lesson, no repeat after reload; controlled API fixtures');
+}finally{await browser.close();}
