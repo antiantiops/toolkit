@@ -31,7 +31,9 @@ try {const page=await browser.newPage({viewport:{width:390,height:844}});
    for(let n=1;n<=3;n++){
     assert(await page.locator('[data-repair-round]').count());
     if(n===2){await page.locator('#repair-answer').fill('still wrong');await page.getByRole('button',{name:'Xác nhận lượt 2/3'}).click();assert(await page.getByText('Chưa đúng. Đáp án:',{exact:false}).count());}
+    assert.equal(await page.locator('.repair-ghost').innerText(),target);
     await page.locator('#repair-answer').fill(target);
+    assert(await page.locator('.repair-ghost').isVisible());
     await page.getByRole('button',{name:`Xác nhận lượt ${n}/3`}).click();
    }
    assert.equal(await page.locator('[data-repair-round]').count(),0);
