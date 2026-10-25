@@ -1,3 +1,4 @@
+import { writingPreferences } from "../../../lib/writing-prompt.mjs";
 import { cacheOwner } from '../session/owner';
 import { NextResponse } from "next/server";
 import { saveSession } from "../session/storage";
@@ -9,8 +10,10 @@ const MODEL = process.env.NINEROUTER_MODEL || "ag/gemini-3.8-flash-high";
 export async function POST(request) {
  if (!cacheOwner(request)) return NextResponse.json({error:"Cần đăng nhập qua Kong"},{status:401});
   try {
-    const { task, title, level = "A2" } = await request.json();
+    const { task, title, level = "A2", customPrompt } = await request.json();
     if (!["A1", "A2", "B1", "B2", "C1", "C2"].includes(level)) return NextResponse.json({ error: "Trình độ CEFR không hợp lệ" }, { status: 400 });
+    let preferences;
+    try { preferences = writingPreferences(customPrompt, level); } catch (e) { return NextResponse.json({ error: e.message }, { status: 400 }); }
     const sid = cacheOwner(request);
     if (!task) {
       return NextResponse.json({ error: "Thiếu dữ liệu bài tập" }, { status: 400 });
@@ -28,12 +31,12 @@ Task Information:
 - Sender: ${task.sender || "Employee"}
 - Recipient: ${task.recipient || "Manager"}
 - Requirements: ${JSON.stringify(task.requirements || [])}
-- Word Bank (Required vocabulary): ${JSON.stringify(task.wordBank || [])}
+- Word Bank (suggested vocabulary; mandatory only if task explicitly requires it): ${JSON.stringify(task.wordBank || [])}
 
 GOAL:
-Write a clear model email at CEFR ${level}. Respect the task's word count; if absent use about 100-130 words.
-Use vocabulary, sentence complexity and grammar appropriate to ${level}, with a natural workplace tone. A1/A2: short sentences and common vocabulary. B1/B2: increasingly varied structures. C1/C2: nuanced, precise language without needless jargon.
-Preserve all task facts and requirements; never add unsupported facts. Use the provided Word Bank naturally. Organize subject, greeting, opening, body and closing appropriately.
+Write a clear model email. ${preferences} Respect the task's word count; if absent use about 100-130 words.
+Use vocabulary, sentence complexity and grammar appropriate to the effective writing level, with a natural workplace tone. A1/A2: short sentences and common vocabulary. B1/B2: increasingly varied structures. C1/C2: nuanced, precise language without needless jargon.
+Preserve all task facts and requirements; never add unsupported facts. Use only suitable Word Bank words naturally; never force all of them. Organize subject, greeting, opening, body and closing appropriately.
 
 MAPPING REQUIREMENT:
 Break the email down sentence-by-sentence. For every single sentence:

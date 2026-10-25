@@ -1,5 +1,6 @@
 "use client";
 import { fetchWithRetry, parseApiResponse, formatErrorMessage } from "./fetch-helper";
+import { DEFAULT_WRITING_PROMPT } from "../lib/writing-prompt.mjs";
 import { useState } from "react";
 import { bankParts } from "../lib/writing-bank.mjs";
 
@@ -25,6 +26,8 @@ const frame = (t = "") =>
   );
 
 export default function Writing({ writing: w, cachedModelDraft, onModelDraft, SpeakBtn, CopyBtn }) {
+  const [customPrompt, setCustomPrompt] = useState(DEFAULT_WRITING_PROMPT);
+  const [promptOpen, setPromptOpen] = useState(false);
   const [level, setLevel] = useState("A2");
   const [modelDraft, setModelDraft] = useState(cachedModelDraft || null);
   const [loadingModel, setLoadingModel] = useState(false);
@@ -87,7 +90,7 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
       const res = await fetchWithRetry("/api/writing-model", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task, title: w.title, level }),
+        body: JSON.stringify({ task, title: w.title, level, customPrompt }),
       }, 2, 1000);
       const d = await parseApiResponse(res);
       setModelDraft(d.modelDraft);
@@ -155,7 +158,7 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
       const res = await fetch("/api/writing-review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task: { ...task, title: w.title }, draft, level }),
+        body: JSON.stringify({ task: { ...task, title: w.title }, draft, level, customPrompt }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Server error");
@@ -555,6 +558,19 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
         </select>
       </label>
       <p className="text-xs text-slate-400">Áp dụng cho bài mẫu AI và chấm/sửa bài bạn viết. Không thay đổi thư mẫu gốc.</p>
+      <div className="w-full" data-writing-custom-prompt>
+        <button type="button" aria-expanded={promptOpen} aria-controls="writing-custom-prompt" onClick={() => setPromptOpen(!promptOpen)} className="min-h-11 rounded-lg border border-teal-700 px-3 py-2 text-sm text-teal-200">{promptOpen ? "− Đóng tùy chỉnh prompt" : "+ Tùy chỉnh prompt"}</button>
+        <p className="mt-2 text-xs text-slate-400">Trình độ trong prompt được ưu tiên. Không ghi trình độ thì dùng CEFR đã chọn. Prompt mặc định dùng B1; Word Bank chỉ dùng khi phù hợp.</p>
+        {promptOpen && <div id="writing-custom-prompt" className="mt-3 space-y-2">
+          <label htmlFor="writing-prompt-text" className="block text-sm text-slate-200">Prompt cho bài mẫu và chấm/sửa bài</label>
+          <textarea id="writing-prompt-text" value={customPrompt} maxLength={4000} rows={7} disabled={loadingModel || reviewing} onChange={e => setCustomPrompt(e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-sm text-slate-100" />
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={loadingModel || reviewing} onClick={fetchModelDraft} className="min-h-11 rounded-lg bg-teal-700 px-3 py-2 text-sm text-white">Áp dụng & tạo lại bài mẫu</button>
+            <button type="button" disabled={loadingModel || reviewing} onClick={() => setCustomPrompt(DEFAULT_WRITING_PROMPT)} className="min-h-11 rounded-lg border border-slate-700 px-3 py-2 text-sm">Khôi phục prompt mặc định</button>
+          </div>
+          <p className="text-xs text-slate-400">Sửa prompt không tự gọi AI. Bấm tạo lại để thay bài mẫu; chấm bài dùng prompt hiện tại.</p>
+        </div>}
+      </div>
               <div className="flex flex-wrap items-center gap-2">
                 {modelDraft && (
                   <div className="inline-flex rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs font-semibold">
