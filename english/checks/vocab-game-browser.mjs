@@ -6,6 +6,14 @@ try {const page=await browser.newPage({viewport:{width:390,height:844}});
  await page.route('**/api/game-memory',r=>r.fulfill({json:r.request().method()==='GET'?{memory:{}}:{word:'book',debt:3,mistakes:1}}));
  await page.route('**/api/session?*',r=>r.fulfill({json:{session:{words},next:null}}));
  await page.goto('http://192.168.101.36:8085/games');assert.equal(await page.locator('[data-buddy-mood]').getAttribute('data-buddy-mood'),'welcome');await page.getByRole('button',{name:'Bắt đầu chuyến đi'}).click();assert.equal(await page.locator('[data-buddy-mood]').getAttribute('data-buddy-mood'),'waiting');
+ await page.locator('section h1').scrollIntoViewIfNeeded();
+ const dock=page.locator('.buddy-docked');
+ const box=await dock.boundingBox();assert(box.y>=0 && box.y+box.height<=844);
+ assert.equal(await dock.evaluate(e=>getComputedStyle(e).position),'fixed');
+ await page.getByRole('button',{name:'Chưa nhớ, xem đáp án'}).scrollIntoViewIfNeeded();
+ const actionBox=await page.getByRole('button',{name:'Chưa nhớ, xem đáp án'}).boundingBox();
+ assert(actionBox.y+actionBox.height<=box.y);
+ await page.screenshot({path:'/root/.openclaw/workspace-nim/media/vocab-game-mobile-dock.png'});
  let count=0,wrong=false;
  while(await page.getByRole('button',{name:'Chơi lại với thứ tự mới'}).count()===0){
   const title=await page.locator('section h1').innerText();

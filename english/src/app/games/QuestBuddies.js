@@ -1,7 +1,15 @@
+import { useEffect, useState } from "react";
 export default function QuestBuddies({feedback,repair,combo,done,started,position}) {
+ const [keyboard,setKeyboard]=useState(false);
+ useEffect(()=>{
+  const viewport=window.visualViewport;
+  const update=()=>setKeyboard(Boolean(viewport && window.innerHeight-viewport.height>140 && /INPUT|TEXTAREA/.test(document.activeElement?.tagName||'')));
+  viewport?.addEventListener('resize',update);document.addEventListener('focusin',update);document.addEventListener('focusout',update);
+  return()=>{viewport?.removeEventListener('resize',update);document.removeEventListener('focusin',update);document.removeEventListener('focusout',update);};
+ },[]);
  const mood=done?'celebrate':feedback?.correct?(combo>=3?'celebrate':'happy'):feedback?.correct===false?'encourage':repair!==null?'coach':started?'waiting':'welcome';
  const lines={welcome:['Cùng chinh phục từ mới nhé!','Tụi mình luôn ở đây cổ vũ bạn.'],waiting:['Đang hóng đáp án của bạn…','Cứ suy nghĩ, không cần vội!'],happy:['Đúng rồi! Đập tay nào!','Một bước nữa, giỏi lắm!'],celebrate:[done?'Về đích rồi! Bạn đã rất cố gắng!':`Combo ${combo}! Đỉnh quá!`,'Ăn mừng chút rồi đi tiếp nào!'],encourage:['Chưa đúng thôi, không sao cả.','Tụi mình cùng thử lại nhé!'],coach:[repair>0?`Đã đúng ${repair}/3 lượt! Tiếp nào!`:'Nhìn kỹ từ rồi thử lại cùng mình.','Mỗi lần thử là một bước tiến.']};
- return <div className={`quest-buddies mood-${mood}`} data-buddy-mood={mood}>
+ return <div className={`quest-buddies ${started?"buddy-docked":""} ${keyboard?"buddy-keyboard":""} mood-${mood}`} data-buddy-mood={mood}>
   <div className="buddy-pair" aria-hidden="true">{['cat','blob'].map((kind,i)=><svg key={kind} viewBox="0 0 120 120" className={`quest-buddy buddy-${kind}`}>
    <ellipse cx="60" cy="111" rx="30" ry="5" fill="#020617" opacity=".4"/>
    <g className="buddy-body">
