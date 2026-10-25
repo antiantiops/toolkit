@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
+import {joinSpeech} from '../lib/join-speech.mjs';
 import {validSegments} from '../lib/speech-segments.mjs';
-const tts = { audio: null, cache: new Map(), segments: new Map(), run: 0, cancel: null };
+const tts = { audio: null, cache: new Map(), segments: new Map(), joined: new Map(), run: 0, cancel: null };
 function stop(){tts.run++;tts.cancel?.();tts.cancel=null;tts.audio?.pause();globalThis.speechSynthesis?.cancel();return tts.run;}
 async function audioUrl(text,lang){
  const k=lang+'|'+text;
@@ -26,28 +27,42 @@ async function speak(text,lang,ready){
    tts.segments.set(text,segments);
   }
  }
- for(const segment of segments){
-  if(run!==tts.run)return;
-  if(!segment.text.trim())continue;
-  let url;
-  try{url=await audioUrl(segment.text,segment.lang);}catch{
-   if(run!==tts.run)return;
-   if(!globalThis.speechSynthesis)throw Error('Không tải được âm thanh. Bấm loa để thử lại.');
+ let url;
+ const key=lang+'|'+text;
+ if(lang==='vi-VN'){
+  url=tts.joined.get(key);
+  if(!url){
+   const Context=globalThis.AudioContext||globalThis.webkitAudioContext;
+   if(!Context)throw Error('Trình duyệt không hỗ trợ ghép âm thanh');
+   const context=new Context({sampleRate:24000});
+   try{
+    const parts=[];
+    // Two requests at a time: fetch ahead without flooding the TTS provider.
+    const audible=segments.filter(s=>s.text.trim());
+    for(let i=0;i<audible.length;i+=2){
+     const batch=await Promise.all(audible.slice(i,i+2).map(async segment=>{
+      const source=await audioUrl(segment.text,segment.lang);
+      const response=await fetch(source);if(!response.ok)throw Error('Không tải được âm thanh');
+      const buffer=await context.decodeAudioData(await response.arrayBuffer());
+      return buffer.getChannelData(0);
+     }));
+     if(run!==tts.run)return;
+     parts.push(...batch);
+    }
+    url=URL.createObjectURL(joinSpeech(parts,context.sampleRate));
+    if(tts.joined.size>=30){const old=tts.joined.keys().next().value;URL.revokeObjectURL(tts.joined.get(old));tts.joined.delete(old);}
+    tts.joined.set(key,url);
+   }finally{await context.close();}
   }
-  if(run!==tts.run)return;
-  await new Promise((resolve,reject)=>{
-   const finish=error=>{if(tts.cancel===cancel)tts.cancel=null;error?reject(error):resolve();};
-   const cancel=()=>finish();tts.cancel=cancel;
-   if(url){
-    const audio=tts.audio;audio.src=url;audio.playbackRate=segment.lang==='en-US'?0.85:1;
-    audio.onended=()=>finish();audio.onerror=()=>finish(Error('Không phát được âm thanh. Bấm loa để thử lại.'));
-    audio.play().then(ready).catch(()=>finish(Error('Trình duyệt chặn phát âm thanh. Bấm loa để thử lại.')));
-   }else{
-    const u=new SpeechSynthesisUtterance(segment.text);u.lang=segment.lang;u.rate=segment.lang==='en-US'?0.68:0.85;
-    u.onend=()=>finish();u.onerror=()=>finish(Error('Không phát được giọng dự phòng'));speechSynthesis.speak(u);ready();
-   }
-  });
- }
+ }else{url=await audioUrl(text,lang);}
+ if(run!==tts.run)return;
+ await new Promise((resolve,reject)=>{
+  const finish=error=>{if(tts.cancel===cancel)tts.cancel=null;error?reject(error):resolve();};
+  const cancel=()=>finish();tts.cancel=cancel;
+  const audio=tts.audio;audio.src=url;audio.playbackRate=lang==='en-US'?0.85:1;
+  audio.onended=()=>finish();audio.onerror=()=>finish(Error('Không phát được âm thanh. Bấm loa để thử lại.'));
+  audio.play().then(ready).catch(()=>finish(Error('Trình duyệt chặn phát âm thanh. Bấm loa để thử lại.')));
+ });
 }
 export default function SpeakBtn({ text, lang = "en-US", className = "", children = "🔊", ...rest }) {
  const [loading,setLoading]=useState(false),[error,setError]=useState('');
