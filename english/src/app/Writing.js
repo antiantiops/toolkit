@@ -560,7 +560,7 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
       <p className="text-xs text-slate-400">Áp dụng cho bài mẫu AI và chấm/sửa bài bạn viết. Không thay đổi thư mẫu gốc.</p>
       <div className="w-full" data-writing-custom-prompt>
         <button type="button" aria-expanded={promptOpen} aria-controls="writing-custom-prompt" onClick={() => setPromptOpen(!promptOpen)} className="min-h-11 rounded-lg border border-teal-700 px-3 py-2 text-sm text-teal-200">{promptOpen ? "− Đóng tùy chỉnh prompt" : "+ Tùy chỉnh prompt"}</button>
-        <p className="mt-2 text-xs text-slate-400">Trình độ trong prompt được ưu tiên. Không ghi trình độ thì dùng CEFR đã chọn. Prompt mặc định dùng B1; Word Bank chỉ dùng khi phù hợp.</p>
+        <p className="mt-2 text-xs text-slate-400">Trình độ trong prompt được ưu tiên. Không ghi trình độ thì dùng CEFR đã chọn. Mặc định CEFR A2; Word Bank chỉ dùng khi phù hợp.</p>
         {promptOpen && <div id="writing-custom-prompt" className="mt-3 space-y-2">
           <label htmlFor="writing-prompt-text" className="block text-sm text-slate-200">Prompt cho bài mẫu và chấm/sửa bài</label>
           <textarea id="writing-prompt-text" value={customPrompt} maxLength={4000} rows={7} disabled={loadingModel || reviewing} onChange={e => setCustomPrompt(e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-sm text-slate-100" />

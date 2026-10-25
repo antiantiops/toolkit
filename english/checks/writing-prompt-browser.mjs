@@ -10,13 +10,13 @@ try {
  await page.getByRole('button',{name:'✍️ Writing',exact:true}).click();
  await page.getByRole('button',{name:'🧭 3. Dàn ý gợi ý',exact:true}).click();
  await page.getByRole('button',{name:'+ Tùy chỉnh prompt',exact:true}).click();
- const input=page.locator('#writing-prompt-text');assert.match(await input.inputValue(),/level B1/);
+ const input=page.locator('#writing-prompt-text');assert.doesNotMatch(await input.inputValue(),/\b[ABC][12]\b/);
  await input.fill('Use common collocations.');await page.getByLabel('Trình độ viết (CEFR)').selectOption('B2');
  await page.getByRole('button',{name:'Áp dụng & tạo lại bài mẫu',exact:true}).click();
  await page.getByRole('button',{name:'🇬🇧 English',exact:true}).waitFor();
  assert.equal(payload.level,'B2');assert.equal(payload.customPrompt,'Use common collocations.');
  assert(await page.locator('[data-writing-custom-prompt]').evaluate(e=>e.scrollWidth<=e.clientWidth));
- await page.getByRole('button',{name:'Khôi phục prompt mặc định',exact:true}).click();assert.match(await input.inputValue(),/level B1/);
+ await page.getByRole('button',{name:'Khôi phục prompt mặc định',exact:true}).click();assert.doesNotMatch(await input.inputValue(),/\b[ABC][12]\b/);
  await page.screenshot({path:'/root/.openclaw/workspace-nim/media/writing-custom-prompt.png'});
  console.log('PASS live mobile prompt expand/edit/reset, regeneration payload and no overflow; lesson and AI response mocked');
 } finally {await browser.close();}

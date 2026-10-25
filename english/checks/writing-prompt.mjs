@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DEFAULT_WRITING_PROMPT, writingPreferences } from '../src/lib/writing-prompt.mjs';
-assert.match(DEFAULT_WRITING_PROMPT,/level B1/);
+assert.doesNotMatch(DEFAULT_WRITING_PROMPT,/\b[ABC][12]\b/);
+assert.match(writingPreferences(),/CEFR A2/);
 assert.match(writingPreferences('Write at B2','A1'),/explicitly requested.*overrides/);
 assert.match(writingPreferences('Use common collocations','A2'),/If no level.*CEFR A2/);
 assert.match(writingPreferences('', 'B1'),/not a checklist/);
