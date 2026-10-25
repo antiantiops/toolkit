@@ -4,7 +4,7 @@ const words=[{word:'book',meaning:'sách',example:'Read a book.'},{word:'pen',me
 const browser=await chromium.launch({args:['--no-sandbox']});
 try {const page=await browser.newPage({viewport:{width:390,height:844}});
  await page.route('**/api/session?*',r=>r.fulfill({json:{session:{words},next:null}}));
- await page.goto('http://192.168.101.36:8085/games');await page.getByRole('button',{name:'Bắt đầu chuyến đi'}).click();
+ await page.goto('http://192.168.101.36:8085/games');assert.equal(await page.locator('[data-buddy-mood]').getAttribute('data-buddy-mood'),'welcome');await page.getByRole('button',{name:'Bắt đầu chuyến đi'}).click();assert.equal(await page.locator('[data-buddy-mood]').getAttribute('data-buddy-mood'),'waiting');
  let count=0,wrong=false;
  while(await page.getByRole('button',{name:'Chơi lại với thứ tự mới'}).count()===0){
   const title=await page.locator('section h1').innerText();
@@ -16,8 +16,9 @@ try {const page=await browser.newPage({viewport:{width:390,height:844}});
   await page.getByRole('status').waitFor();
   const repairButton=page.getByRole('button',{name:'Luyện lại từ này · 3 lượt'});
   if(await repairButton.count()){
+   assert.equal(await page.locator('[data-buddy-mood]').getAttribute('data-buddy-mood'),'encourage');
    const target=words.find(w=>w.meaning===title).word;
-   await repairButton.click();
+   await repairButton.click();assert.equal(await page.locator('[data-buddy-mood]').getAttribute('data-buddy-mood'),'coach');
    for(let n=1;n<=3;n++){
     assert(await page.locator('[data-repair-round]').count());
     if(n===2){await page.locator('#repair-answer').fill('still wrong');await page.getByRole('button',{name:'Xác nhận lượt 2/3'}).click();assert(await page.getByText('Chưa đúng. Đáp án:',{exact:false}).count());}
@@ -29,6 +30,7 @@ try {const page=await browser.newPage({viewport:{width:390,height:844}});
   await page.getByRole('button',{name:/^(Tiếp tục|Xem kết quả)$/}).click();
   assert(++count<=9);
  }
+ assert.equal(await page.locator('[data-buddy-mood]').getAttribute('data-buddy-mood'),'celebrate');
  assert.equal(count,7);assert(await page.getByText('Từ từng trả lời sai trong lượt này:',{exact:true}).count());
  assert(await page.locator('main').evaluate(e=>e.scrollWidth<=e.clientWidth));
  await page.screenshot({path:'/root/.openclaw/workspace-nim/media/vocab-game-results.png'});

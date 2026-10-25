@@ -2,6 +2,7 @@
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import './quest.css';
+import QuestBuddies from './QuestBuddies';
 import {gameWords,buildDeck,choices,normalize,retryQueue} from '../../lib/vocab-game.mjs';
 export default function Games(){
  const [words,setWords]=useState([]),[queue,setQueue]=useState([]),[position,setPosition]=useState(0),[options,setOptions]=useState([]),[answer,setAnswer]=useState(''),[feedback,setFeedback]=useState(null),[hint,setHint]=useState(false),[score,setScore]=useState(0),[combo,setCombo]=useState(0),[best,setBest]=useState(0),[missed,setMissed]=useState([]),[error,setError]=useState(''),[loading,setLoading]=useState(true),[started,setStarted]=useState(false);
@@ -14,6 +15,7 @@ export default function Games(){
  const repairCheck=e=>{e.preventDefault();if(normalize(answer)!==normalize(word.word)){setFeedback({correct:false,repair:true});return;}if(repair===2){setFeedback({correct:true,points:0,repair:true});setRepair(3);}else{setRepair(n=>n+1);setFeedback(null);}setAnswer('');};
  return <main className="quest mx-auto min-h-screen max-w-xl px-4 py-6 text-slate-100">
   <header className="mb-6 flex items-center justify-between"><Link href="/" className="min-h-11 rounded-xl border border-slate-700 px-3 py-3 text-sm">← Về bài học</Link><span className="text-xs font-semibold tracking-widest text-teal-300">WORD QUEST</span></header>
+  {!loading && !error && words.length>=2 && <QuestBuddies feedback={feedback} repair={repair} combo={combo} done={done} started={started} position={position} />}
   {loading?<p role="status">Đang lấy từ trong bài của bạn…</p>:error?<p role="alert">{error}</p>:words.length<2?<section className="rounded-3xl border border-slate-700 bg-slate-900 p-6"><h1 className="text-xl font-bold">Cần ít nhất 2 từ để bắt đầu</h1><p className="mt-3 text-slate-400">Mở Vocabulary, tải đề và chờ phân tích xong rồi quay lại.</p><Link href="/" className="mt-5 inline-block rounded-xl bg-teal-600 px-4 py-3">Về Vocabulary</Link></section>:!started?<section className="rounded-3xl border border-teal-700/60 bg-gradient-to-br from-teal-950 to-slate-900 p-6">
    <div className="quest-emblem" aria-hidden="true">W<span>Q</span></div><span className="text-xs uppercase tracking-widest text-teal-300">Chơi để nhớ · {words.length} từ trong bài</span><h1 className="mt-3 text-3xl font-black">Word Quest</h1><p className="mt-3 leading-7 text-slate-300">Biến từ vừa học thành thử thách nhỏ. Không đếm ngược, không mất mạng. Thắng bằng trí nhớ, không phải tốc độ.</p>
    <ol className="my-6 space-y-3 text-sm"><li>1. Khởi động: nhìn từ, chọn nghĩa.</li><li>2. Thử trí nhớ: nhìn nghĩa, tự gõ từ.</li><li>3. Trạm luyện: từ sai được gõ đúng 3 lượt ngay tại chỗ, rồi gặp lại sau vài câu.</li></ol><button onClick={start} className="min-h-12 w-full rounded-2xl bg-teal-500 px-4 py-3 font-bold text-slate-950 hover:bg-teal-400">Bắt đầu chuyến đi</button>
