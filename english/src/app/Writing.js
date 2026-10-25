@@ -2,6 +2,8 @@
 import { fetchWithRetry, parseApiResponse, formatErrorMessage } from "./fetch-helper";
 import { DEFAULT_WRITING_PROMPT } from "../lib/writing-prompt.mjs";
 import { useState, useEffect, useRef } from "react";
+import FeatureNotice from "./FeatureNotice";
+import { WRITING_PROMPT_NOTICE } from "../lib/feature-notices.mjs";
 import { bankParts } from "../lib/writing-bank.mjs";
 
 const COLORS = [
@@ -580,6 +582,14 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
         </select>
       </label>
       <p className="text-xs text-slate-400">Áp dụng cho bài mẫu AI và chấm/sửa bài bạn viết. Không thay đổi thư mẫu gốc.</p>
+      <div className="w-full"><FeatureNotice id={WRITING_PROMPT_NOTICE} onExplore={() => {
+        setPromptOpen(true);
+        requestAnimationFrame(() => {
+          const input = document.getElementById("writing-prompt-text");
+          input?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "center" });
+          input?.focus({ preventScroll: true });
+        });
+      }} /></div>
       <section className="w-full overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-950/50" data-writing-custom-prompt>
         <button type="button" aria-label={promptOpen ? "− Đóng tùy chỉnh prompt" : "+ Tùy chỉnh prompt"} aria-expanded={promptOpen} aria-controls="writing-custom-prompt" onClick={() => setPromptOpen(!promptOpen)} className="flex min-h-16 w-full items-center gap-3 p-4 text-left transition-colors hover:bg-slate-800/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-400">
           <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-400/10 text-xl text-teal-300">{promptOpen ? "−" : "+"}</span>
