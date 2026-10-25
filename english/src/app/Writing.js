@@ -1,7 +1,7 @@
 "use client";
 import { fetchWithRetry, parseApiResponse, formatErrorMessage } from "./fetch-helper";
 import { DEFAULT_WRITING_PROMPT } from "../lib/writing-prompt.mjs";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { bankParts } from "../lib/writing-bank.mjs";
 
 const COLORS = [
@@ -27,6 +27,28 @@ const frame = (t = "") =>
 
 export default function Writing({ writing: w, cachedModelDraft, onModelDraft, SpeakBtn, CopyBtn }) {
   const [customPrompt, setCustomPrompt] = useState(DEFAULT_WRITING_PROMPT);
+  const [promptStatus, setPromptStatus] = useState("");
+  const [savingPrompt, setSavingPrompt] = useState(false);
+  const promptEdited = useRef(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/writing-preferences", { signal: controller.signal }).then(async res => {
+      if (!res.ok) throw new Error("Không tải được prompt đã lưu");
+      const data = await res.json();
+      if (!controller.signal.aborted && !promptEdited.current) setCustomPrompt(data.customPrompt);
+    }).catch(e => { if (!controller.signal.aborted) setPromptStatus(e.message); });
+    return () => controller.abort();
+  }, []);
+  const savePrompt = async () => {
+    setSavingPrompt(true); setPromptStatus("");
+    try {
+      const res = await fetch("/api/writing-preferences", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ customPrompt }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Không lưu được prompt");
+      setPromptStatus("Đã lưu cho tài khoản của bạn");
+    } catch(e) { setPromptStatus(e.message); }
+    finally { setSavingPrompt(false); }
+  };
   const [promptOpen, setPromptOpen] = useState(false);
   const [level, setLevel] = useState("A2");
   const [modelDraft, setModelDraft] = useState(cachedModelDraft || null);
@@ -569,13 +591,15 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
             <label htmlFor="writing-prompt-text" className="text-sm font-medium text-slate-200">Yêu cầu của bạn</label>
             <span className="rounded-full border border-teal-900 bg-teal-950/50 px-2.5 py-1 text-xs text-teal-200">CEFR đang chọn: {level}</span>
           </div>
-          <textarea id="writing-prompt-text" aria-describedby="writing-prompt-help" value={customPrompt} maxLength={4000} rows={8} disabled={loadingModel || reviewing} onChange={e => setCustomPrompt(e.target.value)} className="w-full resize-y rounded-xl border border-slate-700 bg-slate-900/70 p-3 text-sm leading-7 text-slate-100 outline-none transition-colors focus:border-teal-400 focus:ring-2 focus:ring-teal-400/10 disabled:opacity-60" />
+          <textarea id="writing-prompt-text" aria-describedby="writing-prompt-help" value={customPrompt} maxLength={4000} rows={8} disabled={loadingModel || reviewing} onChange={e => { promptEdited.current = true; setCustomPrompt(e.target.value); setPromptStatus(""); }} className="w-full resize-y rounded-xl border border-slate-700 bg-slate-900/70 p-3 text-sm leading-7 text-slate-100 outline-none transition-colors focus:border-teal-400 focus:ring-2 focus:ring-teal-400/10 disabled:opacity-60" />
           <div className="flex items-start justify-between gap-3 text-xs text-slate-400"><p id="writing-prompt-help" className="leading-relaxed">Không ghi trình độ: dùng ô CEFR (mặc định A2). Có ghi trình độ trong prompt: ưu tiên prompt.</p><span className="shrink-0 tabular-nums">{customPrompt.length}/4000</span></div>
           <div className="flex flex-col-reverse gap-2 border-t border-slate-800 pt-3 sm:flex-row sm:items-center sm:justify-between">
-            <button type="button" disabled={loadingModel || reviewing} onClick={() => setCustomPrompt(DEFAULT_WRITING_PROMPT)} className="min-h-11 rounded-xl px-3 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-white disabled:opacity-50">Khôi phục prompt mặc định</button>
+            <button type="button" disabled={loadingModel || reviewing} onClick={() => { promptEdited.current = true; setCustomPrompt(DEFAULT_WRITING_PROMPT); setPromptStatus("Bấm Lưu prompt để lưu bản mặc định"); }} className="min-h-11 rounded-xl px-3 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-white disabled:opacity-50">Khôi phục prompt mặc định</button>
             <button type="button" disabled={loadingModel || reviewing} onClick={fetchModelDraft} className="min-h-11 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-500 disabled:opacity-50">{loadingModel ? "Đang tạo bài mẫu…" : "Áp dụng & tạo lại bài mẫu"}</button>
           </div>
-          <p className="text-xs leading-relaxed text-slate-500">Áp dụng cho bài mẫu và chấm/sửa bài. Sửa nội dung không tự gọi AI.</p>
+          <button type="button" disabled={savingPrompt || loadingModel || reviewing} onClick={savePrompt} className="min-h-11 w-full rounded-xl border border-teal-700 px-4 py-2 text-sm font-semibold text-teal-200 disabled:opacity-50">{savingPrompt ? "Đang lưu…" : "Lưu prompt cho tài khoản"}</button>
+          <p role="status" className="text-xs text-teal-200">{promptStatus}</p>
+          <p className="text-xs leading-relaxed text-slate-500">Lưu riêng theo tài khoản, dùng lại trên thiết bị khác. Sửa nội dung không tự gọi AI; bấm Lưu prompt để ghi nhớ.</p>
         </div>}
       </section>
               <div className="flex flex-wrap items-center gap-2">
