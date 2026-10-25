@@ -1,4 +1,5 @@
 "use client";
+import { prioritizeWords } from "../lib/vocab-game.mjs";
 import { normalizeGrammarAnswer } from "../lib/grammar/answers";
 import { fetchWithRetry, parseApiResponse, formatErrorMessage, pollLesson } from "./fetch-helper";
 import { useState, useRef, useCallback, useEffect } from "react";
@@ -174,6 +175,8 @@ export default function Home() {
   const [wSkipSlot1, setWSkipSlot1] = useState(false);
   const [wUpload1, setWUpload1] = useState({ loading: false, id: null, size: 0, error: null });
   const [wUpload2, setWUpload2] = useState({ loading: false, id: null, size: 0, error: null });
+  const [gameMemory,setGameMemory]=useState({});
+  useEffect(()=>{const load=()=>fetch('/api/game-memory').then(r=>r.ok?r.json():null).then(d=>{if(d)setGameMemory(d.memory);}).catch(()=>{});load();window.addEventListener('focus',load);return()=>window.removeEventListener('focus',load);},[]);
   const [writingTourStep, setWritingTourStep] = useState(0);
   const [writing, setWriting] = useState(null);
   const [wModelDraft, setWModelDraft] = useState(null);
@@ -1249,7 +1252,7 @@ export default function Home() {
 
         {/* Word cards */}
         {!practice && <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          {words.map((w, i) => (
+          {prioritizeWords(words,gameMemory).map((w, i) => (
             <div key={i} className="bg-slate-900 border border-slate-700 rounded-xl p-4 sm:p-5 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/10 transition-all">
               <div className="flex items-start justify-between gap-2">
                 <div>
@@ -1258,7 +1261,7 @@ export default function Home() {
                 </div>
                 <SpeakBtn text={w.word} className="shrink-0 w-10 h-10 rounded-full bg-emerald-600 hover:bg-emerald-500 flex items-center justify-center text-lg transition-colors" title="Nghe phát âm">🔊</SpeakBtn>
               </div>
-              <div className="mt-3 text-slate-100 font-medium">{w.meaning}</div>
+              <div className="mt-3 text-slate-100 font-medium">{w.meaning}</div>{gameMemory[String(w.word).toLowerCase().trim()]?.debt>0 && <span className="mt-2 inline-block rounded-full bg-amber-950 px-2 py-1 text-xs text-amber-200">Ưu tiên ôn · Hay quên</span>}
               {w.definition && (
                 <div className="mt-3 border-l-2 border-violet-500 pl-3">
                   <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wide text-violet-300">

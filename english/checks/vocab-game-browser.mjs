@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 const words=[{word:'book',meaning:'sách',example:'Read a book.'},{word:'pen',meaning:'bút',example:'Use a pen.'},{word:'desk',meaning:'bàn',example:'A desk.'}];
 const browser=await chromium.launch({args:['--no-sandbox']});
 try {const page=await browser.newPage({viewport:{width:390,height:844}});
+ await page.route('**/api/game-memory',r=>r.fulfill({json:r.request().method()==='GET'?{memory:{}}:{word:'book',debt:3,mistakes:1}}));
  await page.route('**/api/session?*',r=>r.fulfill({json:{session:{words},next:null}}));
  await page.goto('http://192.168.101.36:8085/games');assert.equal(await page.locator('[data-buddy-mood]').getAttribute('data-buddy-mood'),'welcome');await page.getByRole('button',{name:'Bắt đầu chuyến đi'}).click();assert.equal(await page.locator('[data-buddy-mood]').getAttribute('data-buddy-mood'),'waiting');
  let count=0,wrong=false;
