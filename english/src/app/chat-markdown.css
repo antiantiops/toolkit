@@ -1,0 +1,11 @@
+.chat-markdown{white-space:normal;overflow-wrap:anywhere;min-width:0}
+.chat-markdown>*:first-child{margin-top:0}.chat-markdown>*:last-child{margin-bottom:0}
+.chat-markdown p{margin:.65em 0;line-height:1.75}
+.chat-markdown h1,.chat-markdown h2,.chat-markdown h3,.chat-markdown h4,.chat-markdown h5,.chat-markdown h6{color:#7dd3fc;font-weight:700;line-height:1.4;margin:1em 0 .45em}
+.chat-markdown h1{font-size:1.3em}.chat-markdown h2{font-size:1.2em}.chat-markdown h3{font-size:1.1em}
+.chat-markdown strong{font-weight:700;color:#f8fafc}.chat-markdown em{font-style:italic}
+.chat-markdown ul,.chat-markdown ol{padding-left:1.5em;margin:.65em 0}.chat-markdown ul{list-style:disc}.chat-markdown ol{list-style:decimal}.chat-markdown li{margin:.35em 0}.chat-markdown li>p{margin:.25em 0}
+.chat-markdown blockquote{border-left:3px solid #38bdf8;padding-left:.85em;margin:.8em 0;color:#cbd5e1}
+.chat-markdown :not(pre)>code{border-radius:4px;background:#0f172a;padding:.12em .3em;color:#a5f3fc;font-size:.9em;white-space:pre-wrap}
+.chat-markdown a{color:#7dd3fc;text-decoration:underline;text-underline-offset:3px}.chat-markdown hr{border:0;border-top:1px solid #475569;margin:1em 0}
+.chat-table-scroll{max-width:100%;overflow-x:auto;margin:.8em 0}.chat-markdown table{border-collapse:collapse;font-size:.9em;min-width:100%}.chat-markdown th,.chat-markdown td{border:1px solid #475569;padding:.45em .6em;text-align:left}.chat-markdown th{background:#0f172a;font-weight:700}.chat-markdown input[type=checkbox]{margin-right:.5em}

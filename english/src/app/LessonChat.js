@@ -1,4 +1,7 @@
 "use client";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import "./chat-markdown.css";
 import { useEffect, useRef, useState } from "react";
 
 export default function LessonChat({ context }) {
@@ -119,10 +122,16 @@ export default function LessonChat({ context }) {
 }
 
 function ChatAnswer({ text }) {
-  const parts = text.split(/(```[^\n`]*\n[\s\S]*?```)/g);
-  return parts.map((part, i) => part.startsWith("```") && part.endsWith("```")
-    ? <PromptBlock key={i} text={part.replace(/^```[^\n`]*\n/, "").slice(0, -3).replace(/\n$/, "")} />
-    : <span key={i}>{part}</span>);
+  return <div className="chat-markdown"><ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={{
+    pre: ({children}) => {
+      const child = children;
+      const content = String(child?.props?.children || "").replace(/\n$/, "");
+      return <PromptBlock text={content} />;
+    },
+    a: ({href, children}) => <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>,
+    img: ({alt}) => <span>{alt ? `[Ảnh: ${alt}]` : "[Ảnh]"}</span>,
+    table: ({children}) => <div className="chat-table-scroll" tabIndex={0} role="region" aria-label="Bảng trong câu trả lời"><table>{children}</table></div>,
+  }}>{text}</ReactMarkdown></div>;
 }
 
 function PromptBlock({ text }) {
