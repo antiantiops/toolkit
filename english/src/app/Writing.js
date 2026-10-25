@@ -558,19 +558,26 @@ export default function Writing({ writing: w, cachedModelDraft, onModelDraft, Sp
         </select>
       </label>
       <p className="text-xs text-slate-400">Áp dụng cho bài mẫu AI và chấm/sửa bài bạn viết. Không thay đổi thư mẫu gốc.</p>
-      <div className="w-full" data-writing-custom-prompt>
-        <button type="button" aria-expanded={promptOpen} aria-controls="writing-custom-prompt" onClick={() => setPromptOpen(!promptOpen)} className="min-h-11 rounded-lg border border-teal-700 px-3 py-2 text-sm text-teal-200">{promptOpen ? "− Đóng tùy chỉnh prompt" : "+ Tùy chỉnh prompt"}</button>
-        <p className="mt-2 text-xs text-slate-400">Trình độ trong prompt được ưu tiên. Không ghi trình độ thì dùng CEFR đã chọn. Mặc định CEFR A2; Word Bank chỉ dùng khi phù hợp.</p>
-        {promptOpen && <div id="writing-custom-prompt" className="mt-3 space-y-2">
-          <label htmlFor="writing-prompt-text" className="block text-sm text-slate-200">Prompt cho bài mẫu và chấm/sửa bài</label>
-          <textarea id="writing-prompt-text" value={customPrompt} maxLength={4000} rows={7} disabled={loadingModel || reviewing} onChange={e => setCustomPrompt(e.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-sm text-slate-100" />
-          <div className="flex flex-wrap gap-2">
-            <button type="button" disabled={loadingModel || reviewing} onClick={fetchModelDraft} className="min-h-11 rounded-lg bg-teal-700 px-3 py-2 text-sm text-white">Áp dụng & tạo lại bài mẫu</button>
-            <button type="button" disabled={loadingModel || reviewing} onClick={() => setCustomPrompt(DEFAULT_WRITING_PROMPT)} className="min-h-11 rounded-lg border border-slate-700 px-3 py-2 text-sm">Khôi phục prompt mặc định</button>
+      <section className="w-full overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-950/50" data-writing-custom-prompt>
+        <button type="button" aria-label={promptOpen ? "− Đóng tùy chỉnh prompt" : "+ Tùy chỉnh prompt"} aria-expanded={promptOpen} aria-controls="writing-custom-prompt" onClick={() => setPromptOpen(!promptOpen)} className="flex min-h-16 w-full items-center gap-3 p-4 text-left transition-colors hover:bg-slate-800/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-400">
+          <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-400/10 text-xl text-teal-300">{promptOpen ? "−" : "+"}</span>
+          <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-100">Tùy chỉnh cách AI viết</span><span className="mt-0.5 block text-xs leading-relaxed text-slate-400">Chọn cách diễn đạt phù hợp với bạn</span></span>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`h-4 w-4 shrink-0 text-slate-400 transition-transform motion-reduce:transition-none ${promptOpen ? "rotate-180" : ""}`}><path d="m6 9 6 6 6-6" /></svg>
+        </button>
+        {promptOpen && <div id="writing-custom-prompt" className="space-y-3 border-t border-slate-800 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <label htmlFor="writing-prompt-text" className="text-sm font-medium text-slate-200">Yêu cầu của bạn</label>
+            <span className="rounded-full border border-teal-900 bg-teal-950/50 px-2.5 py-1 text-xs text-teal-200">CEFR đang chọn: {level}</span>
           </div>
-          <p className="text-xs text-slate-400">Sửa prompt không tự gọi AI. Bấm tạo lại để thay bài mẫu; chấm bài dùng prompt hiện tại.</p>
+          <textarea id="writing-prompt-text" aria-describedby="writing-prompt-help" value={customPrompt} maxLength={4000} rows={8} disabled={loadingModel || reviewing} onChange={e => setCustomPrompt(e.target.value)} className="w-full resize-y rounded-xl border border-slate-700 bg-slate-900/70 p-3 text-sm leading-7 text-slate-100 outline-none transition-colors focus:border-teal-400 focus:ring-2 focus:ring-teal-400/10 disabled:opacity-60" />
+          <div className="flex items-start justify-between gap-3 text-xs text-slate-400"><p id="writing-prompt-help" className="leading-relaxed">Không ghi trình độ: dùng ô CEFR (mặc định A2). Có ghi trình độ trong prompt: ưu tiên prompt.</p><span className="shrink-0 tabular-nums">{customPrompt.length}/4000</span></div>
+          <div className="flex flex-col-reverse gap-2 border-t border-slate-800 pt-3 sm:flex-row sm:items-center sm:justify-between">
+            <button type="button" disabled={loadingModel || reviewing} onClick={() => setCustomPrompt(DEFAULT_WRITING_PROMPT)} className="min-h-11 rounded-xl px-3 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-white disabled:opacity-50">Khôi phục prompt mặc định</button>
+            <button type="button" disabled={loadingModel || reviewing} onClick={fetchModelDraft} className="min-h-11 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-500 disabled:opacity-50">{loadingModel ? "Đang tạo bài mẫu…" : "Áp dụng & tạo lại bài mẫu"}</button>
+          </div>
+          <p className="text-xs leading-relaxed text-slate-500">Áp dụng cho bài mẫu và chấm/sửa bài. Sửa nội dung không tự gọi AI.</p>
         </div>}
-      </div>
+      </section>
               <div className="flex flex-wrap items-center gap-2">
                 {modelDraft && (
                   <div className="inline-flex rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs font-semibold">

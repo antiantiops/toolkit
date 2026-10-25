@@ -1,4 +1,4 @@
-export const DEFAULT_WRITING_PROMPT = "Show me how to do the following task. Use common collocations so I can learn and apply them. You do not need to use all the words in the prompt: use suggested words only if possible and natural. Prefer clear, familiar expressions and easy-to-remember sentences. Follow any explicit mandatory requirements in the task.";
+export const DEFAULT_WRITING_PROMPT = "Hãy hướng dẫn tôi làm bài tập dưới đây. Dùng các cụm từ kết hợp thông dụng (collocations) để tôi dễ học và áp dụng. Không cần dùng hết từ trong đề hoặc Word Bank; chỉ dùng khi phù hợp và tự nhiên. Ưu tiên cách diễn đạt quen thuộc, rõ ràng và câu dễ nhớ. Tuân thủ các yêu cầu bắt buộc được nêu rõ trong đề bài.";
 
 export function writingPreferences(customPrompt = DEFAULT_WRITING_PROMPT, level = "A2") {
   if (typeof customPrompt !== "string" || customPrompt.length > 4000) throw new Error("Prompt tối đa 4000 ký tự");
