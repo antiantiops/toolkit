@@ -1,3 +1,5 @@
+import {lessonSpeech} from '../speech-segments.mjs';
+import {saveSpeech} from '../speech-store';
 import { cacheOwner } from '../../app/api/session/owner';
 import { NextResponse, after } from 'next/server';
 import { randomUUID } from 'crypto';
@@ -12,6 +14,7 @@ export function lessonRoutes(mode) {
     job.status = 'running';
     after(async () => {
       await runLesson(job, callJson);
+      if (job.status === 'completed') for(const entry of lessonSpeech(job.result)) {try{saveSpeech(job.owner,entry.text,entry.segments);}catch{console.error('[speech-cache] write failed');}}
       if (job.status === 'completed') saveSession(job.owner, { [mode]: job.result, ...mode === 'writing' ? { wPreview1: job.images[0], wPreview2: job.images[1] || null, modelDraft: null } : { gPreview: job.images[0] } });
     });
   };

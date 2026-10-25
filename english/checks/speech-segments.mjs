@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {validSegments,lessonSpeech} from '../src/lib/speech-segments.mjs';
+const text='Chủ ngữ he/she/it đi với is.';
+const segments=[{text:'Chủ ngữ ',lang:'vi-VN'},{text:'he/she/it',lang:'en-US'},{text:' đi với ',lang:'vi-VN'},{text:'is.',lang:'en-US'}];
+assert(validSegments(text,segments));
+assert(!validSegments(text,[{text:'Chủ ngữ he/she/it đi với are.',lang:'vi-VN'}]));
+assert(!validSegments(text,[{text,lang:'fr-FR'}]));
+assert(!validSegments(text,[]));
+assert(!validSegments(text,[{text:text.trim().replace(' ','  '),lang:'vi-VN'}]));
+assert.equal(lessonSpeech({explanation:text,speech:[{text,segments}]}).length,1);
+assert.equal(lessonSpeech({explanation:'other',speech:[{text,segments}]}).length,0);
+assert.equal(lessonSpeech({explanation:text,speech:[{text,segments:[{text:'rewritten',lang:'vi-VN'}]}]}).length,0);
+console.log('PASS exact text, language allowlist, whitespace preservation, lesson-bound metadata');
