@@ -34,7 +34,7 @@ export default function AnswerCard({word:w}) {
                   <span className="font-semibold text-sky-300">Dễ đọc:</span> {w.easyReading}
                 </div>
               )}
-              <details open className="mt-3 group/details">
+              <details className="mt-3 group/details">
                 <summary className="cursor-pointer text-sm text-slate-400 hover:text-blue-300 select-none">Xem ví dụ, mẹo dùng</summary>
                 <div className="mt-3 border-t border-slate-700 pt-3">
                   <div className="text-sm text-slate-300 mb-2">
