@@ -9,7 +9,7 @@ import { validateTimedTranscript } from '../../../lib/lessons/audio-transcript.j
 import { saveSession } from '../session/storage';
 const jobs = globalThis.listeningAudioJobs ||= new Map();
 const AUDIO_DIR=process.env.LISTENING_AUDIO_DIR||path.join(process.env.CACHE_DIR||path.join(os.tmpdir(),'vocab_cache'),'listening-audio');
-const TTL=24*60*60*1000;
+const TTL=7*24*60*60*1000;
 const reply=(data,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
 function clean(){try{fs.mkdirSync(AUDIO_DIR,{recursive:true});for(const name of fs.readdirSync(AUDIO_DIR)){const file=path.join(AUDIO_DIR,name);if(Date.now()-fs.statSync(file).mtimeMs>TTL)fs.unlinkSync(file);}}catch{}}
 function ext(name,mime){return /\.m4a$/i.test(name)?'m4a':/\.wav$/i.test(name)?'wav':mime==='audio/mp4'?'m4a':mime==='audio/wav'?'wav':'mp3';}

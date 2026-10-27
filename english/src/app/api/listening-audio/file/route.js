@@ -1,13 +1,15 @@
+import {history} from '../../session/listening-history';
 import { cacheOwner } from '../../session/owner';
 import { NextResponse } from 'next/server';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { loadSession } from '../../session/storage';
-const TTL=24*60*60*1000;
+const TTL=7*24*60*60*1000;
 export async function GET(request){
  if (!cacheOwner(request)) return NextResponse.json({error:"Cần đăng nhập qua Kong"},{status:401});
- const owner=cacheOwner(request), audio=loadSession(owner)?.listening?.audio;
+ const owner=cacheOwner(request), id=new URL(request.url).searchParams.get('history');
+ const audio=id?history(owner).find(x=>x.id===id)?.lesson?.audio:loadSession(owner)?.listening?.audio;
  if(!owner||!audio?.id)return NextResponse.json({error:'File nghe đã hết hạn'}, {status:404});
  const dir=process.env.LISTENING_AUDIO_DIR||path.join(process.env.CACHE_DIR||path.join(os.tmpdir(),'vocab_cache'),'listening-audio');
  const found=fs.existsSync(dir)&&fs.readdirSync(dir).find(n=>n.startsWith(`${owner}-${audio.id}.`));const file=found&&path.join(dir,found);
@@ -20,5 +22,5 @@ export async function GET(request){
  let start=match[1]?Number(match[1]):0, end=match[2]?Number(match[2]):size-1;
  if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start<0||end<start||start>=size)return new NextResponse(null,{status:416,headers:{'Content-Range':`bytes */${size}`}});
  end=Math.min(end,size-1);const length=end-start+1;
- return new NextResponse(fs.readFileSync(file,{start,end}),{status:206,headers:{...headers,'Content-Length':String(length),'Content-Range':`bytes ${start}-${end}/${size}`}});
+ return new NextResponse(fs.readFileSync(file).subarray(start,end+1),{status:206,headers:{...headers,'Content-Length':String(length),'Content-Range':`bytes ${start}-${end}/${size}`}});
 }

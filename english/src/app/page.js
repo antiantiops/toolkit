@@ -7,6 +7,7 @@ import ImageCrop from "./ImageCrop";
 import LessonChat from "./LessonChat";
 import Listening from "./Listening";
 import ListeningImage from "./ListeningImage";
+import ListeningHistory from "./ListeningHistory";
 import Writing from "./Writing";
 import SpeakBtn from "./SpeakBtn";
 import FeatureNotice from "./FeatureNotice";
@@ -65,6 +66,7 @@ export default function Home() {
   const [mode, setMode] = useState("vocab");
   const skipVocabRestore = useRef(false);
   const [listeningSource,setListeningSource]=useState("image");
+  const [listeningEntry,setListeningEntry]=useState(null);
   const [audioChatContext,setAudioChatContext]=useState(null),[imageChatContext,setImageChatContext]=useState(null);
 
   // --- Vocab state ---
@@ -1667,7 +1669,7 @@ export default function Home() {
         {writing && <Writing tourStep={writingTourStep} writing={writing} cachedModelDraft={wModelDraft} onModelDraft={setWModelDraft} SpeakBtn={SpeakBtn} CopyBtn={CopyBtn} />}
       </>}
 
-      <div hidden={mode !== "listening"}><div className="mb-4 flex gap-2">{[["image","Ảnh bài nghe"],["audio","File audio"]].map(([value,label])=><button key={value} onClick={()=>setListeningSource(value)} className={`min-h-11 flex-1 rounded-xl px-4 text-sm font-semibold ${listeningSource===value?"bg-teal-600 text-white":"bg-slate-800 text-slate-400"}`}>{label}</button>)}</div><div hidden={listeningSource!=="image"}><ListeningImage onContextChange={setImageChatContext} clickableText={clickableText} /></div><div hidden={listeningSource!=="audio"}><ListeningAudio onContextChange={setAudioChatContext} clickableText={clickableText} /></div></div>
+      <div hidden={mode !== "listening"}><ListeningHistory onSelect={entry=>{setListeningEntry(entry);setListeningSource(entry.source);}} /><div className="mb-4 flex gap-2">{[["image","Ảnh bài nghe"],["audio","File audio"]].map(([value,label])=><button key={value} onClick={()=>setListeningSource(value)} className={`min-h-11 flex-1 rounded-xl px-4 text-sm font-semibold ${listeningSource===value?"bg-teal-600 text-white":"bg-slate-800 text-slate-400"}`}>{label}</button>)}</div><div hidden={listeningSource!=="image"}><ListeningImage key={listeningEntry?.id||"current-image"} historyEntry={listeningEntry?.source==="image"?listeningEntry:null} onContextChange={setImageChatContext} clickableText={clickableText} /></div><div hidden={listeningSource!=="audio"}><ListeningAudio key={listeningEntry?.id||"current-audio"} historyEntry={listeningEntry?.source==="audio"?listeningEntry:null} onContextChange={setAudioChatContext} clickableText={clickableText} /></div></div>
 
       {/* Lookup modal */}
       <LessonChat context={{ mode, ...(mode === "listening" ? {source:listeningSource} : {}), lesson: mode === "listening" ? (listeningSource === "audio" ? audioChatContext : imageChatContext) : mode === "grammar" ? grammar : mode === "writing" ? writing : words, practice: mode === "listening" ? null : mode === "grammar" ? gPractice : practice, translation: mode === "listening" ? null : quickResult, wordLookup: mode !== "listening" && lookup && !lookup.loading && !lookup.error ? lookup : null }} />

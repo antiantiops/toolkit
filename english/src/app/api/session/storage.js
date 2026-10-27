@@ -1,3 +1,4 @@
+import {archiveListening} from './listening-history';
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -19,6 +20,7 @@ export function saveSession(sid, patch) {
   ensureDir();
   const file = getFilePath(sid);
   const existing = loadSession(sid) || {};
+  if (patch.listening) { archiveListening(sid,existing.listening); archiveListening(sid,patch.listening); }
   const data = { ...existing, ...patch };
   // ponytail: local disk JSON cache. Upgrade to Redis when multi-instance horizontal scale.
   fs.writeFileSync(file, JSON.stringify({ savedAt: Date.now(), data }), "utf8");

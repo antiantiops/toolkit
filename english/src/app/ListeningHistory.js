@@ -1,0 +1,8 @@
+'use client';
+import {useState} from 'react';
+export default function ListeningHistory({onSelect}){
+ const [entries,setEntries]=useState([]),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ async function load(){setBusy(true);setError('');try{const r=await fetch('/api/listening-history',{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error);setEntries(d.entries);}catch(e){setError(e.message);}finally{setBusy(false);}}
+ async function open(id){setBusy(true);setError('');try{const r=await fetch('/api/listening-history?id='+encodeURIComponent(id),{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error);onSelect(d.entry);}catch(e){setError(e.message);}finally{setBusy(false);}}
+ return <details data-listening-history className="mb-4 rounded-xl border border-slate-700/70 bg-slate-900/60 px-3" onToggle={e=>{if(e.currentTarget.open)load();}}><summary className="cursor-pointer py-3 text-sm text-slate-300">Bài nghe gần đây <span className="text-xs text-slate-500">· 7 ngày</span></summary><div className="max-h-64 overflow-y-auto pb-3">{error&&<p role="alert" className="text-sm text-amber-300">{error}</p>}{busy&&<p role="status" className="text-xs text-slate-400">Đang tải…</p>}{!busy&&!error&&!entries.length&&<p className="text-xs text-slate-400">Chưa có bài nghe được lưu trong 7 ngày.</p>}{entries.map(e=><button disabled={busy} key={e.id} onClick={()=>open(e.id)} className="block min-h-11 w-full rounded-lg px-2 py-3 text-left hover:bg-slate-800 disabled:opacity-50"><span className="block truncate text-sm text-slate-200">{e.title}</span><span className="text-xs text-slate-500">{e.source==='audio'?'File audio':'Ảnh bài nghe'} · {new Date(e.createdAt).toLocaleString('vi-VN')}</span></button>)}</div></details>;
+}

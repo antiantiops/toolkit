@@ -19,7 +19,7 @@ function duration(url) {
     probe.onerror = () => finish(new Error('Không đọc được MP3')); probe.src = url;
   });
 }
-export default function ListeningImage({onContextChange,clickableText=text=>text}) {
+export default function ListeningImage({onContextChange,historyEntry,clickableText=text=>text}) {
   const [pages,setPages]=useState([]), [croppedPages,setCroppedPages]=useState([]), [pageIndex,setPageIndex]=useState(0), [joining,setJoining]=useState(false);
   const [crop, setCrop] = useState(null), [preview, setPreview] = useState(null), [upload, setUpload] = useState(null), [confirm, setConfirm] = useState(false);
   const [lesson, setLesson] = useState(null), [busy, setBusy] = useState(false), [error, setError] = useState(''), [stage, setStage] = useState('');
@@ -48,8 +48,8 @@ export default function ListeningImage({onContextChange,clickableText=text=>text
     catch (e) { setError(formatErrorMessage(e)); } finally { setBusy(false); }
   };
   useEffect(() => {
-    fetch('/api/session?type=listening').then(parseApiResponse).then(data => { if (!loaded.current && data.session?.listening?.sentences?.length) { const restored=validateTranscript(data.session.listening); setLesson(restored);const restoredVoices=dialogueVoices(restored.sentences);setVoices(restoredVoices); fetch('/api/session?type=previews').then(parseApiResponse).then(p => { if (!loaded.current) setPreview(p.session?.lPreview || null); }).catch(() => {}); } }).catch(() => {});
-    if (sessionStorage.getItem('listening-image-pending-job')) { loaded.current = true; analyze(); }
+    (historyEntry?Promise.resolve({session:{listening:historyEntry.lesson}}):fetch('/api/session?type=listening').then(parseApiResponse)).then(data => { if (!loaded.current && data.session?.listening?.sentences?.length) { const restored=validateTranscript(data.session.listening); setLesson(restored);const restoredVoices=dialogueVoices(restored.sentences);setVoices(restoredVoices); !historyEntry && fetch('/api/session?type=previews').then(parseApiResponse).then(p => { if (!loaded.current) setPreview(p.session?.lPreview || null); }).catch(() => {}); } }).catch(() => {});
+    if (!historyEntry && sessionStorage.getItem('listening-image-pending-job')) { loaded.current = true; analyze(); }
     return () => { version.current++; URL.revokeObjectURL(fullAudio.current); resources.current.forEach(c => URL.revokeObjectURL(c.url)); };
   }, []);
   const chooseFiles = files => {
@@ -78,14 +78,14 @@ export default function ListeningImage({onContextChange,clickableText=text=>text
       if (token === version.current) setUpload({ file, loading: false, id: data.id, size: data.size });
     } catch (e) { if (token === version.current) setUpload({ file, loading: false, error: formatErrorMessage(e), size: file.size }); }
   };
-  const createAudio = async (current = lesson, selectedVoices = voices) => {
+  const createAudio = async (current = lesson, selectedVoices = voices, cacheOnly = false) => {
     setAudioBusy(true); setError(''); setAudioProgress(0);
     const token = version.current;
     // ponytail: sequential sentence MP3s, measured browser durations. Upgrade to provider timestamps for gapless audio.
     try {
       for (let i = resources.current.length; i < current.sentences.length; i++) {
         if (token !== version.current) return;
-        const res = await fetchWithRetry('/api/listening', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paragraph: spokenSentence(current.sentences[i]), voice: selectedVoices[current.sentences[i].speaker] || "en-US-AriaNeural" }), timeout: 100000 }, 0);
+        const res = await fetchWithRetry('/api/listening', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paragraph: spokenSentence(current.sentences[i]), cacheOnly, voice: selectedVoices[current.sentences[i].speaker] || "en-US-AriaNeural" }), timeout: 100000 }, 0);
         if (token !== version.current) return;
         if (!res.ok) await parseApiResponse(res);
         if (!res.headers.get('content-type')?.includes('audio/')) throw new Error('TTS response không phải audio');
@@ -105,6 +105,7 @@ export default function ListeningImage({onContextChange,clickableText=text=>text
       setClips([...resources.current]);
     } catch (e) { if (token === version.current) setError(formatErrorMessage(e)); } finally { if (token === version.current) setAudioBusy(false); }
   };
+  useEffect(()=>{if(historyEntry&&lesson)createAudio(lesson,dialogueVoices(lesson.sentences),true);},[historyEntry,lesson]);
   const saveAudio = async () => {
     try {
       const text = lesson.sentences.map(s => `${s.en}\n${s.vi}`).join('\n\n');

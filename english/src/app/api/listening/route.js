@@ -9,7 +9,7 @@ const base = process.env.NINEROUTER_URL || "http://192.168.101.36:20128";
 const headers = { "Content-Type": "application/json", Authorization: `Bearer ${process.env.NINEROUTER_KEY || ""}` };
 export async function POST(request) {
   try {
-    const { words, paragraph, voice = "en-US-AriaNeural" } = await request.json();
+    const { words, paragraph, cacheOnly = false, voice = "en-US-AriaNeural" } = await request.json();
     if (paragraph !== undefined) {
       const owner=cacheOwner(request);
       if(!owner)return NextResponse.json({error:'Cần đăng nhập qua Kong'},{status:401});
@@ -20,9 +20,10 @@ export async function POST(request) {
       const key=createHash('sha256').update(JSON.stringify([owner,paragraph,voice])).digest('hex');
       const file=path.join(dir,key+'.mp3');
       const audioHeaders={'Content-Type':'audio/mpeg','Cache-Control':'private, no-store'};
-      if(fs.existsSync(file)&&Date.now()-fs.statSync(file).mtimeMs<86400000)return new Response(fs.readFileSync(file),{headers:audioHeaders});
+      if(fs.existsSync(file)&&Date.now()-fs.statSync(file).mtimeMs<604800000)return new Response(fs.readFileSync(file),{headers:audioHeaders});
+      if(cacheOnly)return NextResponse.json({error:'Audio đã lưu không còn. Bấm tạo audio để tạo lại.'},{status:404});
       // ponytail: local persistent cache; use shared storage when running multiple hosts.
-      for(const name of fs.readdirSync(dir))if(/^[a-f0-9]{64}\.mp3$/.test(name)){try{const old=path.join(dir,name);if(Date.now()-fs.statSync(old).mtimeMs>=86400000)fs.unlinkSync(old);}catch{}}
+      for(const name of fs.readdirSync(dir))if(/^[a-f0-9]{64}\.mp3$/.test(name)){try{const old=path.join(dir,name);if(Date.now()-fs.statSync(old).mtimeMs>=604800000)fs.unlinkSync(old);}catch{}}
       const res = await fetch(`${base}/v1/audio/speech`, { method: "POST", headers, signal: AbortSignal.timeout(90000), body: JSON.stringify({ model: `edge-tts/${voice}`, input: speechText(paragraph), response_format: "mp3" }) });
       if (!res.ok) throw new Error(`Tạo MP3 lỗi (${res.status})`);
       const audio = await res.arrayBuffer();
