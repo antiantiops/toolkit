@@ -27,3 +27,23 @@ export function cacheLookup(owner, key, value, now = Date.now()) {
   db.prepare('DELETE FROM lookup_cache WHERE expires<=?').run(now);
   db.prepare('INSERT INTO lookup_cache(owner,key,value,expires) VALUES(?,?,?,?) ON CONFLICT(owner,key) DO UPDATE SET value=excluded.value,expires=excluded.expires').run(owner,key,JSON.stringify(value),now+LOOKUP_TTL);
 }
+
+// Reuse the newest available context for saved-word practice; never infer missing data.
+export function cachedGameWords(owner, words, now = Date.now()) {
+  if (!owner || !words.length) return [];
+  const result = [];
+  const query = database().prepare(`SELECT value FROM lookup_cache
+    WHERE owner=? AND expires>? AND json_extract(key,'$[0]')='word-v1'
+    AND json_extract(key,'$[1]')=? ORDER BY expires DESC`);
+  for (const row of words) {
+    for (const entry of query.all(owner, now, row.english.trim().toLowerCase())) {
+      let word;
+      try { word = JSON.parse(entry.value); } catch { continue; }
+      if (!word || typeof word.meaning !== 'string' || !word.meaning.trim()) continue;
+      const example = word.contrastExamples?.find?.(e => e.word?.toLowerCase() === row.english.toLowerCase());
+      result.push({...word, word:row.english, example:example?.english || word.example || '', exampleVietnamese:example?.vietnamese || word.exampleVietnamese || '', note:word.usage || word.note || ''});
+      break;
+    }
+  }
+  return result;
+}
