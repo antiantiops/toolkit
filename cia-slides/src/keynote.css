@@ -450,3 +450,16 @@ html.deck-icon-morph::view-transition-old(*),html.deck-icon-morph::view-transiti
 .deck-icon-morph .comparison .comparison-left .supplied-user,.deck-icon-morph .challenge-card:first-child .challenge-person{view-transition-name:challenge-chat-user}
 .deck-icon-morph .comparison .comparison-right .supplied-user,.deck-icon-morph .challenge-card:last-child .challenge-person{view-transition-name:challenge-search-user}
 .deck-icon-morph .comparison .seated-ai,.deck-icon-morph .challenge-robot{view-transition-name:challenge-agent}
+
+/* Paper passes in front; background travels slower than slide content. */
+.deck-foreground{position:absolute;inset:-12% -8%;z-index:20;pointer-events:none;transform:translateX(150%) rotate(-12deg);background:linear-gradient(135deg,#f1f5f9,#dbeafe 55%,#eff6ff);box-shadow:0 0 90px #0f172a35;border:1px solid #cbd5e1}
+.deck-foreground i{position:absolute;width:50%;height:110%;left:12%;top:-5%;background:#fff9;transform:rotate(22deg);border-left:2px solid #fff;box-shadow:-25px 0 50px #1e40af10}
+.deck-foreground i:nth-child(2){left:55%;transform:rotate(-18deg);background:#bfdbfe66}.deck-foreground i:nth-child(3){left:85%;background:#fff7;transform:rotate(35deg)}
+.presentation{overflow:hidden}.slide-header,.slide-footer{position:relative;z-index:21}
+/* View-transition snapshots paint above DOM: keep wipe in its own top layer. */
+.deck-icon-morph .deck-foreground,.deck-vibe-morph .deck-foreground,.deck-reading-morph .deck-foreground{view-transition-name:deck-foreground}
+::view-transition-group(deck-foreground){z-index:100;animation:none}
+::view-transition-old(deck-foreground){display:none}
+::view-transition-new(deck-foreground){animation:deck-paper-sweep 1200ms cubic-bezier(.45,0,.55,1) both;transform-origin:center}
+@keyframes deck-paper-sweep{0%{transform:translateX(calc(var(--deck-direction,1)*150%)) rotate(calc(var(--deck-direction,1)*-12deg))}48%{transform:translateX(0) rotate(calc(var(--deck-direction,1)*3deg))}100%{transform:translateX(calc(var(--deck-direction,1)*-150%)) rotate(calc(var(--deck-direction,1)*16deg))}}
+@media(prefers-reduced-motion:reduce){.deck-foreground{display:none}}
