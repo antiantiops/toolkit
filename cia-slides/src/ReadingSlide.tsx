@@ -2,14 +2,19 @@ import {useEffect,useState} from 'react';
 import type {CSSProperties} from 'react';
 import './reading-slide.css';
 export function ReadingSlide({english=false,active=true}:{english?:boolean;active?:boolean}){
- const [day,setDay]=useState(0);
+ const [day,setDay]=useState(0),[step,setStep]=useState(-1),[replay,setReplay]=useState(0);
+ useEffect(()=>{
+  setStep(-1);if(!active)return;
+  const timers=[4000,8000,12000,16000,21000].map((ms,i)=>setTimeout(()=>setStep(i),ms));
+  return()=>timers.forEach(clearTimeout);
+ },[active,replay]);
  useEffect(()=>{
   setDay(0);
   if(!active)return;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
   const timer=setTimeout(()=>setDay(15),reduced?700:1500);
   return ()=>clearTimeout(timer);
- },[active]);
+ },[active,replay]);
  const t=(vi:string,en:string)=>english?en:vi;
  return <main className={`reading-slide ${active&&day===15?'reading-active':''}`}><div className="reading-heading"><span className="slide-kicker">{t('TỪ Ý TƯỞNG ĐẾN VẤN ĐỀ THẬT','FROM AN IDEA TO A REAL PROBLEM')}</span><h1>{t('Gặp 10 từ mới,','Ten unfamiliar words.')} <em>{t('bạn làm gì?','What do you do?')}</em></h1></div><div className="reading-stage"><figure className={`reading-book book-sequence ${day===15?'book-ready':''}`} data-book-day={day}><div className="book-stack"><div className={`book-hinge ${day===15?'is-open':''}`}><div className="book-cover" aria-hidden={day!==0}><div className="book-seal">CIA</div><p>CEBU INTERNATIONAL ACADEMY</p><h2>BUSINESS<br/>ENGLISH</h2><div>DAILY VOCABULARY<br/><br/>SELF WRITING BOOK</div></div><div className="book-cover-back" aria-hidden="true"><span>CIA</span></div></div><div className="reading-page textbook-page" aria-hidden={day!==15}><div className="textbook-banner"><b>Cebu International Academy</b><span>BUSINESS Self-<br/>Writing</span></div><h2>Day 15</h2><h3>A. Vocabulary</h3><ol className="textbook-vocabulary">{[
  ['Indicator','n','any of a group of statistical values','Current economic indicators show admirable growth in mining.','pointer'],
@@ -22,5 +27,13 @@ export function ReadingSlide({english=false,active=true}:{english?:boolean;activ
  ['Prosperity','n','the condition of being successful or thriving','Strong economic growth is a prerequisite for national prosperity.',''],
  ['Rapidly','adv','in a fast manner','As solar technology becomes more affordable, demand will increase rapidly.','quickly, swiftly','slowly'],
  ['Ratio','n','the relationship between two amounts','The ratio of students to teachers is 3 to 1.','proportion, rate']
- ].map(([word,pos,meaning,example,syn,ant],i)=><li key={word} style={{'--word-index':i} as CSSProperties}><div className="textbook-word"><span>{i+1}.</span><mark>{word}</mark></div><div className="textbook-detail"><p><b>({pos})</b> - {meaning}</p><p>Example: {example}</p>{syn&&<p><b>Syn:</b> {syn}{ant&&<span className="textbook-ant"><b>Ant:</b> {ant}</span>}</p>}</div></li>)}</ol><div className="textbook-footer"><span>73</span></div></div></div><figcaption>{t('Dựng lại bố cục theo trang sách bạn cung cấp · Nội dung rút gọn','Layout recreated from the supplied textbook page · Abridged content')}</figcaption></figure><section className="reading-question"><span className="reading-counter">10 {t('TỪ MỚI','NEW WORDS')}</span><ol>{[t('Tra nghĩa','Look up meanings'),t('Tìm phát âm','Find pronunciations'),t('Dịch ví dụ','Translate examples'),t('Ghi lại…','Write them down…')].map((line,i)=><li key={line}><span>0{i+1}</span>{line}</li>)}</ol><div className="reading-forgot"><span>{t('RỒI HÔM SAU','AND THE NEXT DAY')}</span><p>{t('…quên?','…forgotten?')}</p></div></section></div></main>;
+ ].map(([word,pos,meaning,example,syn,ant],i)=><li key={word} style={{'--word-index':i} as CSSProperties}><div className="textbook-word"><span>{i+1}.</span><mark>{word}</mark></div><div className="textbook-detail"><p><b>({pos})</b> - {meaning}</p><p>Example: {example}</p>{syn&&<p><b>Syn:</b> {syn}{ant&&<span className="textbook-ant"><b>Ant:</b> {ant}</span>}</p>}</div></li>)}</ol><div className="textbook-footer"><span>73</span></div></div></div><figcaption>{t('Dựng lại bố cục theo trang sách bạn cung cấp · Nội dung rút gọn','Layout recreated from the supplied textbook page · Abridged content')}</figcaption></figure><section className="reading-question"><span className="reading-counter">10 {t('TỪ MỚI','NEW WORDS')}</span><ol className="reading-actions">{[t('Tra nghĩa','Look up meanings'),t('Tìm phát âm','Find pronunciations'),t('Dịch ví dụ','Translate examples'),t('Ghi lại…','Write them down…')].map((line,i)=><li key={line} className={step===i?'action-current':step>i?'action-done':''} aria-current={step===i?'step':undefined}><span>0{i+1}</span>{line}</li>)}</ol><div className="reading-action-demo" data-reading-step={step} aria-live="polite">
+ {step<0?<div className="reading-demo-wait">{t('Mở sách. Chọn một từ mới.','Open the book. Pick an unfamiliar word.')}</div>:<div key={step} className={`reading-demo-content reading-demo-${step}`}>
+ {step===0&&<><small>DICTIONARY · {t('MINH HỌA','ILLUSTRATION')}</small><div className="reading-query">Indicator<span className="reading-search-icon">⌕</span></div><p className="reading-result"><strong>indicator</strong> <small>noun</small><br/>{t('chỉ số; dấu hiệu cho biết tình trạng hoặc xu hướng','a value or sign that shows a condition or trend')}</p></>}
+ {step===1&&<><small>{t('PHÁT ÂM · MINH HỌA KHÔNG ÂM THANH','PRONUNCIATION · SILENT ILLUSTRATION')}</small><h2>indicator</h2><p className="reading-ipa">/ˈɪn.də.keɪ.t̬ɚ/ <small>US</small></p><div className="reading-wave" aria-hidden="true">{Array.from({length:17},(_,i)=><i key={i} style={{'--bar':i} as CSSProperties}/>)}</div><p>IN · di · ca · tor</p></>}
+ {step===2&&<><small>{t('DỊCH CÂU VÍ DỤ','TRANSLATE THE EXAMPLE')}</small><p className="reading-source">Current economic indicators show admirable growth in mining.</p><p className="reading-translation">Các chỉ số kinh tế hiện tại cho thấy mức tăng trưởng đáng khích lệ trong ngành khai khoáng.</p></>}
+ {step===3&&<><small>{t('SỔ TỪ VỰNG','VOCABULARY NOTEBOOK')}</small><div className="reading-notebook"><p className="reading-handwriting">indicator <span>— chỉ số</span></p><p className="reading-note-detail">/ˈɪn.də.keɪ.t̬ɚ/ · noun</p><p className="reading-note-detail">economic indicators = các chỉ số kinh tế</p><span className="reading-pencil" aria-hidden="true">✎</span></div></>}
+ {step===4&&<><small>{t('ĐÃ TRA. ĐÃ LUYỆN. ĐÃ GHI.','LOOKED UP. PRACTISED. WRITTEN DOWN.')}</small><h2>indicator</h2><p>{t('Nhưng bạn có nhớ khi cần dùng?','But will you remember when you need it?')}</p></>}
+ </div>}
+ </div><button className="reading-replay" onClick={()=>setReplay(n=>n+1)}>{t('Phát lại','Replay')}</button><div className={`reading-forgot ${step===4?'forgot-visible':''}`}><span>{t('RỒI HÔM SAU','AND THE NEXT DAY')}</span><p>{t('…quên?','…forgotten?')}</p></div></section></div></main>;
 }
