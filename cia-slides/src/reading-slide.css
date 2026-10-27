@@ -52,3 +52,8 @@
 .reading-lens>i{position:absolute;left:91px;top:94px;width:16px;height:69px;border-radius:5px;background:linear-gradient(90deg,#334155,#64748b,#334155);transform:rotate(-38deg);transform-origin:top;box-shadow:2px 4px 6px #0f172a25}
 @keyframes reading-lens-drop{0%{opacity:0;transform:translate(-50%,-600px) rotate(-25deg)}15%{opacity:1}75%{opacity:1;transform:translate(-50%,-45%) rotate(3deg)}100%{opacity:1;transform:translate(-50%,-50%) rotate(0)}}
 @media(prefers-reduced-motion:reduce){.reading-lens{animation:none;opacity:1;transform:translate(-50%,-50%)}.book-ready .textbook-word mark::after{animation-delay:0ms}}
+/* The glass clips a 2x copy of the actual page, counter-translated as it scans. */
+.reading-lens-glass{overflow:hidden;display:block;background:#fffef9}
+.reading-lens-glass .lens-page-copy{position:absolute;left:0;top:0;margin:0;max-width:none;transform-origin:0 0;box-shadow:none;border-radius:0;pointer-events:none}
+.reading-lens-glass::after{content:'';position:absolute;inset:0;border-radius:50%;background:linear-gradient(135deg,#ffffff55,transparent 55%);pointer-events:none}
+.reading-lens{animation:reading-lens-drop 700ms 2500ms ease-out forwards}
