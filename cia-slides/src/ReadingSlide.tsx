@@ -1,3 +1,4 @@
+import {ReadingTranslate} from './ReadingTranslate';
 import {useEffect,useState,useRef} from 'react';
 import type {CSSProperties} from 'react';
 import './reading-slide.css';
@@ -7,7 +8,7 @@ export function ReadingSlide({english=false,active=true}:{english?:boolean;activ
  const [day,setDay]=useState(0),[step,setStep]=useState(-1),[replay,setReplay]=useState(0);
  useEffect(()=>{
   setStep(-1);if(!active)return;
-  const timers=[7400,11400,15400,19400,24400].map((ms,i)=>setTimeout(()=>setStep(i),ms));
+  const timers=[7400,14500,18500,22500,27500].map((ms,i)=>setTimeout(()=>setStep(i),ms));
   return()=>timers.forEach(clearTimeout);
  },[active,replay]);
  useEffect(()=>{
@@ -48,7 +49,7 @@ export function ReadingSlide({english=false,active=true}:{english?:boolean;activ
   return()=>{cancelAnimationFrame(raf);clone.remove();};
  },[day,replay]);
  const t=(vi:string,en:string)=>english?en:vi;
- return <main className={`reading-slide ${active&&day===15?'reading-active':''}`}><div className="reading-heading"><span className="slide-kicker">{t('TỪ Ý TƯỞNG ĐẾN VẤN ĐỀ THẬT','FROM AN IDEA TO A REAL PROBLEM')}</span><h1>{t('Gặp 10 từ mới,','Ten unfamiliar words.')} <em>{t('bạn làm gì?','What do you do?')}</em></h1></div><div className="reading-stage"><figure ref={bookRef} className={`reading-book book-sequence ${day===15?'book-ready':''}`} data-book-day={day}><div className="book-stack"><div className={`book-hinge ${day===15?'is-open':''}`}><div className="book-cover" aria-hidden={day!==0}><div className="book-seal">CIA</div><p>CEBU INTERNATIONAL ACADEMY</p><h2>BUSINESS<br/>ENGLISH</h2><div>DAILY VOCABULARY<br/><br/>SELF WRITING BOOK</div></div><div className="book-cover-back" aria-hidden="true"><span>CIA</span></div></div><div className="reading-page textbook-page" aria-hidden={day!==15}><div className="textbook-banner"><b>Cebu International Academy</b><span>BUSINESS Self-<br/>Writing</span></div><h2>Day 15</h2><h3>A. Vocabulary</h3><ol className="textbook-vocabulary">{[
+ return <main className={`reading-slide ${active&&day===15?'reading-active':''}`}><div className="reading-heading"><span className="slide-kicker">{t('TỪ Ý TƯỞNG ĐẾN VẤN ĐỀ THẬT','FROM AN IDEA TO A REAL PROBLEM')}</span><h1>{t('Gặp 10 từ mới,','Ten unfamiliar words.')} <em>{t('bạn làm gì?','What do you do?')}</em></h1></div><div className="reading-stage"><ReadingTranslate active={active} reset={replay}/><figure ref={bookRef} className={`reading-book book-sequence ${day===15?'book-ready':''}`} data-book-day={day}><div className="book-stack"><div className={`book-hinge ${day===15?'is-open':''}`}><div className="book-cover" aria-hidden={day!==0}><div className="book-seal">CIA</div><p>CEBU INTERNATIONAL ACADEMY</p><h2>BUSINESS<br/>ENGLISH</h2><div>DAILY VOCABULARY<br/><br/>SELF WRITING BOOK</div></div><div className="book-cover-back" aria-hidden="true"><span>CIA</span></div></div><div className="reading-page textbook-page" aria-hidden={day!==15}><div className="textbook-banner"><b>Cebu International Academy</b><span>BUSINESS Self-<br/>Writing</span></div><h2>Day 15</h2><h3>A. Vocabulary</h3><ol className="textbook-vocabulary">{[
  ['Indicator','n','any of a group of statistical values','Current economic indicators show admirable growth in mining.','pointer'],
  ['Industrial','adj','of or relating to industry; producing goods',"My father’s birthplace is an industrial town known for its various products.",''],
  ['Lead','v','to guide the actions of a person or a group','They lead the company to success.','direct, control, manage'],
