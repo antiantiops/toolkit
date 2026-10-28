@@ -1,4 +1,5 @@
 "use client";
+import {requestChat,pendingChat} from './chat-request';
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import "./chat-markdown.css";
@@ -25,6 +26,7 @@ export default function LessonChat({ context }) {
   const undoWords=async()=>{try{const r=await fetch('/api/chat-words',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({undo:wordJob})});if(!r.ok)throw Error();setSavedWords([]);}catch{setError('Không hoàn tác được. Thử lại.');}};
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const [chatStatus,setChatStatus]=useState('AI đang trả lời…');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [position, setPosition] = useState(null);
@@ -64,6 +66,7 @@ export default function LessonChat({ context }) {
   useEffect(() => { if (open) end.current?.scrollIntoView({ block: "nearest" }); }, [messages, busy, open]);
   const send = async (e, question) => {
     e.preventDefault();
+    if(pendingChat()){await resumeChat();return;}
     const text = question || input.trim();
     if (!text || sending.current) return;
     sending.current = true;
@@ -71,13 +74,14 @@ export default function LessonChat({ context }) {
     const next = [...messages, { role: "user", content: text }];
     setMessages(next); setInput("");
     try {
-      const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(100000), body: JSON.stringify({ messages: next.slice(-11), context }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Không gửi được câu hỏi");
+      const payload={messages:next.slice(-11),context,requestId:crypto.randomUUID?.()||Array.from(crypto.getRandomValues(new Uint8Array(18)),n=>n.toString(16).padStart(2,'0')).join('')};
+      const data=await requestChat(payload,setChatStatus);
       setMessages([...next, { role: "assistant", content: data.answer }]);setSavedWords([]);setWordJob(data.wordJob||null);
     } catch (e) { setMessages(messages); setInput(text); setError(e.message); }
     finally { setBusy(false); sending.current = false; }
   };
+  const resumeChat=async()=>{const payload=pendingChat();if(!payload||sending.current)return;sending.current=true;setBusy(true);setError('');setMessages(payload.messages);try{const data=await requestChat(payload,setChatStatus);setMessages([...payload.messages,{role:'assistant',content:data.answer}]);setInput('');setWordJob(data.wordJob||null);}catch(e){setError(e.message);}finally{sending.current=false;setBusy(false);}};
+  useEffect(()=>{if(pendingChat())resumeChat();},[]);
   return <>
     {<button ref={bubble} aria-expanded={open} aria-controls="lesson-chat-panel" tabIndex={open ? -1 : 0} id="lesson-chat-toggle" aria-label="Mở chat với AI; kéo để di chuyển" title="Chat AI · kéo để di chuyển"
       style={position ? { left: position.x, top: position.y, touchAction: "none", opacity: open ? 0 : 1, pointerEvents: open ? "none" : "auto", transform: open ? "scale(.6)" : "scale(1)", transition: dragging ? "none" : "left 220ms ease, top 220ms ease, opacity 180ms ease, transform 220ms ease" } : { right: 16, bottom: 20, touchAction: "none" }}
@@ -108,9 +112,9 @@ export default function LessonChat({ context }) {
       <div role="log" aria-live="polite" className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 text-sm">
         {!messages.length && <p className="text-slate-400">Hỏi thêm về câu, từ hoặc quy tắc đang học. Nội dung bài hiện tại được gửi cùng câu hỏi; không gửi ảnh hay toàn màn hình.</p>}
         {messages.map((m, i) => <div key={i} className={m.role === "user" ? "chat-message-in ml-6 whitespace-pre-wrap break-words rounded-xl bg-blue-900/60 p-3 text-white" : "chat-message-in mr-3 whitespace-pre-wrap break-words rounded-xl bg-slate-800 p-3 leading-relaxed text-slate-100"}><div className="mb-1 text-xs font-semibold text-sky-300">{m.role === "user" ? "Bạn" : "AI"}</div>{m.role === "assistant" ? <ChatAnswer text={m.content} /> : m.content}</div>)}
-        {busy && <div role="status" className="flex items-center gap-2 text-sky-300"><span className="chat-typing flex gap-1" aria-hidden="true"><i /><i /><i /></span><span>AI đang trả lời...</span></div>}
+        {busy && <div role="status" className="flex items-center gap-2 text-sky-300"><span className="chat-typing flex gap-1" aria-hidden="true"><i /><i /><i /></span><span>{chatStatus}</span></div>}
         {!!savedWords.length&&<div role="status" className="rounded-lg bg-teal-950 p-2 text-xs text-teal-200">Đã lưu {savedWords.length} từ/cụm vào My Words: {savedWords.map(w=>w.english).join(', ')}. <button onClick={undoWords} className="min-h-11 underline">Hoàn tác</button></div>}
-        {error && <p role="alert" className="text-red-300">{error}</p>}<div ref={end} />
+        {error && <div role="alert" className="text-red-300">{error}<button type="button" onClick={resumeChat} className="ml-2 min-h-11 underline">Nối lại</button><button type="button" onClick={()=>location.reload()} className="ml-2 min-h-11 underline">Tải lại / đăng nhập</button></div>}<div ref={end} />
       </div>
       <form onSubmit={send} className="relative flex shrink-0 items-center gap-1 border-t border-slate-700 p-2">
         <div ref={tools} className="contents">

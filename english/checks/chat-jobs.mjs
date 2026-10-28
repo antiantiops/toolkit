@@ -1,0 +1,5 @@
+import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import assert from 'node:assert/strict';
+const dir=fs.mkdtempSync(path.join(os.tmpdir(),'chat-job-check-'));process.env.CACHE_DIR=dir;
+const source=fs.readFileSync(new URL('../src/app/api/chat/jobs.js',import.meta.url),'utf8');fs.writeFileSync(path.join(dir,'jobs.mjs'),source);const {createJob,readJob,writeJob}=await import('file://'+dir+'/jobs.mjs');
+const id=crypto.randomUUID();assert(createJob('a',id,'digest').fresh);assert(!createJob('a',id,'digest').fresh);assert.equal(readJob('b',id),null);writeJob('a',{...readJob('a',id),status:'completed',answer:'Hello'});assert.equal(readJob('a',id).answer,'Hello');assert.equal(createJob('a',id,'digest').job.status,'completed');const stale=crypto.randomUUID();createJob('a',stale,'digest');writeJob('a',{...readJob('a',stale),created:Date.now()-130000});assert.equal(readJob('a',stale).status,'failed');
+console.log('PASS same-ID dedupe, account isolation, persisted completed reply, stale-running recovery');fs.rmSync(dir,{recursive:true,force:true});
