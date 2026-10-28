@@ -1,3 +1,4 @@
+import { validSavedText } from '../../../lib/words/validation.mjs';
 import { NextResponse } from "next/server";
 import { currentUser } from "../me/auth";
 import { cachedLookup, lookupKey } from "../../../lib/lookup/cache";
@@ -11,7 +12,7 @@ const MODEL = process.env.NINEROUTER_LOOKUP_MODEL || "ag/gemini-3.8-flash";
 export async function POST(request) {
   try {
     const { word, context = "" } = await request.json();
-    if (typeof word !== "string" || !/^[A-Za-z][A-Za-z\s'’.,!?;:()-]{0,199}$/.test(word) || typeof context !== "string" || context.length > 4000) {
+    if (!validSavedText(word) || typeof context !== "string" || context.length > 4000) {
       return NextResponse.json({ error: "Từ không hợp lệ" }, { status: 400 });
     }
     const full = cachedLookup(currentUser(request)?.id, lookupKey(word, context));
