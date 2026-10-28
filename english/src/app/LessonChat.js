@@ -25,6 +25,7 @@ export default function LessonChat({ context }) {
   const changeAutoWords=async()=>{try{const r=await fetch('/api/chat-words',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:!autoWords})});if(!r.ok)throw Error();setAutoWords(!autoWords);}catch{setError('Không đổi được tự lưu. Thử lại.');}};
   const undoWords=async()=>{try{const r=await fetch('/api/chat-words',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({undo:wordJob})});if(!r.ok)throw Error();setSavedWords([]);}catch{setError('Không hoàn tác được. Thử lại.');}};
   const [messages, setMessages] = useState([]);
+  const historyEdited=useRef(false);
   const [input, setInput] = useState("");
   const [chatStatus,setChatStatus]=useState('AI đang trả lời…');
   const [busy, setBusy] = useState(false);
@@ -69,6 +70,7 @@ export default function LessonChat({ context }) {
     if(pendingChat()){await resumeChat();return;}
     const text = question || input.trim();
     if (!text || sending.current) return;
+    historyEdited.current=true;
     sending.current = true;
     setBusy(true); setError("");
     const next = [...messages, { role: "user", content: text }];
@@ -81,7 +83,7 @@ export default function LessonChat({ context }) {
     finally { setBusy(false); sending.current = false; }
   };
   const resumeChat=async()=>{const payload=pendingChat();if(!payload||sending.current)return;sending.current=true;setBusy(true);setError('');setMessages(payload.messages);try{const data=await requestChat(payload,setChatStatus);setMessages([...payload.messages,{role:'assistant',content:data.answer}]);setInput('');setWordJob(data.wordJob||null);}catch(e){setError(e.message);}finally{sending.current=false;setBusy(false);}};
-  useEffect(()=>{if(pendingChat())resumeChat();},[]);
+  useEffect(()=>{if(pendingChat()){historyEdited.current=true;resumeChat();return;}const controller=new AbortController();fetch('/api/chat?history=1',{signal:controller.signal,cache:'no-store'}).then(async r=>{if(!r.ok)throw Error('Không tải được lịch sử chat. Tải lại để thử.');return r.json();}).then(d=>{if(!historyEdited.current)setMessages(d.messages||[]);}).catch(e=>{if(e.name!=='AbortError'&&!historyEdited.current)setError(e.message);});return()=>controller.abort();},[]);
   return <>
     {<button ref={bubble} aria-expanded={open} aria-controls="lesson-chat-panel" tabIndex={open ? -1 : 0} id="lesson-chat-toggle" aria-label="Mở chat với AI; kéo để di chuyển" title="Chat AI · kéo để di chuyển"
       style={position ? { left: position.x, top: position.y, touchAction: "none", opacity: open ? 0 : 1, pointerEvents: open ? "none" : "auto", transform: open ? "scale(.6)" : "scale(1)", transition: dragging ? "none" : "left 220ms ease, top 220ms ease, opacity 180ms ease, transform 220ms ease" } : { right: 16, bottom: 20, touchAction: "none" }}
@@ -108,7 +110,7 @@ export default function LessonChat({ context }) {
         <div><h2 className="font-semibold text-sky-200">Hỏi AI về bài học</h2><p className="text-xs text-slate-400">Ngữ cảnh: {context.mode === "listening" ? "Listening" : context.mode === "grammar" ? "Grammar" : context.mode === "writing" ? "Writing" : "Vocabulary"}</p></div>
         <button aria-label="Thu nhỏ chat" onClick={() => toggleChat(false)} className="rounded-lg px-2 py-1 text-slate-300">✕</button>
       </header>
-      <label className="flex shrink-0 items-center gap-2 px-3 py-2 text-xs text-slate-300"><input type="checkbox" checked={autoWords} onChange={changeAutoWords}/>Tự lưu từ đáng học vào My Words</label>
+      <label className="flex shrink-0 items-center gap-2 px-3 py-2 text-xs text-slate-300"><input type="checkbox" checked={autoWords} onChange={changeAutoWords}/>Tự lưu từ đáng học vào My Words</label><p className="px-3 pb-2 text-xs text-slate-400">Lịch sử riêng theo tài khoản · Lưu 7 ngày</p>
       <div role="log" aria-live="polite" className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 text-sm">
         {!messages.length && <p className="text-slate-400">Hỏi thêm về câu, từ hoặc quy tắc đang học. Nội dung bài hiện tại được gửi cùng câu hỏi; không gửi ảnh hay toàn màn hình.</p>}
         {messages.map((m, i) => <div key={i} className={m.role === "user" ? "chat-message-in ml-6 whitespace-pre-wrap break-words rounded-xl bg-blue-900/60 p-3 text-white" : "chat-message-in mr-3 whitespace-pre-wrap break-words rounded-xl bg-slate-800 p-3 leading-relaxed text-slate-100"}><div className="mb-1 text-xs font-semibold text-sky-300">{m.role === "user" ? "Bạn" : "AI"}</div>{m.role === "assistant" ? <ChatAnswer text={m.content} /> : m.content}</div>)}
