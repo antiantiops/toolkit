@@ -18,6 +18,11 @@ export default function LessonChat({ context }) {
     document.addEventListener("keydown", escape);
     return () => { document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", escape); };
   }, [toolsOpen]);
+  const [autoWords,setAutoWords]=useState(true),[wordJob,setWordJob]=useState(null),[savedWords,setSavedWords]=useState([]);
+  useEffect(()=>{fetch('/api/chat-words').then(r=>r.ok?r.json():null).then(d=>{if(d)setAutoWords(d.enabled);}).catch(()=>{});},[]);
+  useEffect(()=>{if(!wordJob)return;let stop=false,count=0;let timer;const poll=async()=>{try{const r=await fetch('/api/chat-words?id='+wordJob);const d=await r.json();if(stop)return;if(d.status==='done'){setSavedWords(d.items||[]);return;}if(d.status==='failed'||++count>=40)return;}catch{if(++count>=40)return;}timer=setTimeout(poll,2000);};timer=setTimeout(poll,1500);return()=>{stop=true;clearTimeout(timer);};},[wordJob]);
+  const changeAutoWords=async()=>{try{const r=await fetch('/api/chat-words',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:!autoWords})});if(!r.ok)throw Error();setAutoWords(!autoWords);}catch{setError('Không đổi được tự lưu. Thử lại.');}};
+  const undoWords=async()=>{try{const r=await fetch('/api/chat-words',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({undo:wordJob})});if(!r.ok)throw Error();setSavedWords([]);}catch{setError('Không hoàn tác được. Thử lại.');}};
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -69,7 +74,7 @@ export default function LessonChat({ context }) {
       const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(100000), body: JSON.stringify({ messages: next.slice(-11), context }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Không gửi được câu hỏi");
-      setMessages([...next, { role: "assistant", content: data.answer }]);
+      setMessages([...next, { role: "assistant", content: data.answer }]);setSavedWords([]);setWordJob(data.wordJob||null);
     } catch (e) { setMessages(messages); setInput(text); setError(e.message); }
     finally { setBusy(false); sending.current = false; }
   };
@@ -99,10 +104,12 @@ export default function LessonChat({ context }) {
         <div><h2 className="font-semibold text-sky-200">Hỏi AI về bài học</h2><p className="text-xs text-slate-400">Ngữ cảnh: {context.mode === "listening" ? "Listening" : context.mode === "grammar" ? "Grammar" : context.mode === "writing" ? "Writing" : "Vocabulary"}</p></div>
         <button aria-label="Thu nhỏ chat" onClick={() => toggleChat(false)} className="rounded-lg px-2 py-1 text-slate-300">✕</button>
       </header>
+      <label className="flex shrink-0 items-center gap-2 px-3 py-2 text-xs text-slate-300"><input type="checkbox" checked={autoWords} onChange={changeAutoWords}/>Tự lưu từ đáng học vào My Words</label>
       <div role="log" aria-live="polite" className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 text-sm">
         {!messages.length && <p className="text-slate-400">Hỏi thêm về câu, từ hoặc quy tắc đang học. Nội dung bài hiện tại được gửi cùng câu hỏi; không gửi ảnh hay toàn màn hình.</p>}
         {messages.map((m, i) => <div key={i} className={m.role === "user" ? "chat-message-in ml-6 whitespace-pre-wrap break-words rounded-xl bg-blue-900/60 p-3 text-white" : "chat-message-in mr-3 whitespace-pre-wrap break-words rounded-xl bg-slate-800 p-3 leading-relaxed text-slate-100"}><div className="mb-1 text-xs font-semibold text-sky-300">{m.role === "user" ? "Bạn" : "AI"}</div>{m.role === "assistant" ? <ChatAnswer text={m.content} /> : m.content}</div>)}
         {busy && <div role="status" className="flex items-center gap-2 text-sky-300"><span className="chat-typing flex gap-1" aria-hidden="true"><i /><i /><i /></span><span>AI đang trả lời...</span></div>}
+        {!!savedWords.length&&<div role="status" className="rounded-lg bg-teal-950 p-2 text-xs text-teal-200">Đã lưu {savedWords.length} từ/cụm vào My Words: {savedWords.map(w=>w.english).join(', ')}. <button onClick={undoWords} className="min-h-11 underline">Hoàn tác</button></div>}
         {error && <p role="alert" className="text-red-300">{error}</p>}<div ref={end} />
       </div>
       <form onSubmit={send} className="relative flex shrink-0 items-center gap-1 border-t border-slate-700 p-2">

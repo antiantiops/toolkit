@@ -10,6 +10,7 @@ import ListeningImage from "./ListeningImage";
 import ListeningHistory from "./ListeningHistory";
 import Writing from "./Writing";
 import SpeakBtn from "./SpeakBtn";
+import ChatWordsNotice from './ChatWordsNotice';
 import FeatureNotice from "./FeatureNotice";
 import Account from "./Account";
 import ListeningAudio from "./ListeningAudio";
@@ -775,7 +776,7 @@ export default function Home() {
 
   return (
     <div className="max-w-5xl mx-auto px-3 py-4 sm:px-5 sm:py-8">
-      <FeatureNotice onNavigate={() => { setMode("writing"); setWritingTourStep(n => n + 1); }} hasWriting={Boolean(writing)} />
+      <ChatWordsNotice/><FeatureNotice onNavigate={() => { setMode("writing"); setWritingTourStep(n => n + 1); }} hasWriting={Boolean(writing)} />
       {cropPending && <ImageCrop file={cropPending.file} onCancel={() => setCropPending(null)} onApply={file => {
         const target = cropPending.target;
         setCropPending(null);

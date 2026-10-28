@@ -1,3 +1,4 @@
+import {contexts} from '../../../lib/words/chat-store';
 import { NextResponse } from 'next/server';
 import { currentUser } from '../me/auth';
 import { saveWord, listWords, listWeeks, moveWord, tagWord } from '../../../lib/words/store';
@@ -13,7 +14,7 @@ export async function GET(request) {
   const raw = params.get('before');
   const before = raw === null ? Number.MAX_SAFE_INTEGER : Number(raw);
   if (!Number.isSafeInteger(before) || before <= 0) return reply({error:'Invalid cursor'},400);
-  try { const rows = listWords(user.id,before,week); if (params.get('game') === '1') return reply({words:cachedGameWords(user.id,rows.slice(0,50)).slice(0,10),cacheOnly:true}); return reply({weeks:listWeeks(user.id),words:rows.slice(0,50),next:rows.length>50 ? (week ? (raw === null ? 0 : before)+50 : rows[49].id) : null}); }
+  try { const rows = listWords(user.id,before,week); if (params.get('game') === '1') return reply({words:cachedGameWords(user.id,rows.slice(0,50)).slice(0,10),cacheOnly:true}); return reply({weeks:listWeeks(user.id),words:contexts(user.id,rows.slice(0,50)),next:rows.length>50 ? (week ? (raw === null ? 0 : before)+50 : rows[49].id) : null}); }
   catch { return reply({error:'Không tải được từ đã tra'},503); }
 }
 export async function POST(request) {

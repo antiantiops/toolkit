@@ -1,4 +1,8 @@
-import { NextResponse } from "next/server";
+import {createHash} from 'node:crypto';
+import {currentUser} from '../me/auth';
+import {enabled,claim} from '../../../lib/words/chat-store';
+import {extract} from '../../../lib/words/chat-extract';
+import { after, NextResponse } from "next/server";
 
 export async function POST(request) {
   try {
@@ -23,7 +27,10 @@ export async function POST(request) {
     const data = await response.json();
     const answer = data.choices?.[0]?.message?.content;
     if (typeof answer !== "string" || !answer.trim()) throw new Error("empty response");
-    return NextResponse.json({ answer });
+    let wordJob=null;
+    const user=currentUser(request);
+    try{if(user&&enabled(user.id)){wordJob=createHash('sha256').update(JSON.stringify(messages)).digest('hex');if(claim(user.id,wordJob)){const id=wordJob;after(()=>extract(user.id,id,[...messages,{role:'assistant',content:answer}]));}}}catch{wordJob=null;}
+    return NextResponse.json({ answer,wordJob },{headers:{'Cache-Control':'private, no-store'}});
   } catch {
     return NextResponse.json({ error: "Không nhận được trả lời. Thử lại sau." }, { status: 502 });
   }
