@@ -135,7 +135,7 @@ export default function MyWords({onLookup}) {
         <div className="rounded-xl bg-indigo-500/10 px-4 py-3"><p className="text-2xl font-semibold tabular-nums text-indigo-200">{summary?.count || 0}</p><p className="mt-1 text-xs text-slate-400">Từ / cụm từ</p></div>
         <div className="rounded-xl bg-slate-800/60 px-4 py-3"><p className="text-2xl font-semibold tabular-nums text-slate-200">{summary?.searches || 0}</p><p className="mt-1 text-xs text-slate-400">Lượt tra / xem nghĩa trong tuần</p></div>
       </div>
-      <a aria-disabled={!rows.length||busy||ordering} href={rows.length&&!busy&&!ordering?`/games?source=my-words&week=${encodeURIComponent(week)}`:undefined} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-950/30 hover:bg-indigo-500">Chơi để nhớ · Từ của tôi</a>
+      <a aria-disabled={!rows.length||busy||ordering} href={rows.length&&!busy&&!ordering?`/games?source=my-words&week=${encodeURIComponent(week)}`:undefined} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-950/30 hover:bg-indigo-500">Chơi để nhớ · Từ gắn sách</a>
       <p className="text-xs text-slate-400">Mỗi lượt tối đa 10 từ trong tuần đã chọn · Nhớ nghĩa, gọi lại từ, tập dùng trong câu.</p>
     </div>
     {review && rows[card] && <div style={{overflowAnchor:"none"}} className="relative overflow-hidden px-1 pb-2 pt-2">

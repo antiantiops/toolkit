@@ -53,3 +53,9 @@ export function tagWord(owner,id,needsReview) {
  const result=database().prepare('UPDATE words SET needs_review=? WHERE owner=? AND id=?').run(needsReview?1:0,owner,id);
  if(result.changes!==1)throw new Error('Word not found');
 }
+
+export function markedGameRows(owner,week) {
+ return database().prepare(`SELECT w.id,w.english,w.needs_review AS needsReview FROM word_weeks ww
+ JOIN words w ON w.id=ww.word_id WHERE ww.owner=? AND w.owner=? AND ww.week=? AND w.needs_review=1
+ ORDER BY COALESCE(ww.position,-w.id),w.id DESC LIMIT 30`).all(owner,owner,week);
+}
