@@ -1,0 +1,33 @@
+.reading-world{display:contents}
+/* Same page, lens and lookup share one projected plane; no decorative foreground. */
+.reading-depth{gap:8px;padding:6px 38px 8px}
+.reading-depth .reading-heading h1{font-size:43px;margin:9px 0}
+.reading-depth .reading-stage{grid-template-columns:780px 1fr;gap:30px;align-items:center}
+.reading-depth .reading-world{display:block;position:relative;width:780px;height:495px;transform:perspective(1600px) rotateX(27deg) rotateZ(-8deg);transform-style:preserve-3d}
+.reading-depth .reading-book{position:absolute;left:390px;top:12px;width:360px;padding:0;transform:none;transform-style:preserve-3d}
+.reading-depth .book-stack{transform-style:preserve-3d;isolation:auto;perspective:1500px}
+.reading-depth .reading-page.textbook-page{height:445px;padding:12px 15px;box-shadow:0 3px #e3dac5,0 6px #fffdf4,0 9px #ded5c1,0 12px #fffdf4,0 15px #1b6a48,4px 35px 32px #17203335;border-radius:2px 8px 8px 2px;background:linear-gradient(90deg,#c3b59a,#fffef9 10%,#fffef9 88%,#eae2d1)}
+.reading-depth .textbook-vocabulary li{grid-template-columns:84px 1fr;font-size:8px;gap:4px}
+.reading-depth .textbook-word{gap:4px}
+.book-left-page{position:absolute;right:100%;top:0;width:360px;height:445px;box-sizing:border-box;padding:12px 25px;color:#302c29;font-family:Georgia,serif;background:linear-gradient(90deg,#eae2d1,#fffef9 10%,#fffef9 85%,#c3b59a);border:1px solid #e5ddce;border-radius:8px 2px 2px 8px;box-shadow:0 3px #e3dac5,0 6px #fffdf4,0 9px #ded5c1,0 12px #fffdf4,0 15px #1b6a48,-8px 35px 32px #17203335}
+.book-left-page h2{text-align:center;font-size:19px;margin:9px 0 20px}.book-left-page h3{font-size:15px}.book-left-page>p{font-size:17px;line-height:1.6}.book-left-page>p:first-of-type{font-size:27px;font-weight:bold;margin:24px 0 12px}.depth-page-number{position:absolute;bottom:12px;left:30px;font-size:10px}
+.depth-chart{height:90px;display:flex;align-items:end;gap:14px;border-bottom:1px solid #adbaae;padding:0 22px;margin:22px 0}.depth-chart i{width:30px;background:#88ab91;height:30%}.depth-chart i:nth-child(2){height:42%}.depth-chart i:nth-child(3){height:55%}.depth-chart i:nth-child(4){height:73%}.depth-chart i:nth-child(5){height:95%}
+.reading-depth .book-hinge.is-open{transform:rotateY(-179deg)}
+.reading-depth .book-cover-back{background:linear-gradient(90deg,#c3b59a,#fffef9 15%,#fffef9 85%,#eae2d1);opacity:.12}
+.reading-depth .book-cover{padding:30px}.reading-depth .book-cover h2{font-size:34px}
+.reading-depth .reading-lens{transform-style:preserve-3d;filter:drop-shadow(12px 20px 8px #17203345)}
+.reading-depth .reading-lens-glass{box-shadow:inset 0 0 0 2px white,0 4px #1e293b,0 8px #475569}
+.reading-depth .reading-translate{left:395px;top:175px;transform:translateZ(65px);width:360px}
+.reading-depth .translate-window{width:360px;box-shadow:18px 30px 20px #17203340;border-bottom:5px solid #b5bfce}
+.reading-depth .translate-tabs{font-size:10px;gap:4px;padding:4px 9px 9px}.reading-depth .translate-tabs>span{padding:5px}.reading-depth .translate-tabs svg{width:14px;height:14px}
+.reading-depth .translate-title{padding:10px}.reading-depth .translate-history{padding:5px}.reading-depth .translate-alternatives{min-height:48px}.reading-depth .translate-alternatives p{padding:6px 0}
+.reading-depth .reading-question .reading-actions{grid-template-columns:1fr;margin:15px 0;gap:13px}.reading-depth .reading-question .reading-actions li{font-size:19px}
+.reading-depth .reading-action-demo{height:215px;padding:16px}.reading-depth .reading-demo-content p{font-size:15px}.reading-depth .reading-demo-content h2{font-size:27px}.reading-depth .reading-notebook .reading-handwriting{font-size:20px}.reading-depth .reading-handwriting span{font-size:16px}.reading-depth .reading-notebook .reading-note-detail{font-size:12px}
+.reading-depth .reading-forgot p{font-size:40px}.reading-depth .reading-forgot{padding-top:9px}.reading-depth .reading-book figcaption{position:relative;left:-180px;width:700px;margin-top:29px;font-size:10px}
+@media(prefers-reduced-motion:reduce){.reading-depth .book-hinge{transition:none}}
+.reading-depth .book-cover-back{opacity:0}
+.reading-depth .reading-translate{left:360px;top:175px}
+.reading-depth .translate-window{width:340px}
+.reading-depth .translate-tabs{font-size:9px}
+.reading-depth .reading-world{pointer-events:none}
+.reading-depth .reading-question{position:relative;z-index:1}
