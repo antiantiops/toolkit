@@ -21,6 +21,22 @@
   animation: pulse-ring 2s ease-in-out infinite;
 }
 
+/* Raised chat surface: separate from page without dimming or blocking it. */
+#lesson-chat-panel {
+  background: #18243b;
+  border-color: #718fba;
+  box-shadow: 0 24px 64px -12px rgb(0 0 0 / .8), 0 8px 24px rgb(0 0 0 / .45), 0 0 0 1px rgb(125 211 252 / .16);
+}
+#lesson-chat-panel > header {
+  background: linear-gradient(110deg, #24456a, #283653);
+  border-bottom-color: #526d92;
+  box-shadow: inset 0 1px rgb(255 255 255 / .1);
+}
+#lesson-chat-panel > form {
+  background: #20314c;
+  border-top-color: #526d92;
+}
+
 /* Keep chat mounted for smooth open/close without losing focus or history. */
 .lesson-chat-motion {
   opacity: 0;
