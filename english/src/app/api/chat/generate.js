@@ -7,9 +7,9 @@ import { after, NextResponse } from "next/server";
 export async function generate(request) {
   try {
     const body = await request.text();
-    if (body.length > 80000) return NextResponse.json({ error: "Nội dung quá dài" }, { status: 413 });
+    if (body.length > 250000) return NextResponse.json({ error: "Nội dung quá dài" }, { status: 413 });
     const { messages, context } = JSON.parse(body);
-    if (!Array.isArray(messages) || !messages.length || messages.length > 12 || messages.some(m => !m || !["user", "assistant"].includes(m.role) || typeof m.content !== "string" || !m.content.trim() || m.content.length > 4000) || !context || typeof context !== "object" || JSON.stringify(context).length > 50000) {
+    if (!Array.isArray(messages) || !messages.length || messages.length > 12 || messages.some(m => !m || !["user", "assistant"].includes(m.role) || typeof m.content !== "string" || !m.content.trim() || m.content.length > (m.role === "assistant" ? 16000 : 4000)) || !context || typeof context !== "object" || JSON.stringify(context).length > 50000) {
       return NextResponse.json({ error: "Nội dung chat không hợp lệ" }, { status: 400 });
     }
     const key = process.env.NINEROUTER_KEY;
