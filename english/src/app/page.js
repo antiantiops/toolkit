@@ -549,7 +549,7 @@ export default function Home() {
     const controller = new AbortController();
     translationAbort.current = controller;
     const cacheKey = JSON.stringify([dir, text]);
-    if (!imageFile && translationCache.current.has(cacheKey)) { const cached = translationCache.current.get(cacheKey); setQuickResult(cached); rememberEnglish(cached.corrected).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại.")); setQuickLoading(false); return; }
+    if (!imageFile && translationCache.current.has(cacheKey)) { const cached = translationCache.current.get(cacheKey); setQuickResult({...cached, fromCache: true}); rememberEnglish(cached.corrected).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại.")); setQuickLoading(false); return; }
     setQuickLoading(true);
     setQuickResult(null);
     try {
@@ -559,6 +559,7 @@ export default function Home() {
       if (imageFile) form.append("image", imageFile);
       const res = await fetchWithRetry("/api/lookup", { method: "POST", body: form, timeout: 60000, signal: controller.signal }, 2, 1000);
       const data = await parseApiResponse(res);
+      data.result.fromCache = res.headers.get("X-Lookup-Cache") === "HIT";
       if (!imageFile) { if (translationCache.current.size >= 100) translationCache.current.delete(translationCache.current.keys().next().value); translationCache.current.set(cacheKey, data.result); }
       rememberEnglish(data.result.corrected).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại."));
       if (requestId === translationRequest.current) setQuickResult(data.result);
@@ -1042,11 +1043,11 @@ export default function Home() {
                 </span>
                 <span className="font-medium">
                   {quickDirection === "en-vi"
-                    ? "AI đang phân tích ngữ pháp & từ vựng tiếng Anh..."
-                    : "AI đang chuyển ngữ sang tiếng Anh tự nhiên & chuẩn bản ngữ..."}
+                    ? "Đang tra cứu nghĩa và phiên âm..."
+                    : "Đang tra cứu bản dịch tiếng Anh..."}
                 </span>
               </div>
-              <span className="font-mono text-[11px] text-sky-400/80 animate-pulse">9router · Gemini</span>
+              <span className="font-mono text-[11px] text-sky-400/80 animate-pulse">Tra cứu</span>
             </div>
 
             {/* Glowing animated scan beam */}
@@ -1082,6 +1083,8 @@ export default function Home() {
                 </span>
                 <span className="min-w-0 text-slate-400">Chạm từ tiếng Anh để tra từ điển</span>
               </div>
+
+              {quickResult.fromCache && <p data-testid="search-cache-hit" className="mb-2 text-xs text-emerald-300">Từ cache · Không gọi AI dịch lại</p>}
 
               {/* Target / Corrected English */}
               <div className="flex flex-wrap items-center gap-1.5 text-sky-100">
