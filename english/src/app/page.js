@@ -1101,6 +1101,8 @@ export default function Home() {
                 </span>
               </div>
 
+              {quickResult.ipa && <p data-testid="search-phrase-ipa" className="mt-1 break-words text-sm leading-relaxed text-violet-300"><span className="mr-2 text-xs not-italic text-slate-400">US IPA · AI</span>{quickResult.ipa}</p>}
+
               {/* Corrections if any */}
               {quickResult.direction === "en-vi" && quickResult.changed && (
                 <div className="mt-2 rounded-lg bg-amber-950/40 border border-amber-800/40 px-3 py-2 text-xs text-amber-200 leading-relaxed">

@@ -21,7 +21,7 @@ export async function POST(request) {
     if (image instanceof File && image.size > 8 * 1024 * 1024) return NextResponse.json({ error: "Ảnh tối đa 8 MB" }, { status: 400 });
 
     if (!['en-vi', 'vi-en'].includes(direction)) return NextResponse.json({ error: 'Invalid direction' }, { status: 400 });
-    const cacheKey = JSON.stringify([direction, text]);
+    const cacheKey = JSON.stringify(["ipa-v1", direction, text]);
     const cached = cache.get(cacheKey);
     if (!(image instanceof File) && cached && Date.now() - cached.at < 86400000) return NextResponse.json({ result: cached.result });
     const headers = { "Content-Type": "application/json" };
@@ -39,11 +39,12 @@ Return ONLY valid JSON:
   "direction": "vi-en",
   "original": "extracted or typed Vietnamese text",
   "corrected": "natural idiomatic English translation",
+  "ipa": "US IPA transcription of the complete corrected English text, enclosed in slashes",
   "changed": false,
   "meaning": "natural Vietnamese translation of the English (or same as original)",
   "note": "short Vietnamese explanation of key English phrases/grammar/collocations used"
 }
-Do not include markdown or extra text. Only JSON.`;
+Include US IPA for the full corrected English phrase/sentence, not a Vietnamese pronunciation approximation. Do not include markdown or extra text. Only JSON.`;
     } else {
       const source = text ? `Typed English: ${JSON.stringify(text)}` : "Read English text from the supplied image.";
       prompt = `You help Vietnamese learners look up English.
@@ -54,11 +55,12 @@ Return ONLY valid JSON:
   "direction": "en-vi",
   "original": "extracted or typed English",
   "corrected": "correct English text",
+  "ipa": "US IPA transcription of the complete corrected English text, enclosed in slashes",
   "changed": true,
   "meaning": "natural Vietnamese translation",
   "note": "short Vietnamese explanation of correction or empty string"
 }
-If input is already correct, corrected must equal original and changed must be false. Do not invent a different meaning. Do not include markdown. Only JSON.`;
+Include US IPA for the full corrected English phrase/sentence, not a Vietnamese pronunciation approximation. If input is already correct, corrected must equal original and changed must be false. Do not invent a different meaning. Do not include markdown. Only JSON.`;
     }
 
     const content = [{ type: "text", text: prompt }];

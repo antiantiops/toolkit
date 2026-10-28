@@ -1,3 +1,4 @@
+import { validSavedText } from '../../../lib/words/validation.mjs';
 import {contexts} from '../../../lib/words/chat-store';
 import { NextResponse } from 'next/server';
 import { currentUser } from '../me/auth';
@@ -25,7 +26,7 @@ export async function POST(request) {
   if (Number(request.headers.get('content-length')) > 4096) return reply({error:'Input too large'},413);
   try {
     const {english} = await request.json();
-    if (typeof english !== 'string' || !english.trim() || english.length>500 || !/^[A-Za-z\s\d'’.,!?;:()\-]+$/.test(english)) return reply({error:'Invalid English text'},400);
+    if (!validSavedText(english)) return reply({error:'Invalid English text'},400);
     saveWord(user.id,english); return reply({ok:true});
   } catch { return reply({error:'Không lưu được từ'},503); }
 }
