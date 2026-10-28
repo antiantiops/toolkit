@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {mkdtempSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+process.env.LOOKUP_DB_PATH=mkdtempSync(tmpdir()+'/search-cache-')+'/lookup.sqlite';
+const {cacheLookup,cachedLookup,LOOKUP_TTL}=await import('../src/lib/lookup/cache.js');
+const key=JSON.stringify(['translation-ipa-v1','en-vi','piece of cake = very easy']);
+const summary=JSON.stringify(['search-summary-v1','piece of cake = very easy','']);
+const value={corrected:'Piece of cake = very easy',meaning:'rất dễ',ipa:'/piːs/'};
+cacheLookup('one',key,value,100);cacheLookup('one',summary,{meaning:value.meaning,ipa:value.ipa},100);
+assert.deepEqual(cachedLookup('one',key,101),value);assert.equal(cachedLookup('two',key,101),null);
+assert.equal(cachedLookup('one',summary,101).meaning,'rất dễ');assert.equal(cachedLookup('one',key,100+LOOKUP_TTL),null);
+assert.equal(cachedLookup('one',JSON.stringify(['translation-ipa-v1','vi-en','piece of cake = very easy']),101),null);
+console.log('PASS persistent search/summary keys, account and direction isolation, seven-day expiry');

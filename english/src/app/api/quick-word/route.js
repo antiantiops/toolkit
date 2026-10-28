@@ -17,6 +17,8 @@ export async function POST(request) {
     }
     const full = cachedLookup(currentUser(request)?.id, lookupKey(word, context));
     if (full) return NextResponse.json({ meaning: full.meaning, source: "cache" }, { headers: { "Cache-Control": "private, no-store" } });
+    const summary = !context && cachedLookup(currentUser(request)?.id, JSON.stringify(["search-summary-v1", word.trim().toLowerCase(), ""]));
+    if (summary) return NextResponse.json({meaning:summary.meaning,ipa:summary.ipa,source:"search-cache"}, {headers:{"Cache-Control":"private, no-store"}});
     if (!context && meanings[word.toLowerCase()]) return NextResponse.json({ meaning: meanings[word.toLowerCase()], source: 'local' });
     const cacheKey = JSON.stringify([word.toLowerCase(), context]);
     const cached = cache.get(cacheKey);
