@@ -52,7 +52,7 @@
 .reading-depth .depth-chart{height:75px;margin:18px 0}
 /* Lower the scene while turning so the raised cover clears the heading. */
 .reading-depth .reading-world{transform:perspective(2400px) rotateX(16deg) rotateZ(-6deg);top:30px}
-.reading-depth .reading-world{transform:perspective(2400px) rotateX(12deg) rotateZ(-6deg) scale(.88);transform-origin:50% 100%;top:20px}
+.reading-depth .reading-world{transform:perspective(4000px) rotateX(4deg) rotateZ(-6deg) scale(.88);transform-origin:50% 100%;top:20px}
 .reading-depth .reading-translate{top:90px}
 
 /* Reference page 72 is ruled paper, not an invented lesson. */
@@ -95,7 +95,7 @@
 @media(prefers-reduced-motion:reduce){.example-robot{animation:none;transition:none}}
 
 /* Fixed spine throughout opening and Replay. */
-.reading-depth .reading-world{top:20px;left:30px}
+.reading-depth .reading-world{top:-35px;left:30px}
 
 @keyframes example-marker{to{background-size:100% 100%}}
 @media(prefers-reduced-motion:reduce){.reading-depth .example-pending{animation-duration:1ms}}
