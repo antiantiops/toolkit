@@ -74,3 +74,12 @@
 @media(prefers-reduced-motion:reduce){.reading-translate.speaker-approach .translate-pointer,.speaker-mouth,.speaker-wave i,.translate-speaking{animation:none}}
 .indicator-speaker{display:inline-flex;position:relative}
 .speaker-robot{flex-shrink:0}
+/* Launcher near spine; keep expanded window over ruled page. */
+.reading-depth .translate-launcher{position:relative;left:225px}
+.reading-depth .translate-stage-2 .translate-pointer{left:268px}
+.reading-depth .translate-stage-2 .translate-click{left:252px}
+.reading-depth .translate-window{transform-origin:253px 28px}
+/* Keep glass aperture and 2x sampling unchanged; refine physical rim/grip. */
+.reading-depth .reading-lens-glass{border-color:#3c4652;box-shadow:inset 0 0 0 1px #dce5ed,0 0 0 1px #111827,1px 2px 0 2px #718091,2px 5px 0 2px #202a36,4px 8px 10px #17203330}
+.reading-depth .reading-lens>i{left:91px;top:94px;width:15px;height:65px;border:1px solid #18212e;border-radius:4px 4px 8px 8px;background:linear-gradient(90deg,#18212e 0%,#526173 30%,#354456 52%,#18212e 100%);box-shadow:inset 1px 0 #a5b2c180,2px 4px 5px #17203330}
+.reading-depth .reading-lens>i::before{content:'';position:absolute;left:-1px;top:0;width:15px;height:12px;border-radius:3px 3px 0 0;background:linear-gradient(90deg,#697888,#d0d8df 45%,#586879);border-bottom:2px solid #111827}
