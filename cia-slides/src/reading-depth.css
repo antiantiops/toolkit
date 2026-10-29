@@ -100,3 +100,14 @@
 
 @keyframes example-marker{to{background-size:100% 100%}}
 @media(prefers-reduced-motion:reduce){.reading-depth .example-pending{animation-duration:1ms}}
+
+/* Torn ruled sheet; each copy is written in sequence and stays readable. */
+.practice-paper{position:absolute;z-index:20;left:55px;top:15px;width:405px;min-height:440px;box-sizing:border-box;padding:36px 25px 22px 42px;color:#243c68;background:repeating-linear-gradient(transparent 0,transparent 25px,#8b9aaf66 25px,#8b9aaf66 26px),#f5efdc;box-shadow:2px 8px 20px #17203338;transform:translateZ(95px) rotateZ(4deg);border-radius:2px 3px 15px 5px;border-left:1px solid #c2bca8;animation:practice-arrive .5s both}
+.practice-paper::before{content:'';position:absolute;top:-10px;left:0;right:0;height:18px;background:#f5efdc;clip-path:polygon(0 60%,3% 0,7% 50%,11% 15%,16% 65%,21% 5%,25% 50%,31% 0,36% 65%,42% 20%,48% 60%,54% 0,60% 50%,67% 10%,73% 60%,80% 0,86% 60%,93% 15%,100% 50%,100% 100%,0 100%)}
+.practice-paper>small{font:10px Arial;letter-spacing:2px;color:#716958;display:block;margin-bottom:18px}
+.practice-copy{margin-bottom:20px}.practice-copy p{font:italic 18px/26px 'Segoe Print','Bradley Hand',cursive;margin:0;white-space:nowrap;clip-path:inset(0 100% 0 0);animation:practice-ink 1s linear forwards;animation-delay:calc(var(--copy)*3.4s + .6s)}
+.practice-copy p:nth-child(2){animation-delay:calc(var(--copy)*3.4s + 1.6s)}.practice-copy p:nth-child(3){animation-delay:calc(var(--copy)*3.4s + 2.6s)}
+@keyframes practice-ink{to{clip-path:inset(0 0 0 0)}}
+@media(prefers-reduced-motion:reduce){.practice-paper{animation:none}.practice-copy p{animation:none;clip-path:none}}
+
+@keyframes practice-arrive{from{opacity:0}to{opacity:1}}
