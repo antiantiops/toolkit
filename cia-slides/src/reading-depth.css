@@ -54,3 +54,11 @@
 .reading-depth .reading-world{transform:perspective(2400px) rotateX(16deg) rotateZ(-6deg);top:30px}
 .reading-depth .reading-world{transform:perspective(2400px) rotateX(12deg) rotateZ(-6deg) scale(.88);transform-origin:50% 100%;top:20px}
 .reading-depth .reading-translate{top:90px}
+
+/* Reference page 72 is ruled paper, not an invented lesson. */
+.reading-depth .book-writing-lines{height:365px;margin-top:18px;background:repeating-linear-gradient(to bottom,transparent 0,transparent 16px,#a9a79c 16px,#a9a79c 17px)}
+.reading-depth .textbook-vocabulary{gap:2px}
+.reading-depth .textbook-vocabulary li{line-height:1.05}
+.reading-depth .textbook-ant{margin-left:7px}
+.reading-depth .textbook-footer{margin-top:6px}
+.reading-depth .reading-book figcaption{margin-top:20px}
