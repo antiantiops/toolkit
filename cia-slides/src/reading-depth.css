@@ -62,3 +62,14 @@
 .reading-depth .textbook-ant{margin-left:7px}
 .reading-depth .textbook-footer{margin-top:6px}
 .reading-depth .reading-book figcaption{margin-top:20px}
+/* Lookup sits over ruled left page; source word remains exposed. */
+.reading-depth .reading-translate{left:35px}
+.reading-translate.speaker-approach .translate-pointer{left:var(--speaker-x);top:var(--speaker-y);opacity:1;z-index:12;animation:speaker-aim .8s ease both}
+.reading-translate.speaker-playing .translate-pointer{animation:speaker-press .3s ease both}
+.speaker-playing .indicator-speaker{color:#1a73e8;filter:drop-shadow(0 0 4px #4285f4)}
+.translate-speaking{position:absolute;left:38px;top:-92px;z-index:13;display:flex;align-items:center;gap:12px;padding:12px 18px;background:#fff;border:1px solid #c4d5f5;border-radius:18px;box-shadow:0 10px 28px #17203330;color:#172033;animation:reading-action-enter .35s both}
+.speaker-face{width:82px;height:82px}.translate-speaking b{font:600 19px Arial}.translate-speaking p{font:12px Arial;margin:5px 0}.translate-speaking small{font:8px Arial;color:#64748b}
+.speaker-mouth{transform-origin:50px 64px;animation:speaker-talk .24s infinite alternate}.speaker-wave{height:25px;display:flex;align-items:center;gap:3px}.speaker-wave i{height:20px;width:3px;background:#4285f4;border-radius:3px;animation:speaker-wave .45s infinite alternate}
+@keyframes speaker-aim{from{opacity:0;transform:translate(110px,55px)}to{opacity:1;transform:none}}@keyframes speaker-press{50%{transform:scale(.75)}to{transform:none}}@keyframes speaker-talk{to{transform:scaleY(.25)}}@keyframes speaker-wave{to{transform:scaleY(.2)}}
+@media(prefers-reduced-motion:reduce){.reading-translate.speaker-approach .translate-pointer,.speaker-mouth,.speaker-wave i,.translate-speaking{animation:none}}
+.indicator-speaker{display:inline-flex;position:relative}
