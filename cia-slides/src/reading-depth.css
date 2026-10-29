@@ -31,26 +31,26 @@
 .reading-depth .translate-tabs{font-size:9px}
 .reading-depth .reading-world{pointer-events:none}
 .reading-depth .reading-question{position:relative;z-index:1}
-/* Retire the cover after opening; avoid GPU backface layers covering the page. */
-.reading-depth .book-hinge{visibility:visible;transition:transform 1500ms cubic-bezier(.32,.05,.24,1),visibility 0s}
-.reading-depth .book-hinge.is-open{visibility:hidden;transition:transform 1500ms cubic-bezier(.32,.05,.24,1),visibility 0s 1500ms}
-@media(prefers-reduced-motion:reduce){.reading-depth .book-hinge.is-open{transition:none}}
-/* Closed book must not expose either Day 15 page before the opening starts. */
-.reading-depth .book-sequence:not(.book-ready) .book-left-page,
+/* One rigid leaf; its reverse carries the left page throughout the turn. */
+.reading-depth .book-stack{perspective:none;transform-style:preserve-3d}
+.reading-depth .book-hinge{transform:translateZ(3px) rotateY(0deg);transform-origin:left center;transform-style:preserve-3d;transition:transform 1500ms cubic-bezier(.45,0,.2,1)}
+.reading-depth .book-hinge.is-open{transform:translateZ(3px) rotateY(-180deg);visibility:visible}
+.reading-depth .book-cover,.reading-depth .book-cover-back{backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.reading-depth .book-cover{transform:translateZ(1px)}
+.reading-depth .book-cover-back{opacity:1;transform:rotateY(180deg) translateZ(1px);border:0;background:#fffef9;display:block}
+.reading-depth .book-cover-back .book-left-page{position:absolute;inset:0;width:100%;height:100%;margin:0;backface-visibility:hidden}
 .reading-depth .book-sequence:not(.book-ready) .textbook-page{visibility:hidden}
-/* Two projected halves avoid nested 3D backface compositing on laptop GPUs. */
-.reading-depth .book-hinge{transform:none;transform-style:flat;transition:none}
-.reading-depth .book-hinge.is-open{transform:none;visibility:hidden;transition:none;animation:depth-cover-fold 1500ms linear both}
-.reading-depth .book-cover{transform:none}
-.reading-depth .book-ready .book-left-page{transform-origin:right center;animation:depth-page-unfold 1500ms linear both}
-@keyframes depth-cover-fold{
-  0%{visibility:visible;transform:scaleX(1) skewY(0)}
-  49%{visibility:visible;transform:scaleX(.015) skewY(-8deg)}
-  50%,100%{visibility:hidden;transform:scaleX(0)}
-}
-@keyframes depth-page-unfold{
-  0%,49%{visibility:hidden;transform:scaleX(0) skewY(8deg)}
-  50%{visibility:visible;transform:scaleX(.015) skewY(8deg)}
-  100%{visibility:visible;transform:scaleX(1) skewY(0)}
-}
-@media(prefers-reduced-motion:reduce){.reading-depth .book-hinge.is-open,.reading-depth .book-ready .book-left-page{animation:none}}
+.reading-depth .book-stack::after{transform:translateZ(1px)}
+@media(prefers-reduced-motion:reduce){.reading-depth .book-hinge{transition:none}.reading-depth .book-hinge.is-open{visibility:visible}}
+/* Reverse-page typography must not inherit the generic inside-cover seal styles. */
+.reading-depth .book-cover-back .textbook-banner span{border:0;border-radius:0;padding:0;font:inherit}
+.reading-depth .book-cover-back .depth-page-number{border:0;border-radius:0;padding:0;font:10px Georgia,serif}
+.reading-depth .book-cover-back .book-left-page{padding:12px 25px}
+.reading-depth .book-left-page h2{margin:9px 0 16px}
+.reading-depth .book-left-page>p{font-size:16px;line-height:1.45}
+.reading-depth .book-left-page>p:first-of-type{margin:18px 0 10px;font-size:25px}
+.reading-depth .depth-chart{height:75px;margin:18px 0}
+/* Lower the scene while turning so the raised cover clears the heading. */
+.reading-depth .reading-world{transform:perspective(2400px) rotateX(16deg) rotateZ(-6deg);top:30px}
+.reading-depth .reading-world{transform:perspective(2400px) rotateX(12deg) rotateZ(-6deg) scale(.88);transform-origin:50% 100%;top:20px}
+.reading-depth .reading-translate{top:90px}
