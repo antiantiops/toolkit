@@ -87,3 +87,9 @@
 .example-robot{position:absolute;left:320px;top:-110px;z-index:14;display:flex;flex-direction:column;align-items:center;animation:reading-action-enter .4s both;color:#334155}.example-robot>span{transition:transform .7s;transform-origin:center}.example-robot.look-book>span{transform:perspective(350px) rotateY(28deg) rotateZ(10deg)}.example-robot.look-app>span{transform:perspective(350px) rotateY(-28deg) rotateZ(-10deg)}.example-robot small{font:10px Arial;background:#fff;padding:4px 7px;border-radius:8px;white-space:nowrap}
 .translate-example .translate-input,.translate-example .translate-output{font-size:15px;line-height:1.35;min-height:106px}.translate-example .translate-alternatives{min-height:0}.translate-example .translate-bottom{display:none}
 @media(prefers-reduced-motion:reduce){.example-robot,.example-robot>span{animation:none;transition:none}}
+/* Lens parks first; robot approaches source, then travels into translation app. */
+.reading-depth:has(.example-robot) .example-pending,.reading-depth:has(.translate-example .translate-output:not(:empty)) .example-pending{background:#fde68a;box-shadow:0 0 0 2px #fbbf2480;border-radius:2px}
+.example-robot{left:430px;top:20px;animation:example-approach .8s both;transition:left 1.1s ease-in-out,top 1.1s ease-in-out}
+.example-robot.look-app{left:185px;top:90px}
+@keyframes example-approach{from{opacity:0;translate:45px 35px}to{opacity:1;translate:0 0}}
+@media(prefers-reduced-motion:reduce){.example-robot{animation:none;transition:none}}

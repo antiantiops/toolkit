@@ -13,11 +13,12 @@ export function ReadingTranslate({active,reset,step}:{active:boolean;reset:numbe
  useEffect(()=>{if(stage!==4)return;let n=0;const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;if(reduced){setTyped('Indicator');return;}const timer=setInterval(()=>{setTyped('Indicator'.slice(0,++n));if(n===9)clearInterval(timer);},130);return()=>clearInterval(timer);},[stage]);
  const [examplePhase,setExamplePhase]=useState(0),[sentence,setSentence]=useState('');
  useEffect(()=>{
-  setExamplePhase(0);setSentence('');if(step!==2)return;
-  const timers=[1000,2400,3400].map((ms,i)=>setTimeout(()=>setExamplePhase(i+1),ms));return()=>timers.forEach(clearTimeout);
+  if(step!==2)return;setExamplePhase(0);setSentence('');
+  const timers=[3900,5700,7100].map((ms,i)=>setTimeout(()=>setExamplePhase(i+1),ms));return()=>timers.forEach(clearTimeout);
  },[step,reset]);
  useEffect(()=>{if(examplePhase!==3)return;let n=0;if(matchMedia('(prefers-reduced-motion: reduce)').matches){setSentence(exampleText);return;}const timer=setInterval(()=>{setSentence(exampleText.slice(0,++n));if(n===exampleText.length)clearInterval(timer);},55);return()=>clearInterval(timer);},[examplePhase]);
- const exampleMode=step===2, input=exampleMode?(examplePhase>=3?sentence:'Indicator'):typed;
+ useEffect(()=>{setExamplePhase(0);setSentence('');},[reset,active]);
+ const exampleMode=step>=2, input=exampleMode?(examplePhase>=3?sentence:'Indicator'):typed;
  return stage>0?<div ref={root} className={`reading-translate translate-stage-${stage} ${exampleMode?'translate-example':''} ${approach&&step<=1?'speaker-approach':''} ${step===1?'speaker-playing':''}`} style={{'--speaker-x':`${aim.x}px`,'--speaker-y':`${aim.y}px`} as React.CSSProperties} data-translate-stage={stage}>
  <div className="translate-launcher" aria-hidden="true"><svg viewBox="0 0 48 48"><path fill="#4285f4" d="M5 5h27v30H5z"/><path fill="#e8eaed" stroke="#9aa0a6" d="M20 14h24v29H20z"/><text x="9" y="28" fill="white" fontSize="24" fontFamily="Arial">G</text><text x="23" y="35" fill="#5f6368" fontSize="20">文</text></svg></div>
  <svg className="translate-pointer" viewBox="0 0 32 40" aria-hidden="true"><path d="M3 2V30L11 24L17 37L23 34L17 21H29Z" fill="white" stroke="#172033" strokeWidth="2"/></svg><i className="translate-click" aria-hidden="true"/>
@@ -29,7 +30,7 @@ export function ReadingTranslate({active,reset,step}:{active:boolean;reset:numbe
  <div className="translate-bottom"><b>More translations</b><span>Expand all</span></div><div className="translate-alternatives">{!exampleMode&&typed==='Indicator'&&<><p><span>chỉ báo</span><small>Noun</small><span>indicator</span></p><p><span>dấu hiệu</span><small>Noun</small><span>sign, indicator</span></p></>}</div>
  <div className="translate-history"><span><History/><small>History</small></span><span><Star/><small>Saved</small></span></div></section>}
 
- {exampleMode&&examplePhase>0&&<div className={`example-robot look-${examplePhase===1?'book':'app'}`} data-example-phase={examplePhase}><RobotHead state={examplePhase===1?'searching':examplePhase===2?'thinking':'working'} size={110} interactive={false} color="#4267c9" aria-label="Example translation robot"/><small>{examplePhase===1?'Read example':examplePhase===2?'Google Translate':'English → Vietnamese'}</small></div>}
+ {step===2&&examplePhase>0&&sentence!==exampleText&&<div className={`example-robot look-${examplePhase===1?'book':'app'}`} data-example-phase={examplePhase}><RobotHead state={examplePhase===1?'searching':examplePhase===2?'thinking':'working'} size={110} interactive={false} color="#4267c9" aria-label="Example translation robot"/><small>{examplePhase===1?'Read example':examplePhase===2?'Google Translate':'English → Vietnamese'}</small></div>}
  {step===1&&<div className="translate-speaking" aria-label="Silent pronunciation illustration"><RobotHead className="speaker-robot" state="speaking" shape="rectangle" size={88} interactive={false} color="#4267c9" aria-label="Speaking robot"/><div><b>Indicator</b><p>/ˈɪn.də.keɪ.t̬ɚ/</p><div className="speaker-wave" aria-hidden="true">{Array.from({length:13},(_,i)=><i key={i} style={{animationDelay:`${i*.09}s`}}/>)}</div><small>DEMO · SILENT</small></div></div>}
  </div>:null;
 }
