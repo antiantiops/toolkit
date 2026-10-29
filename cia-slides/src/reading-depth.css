@@ -31,3 +31,7 @@
 .reading-depth .translate-tabs{font-size:9px}
 .reading-depth .reading-world{pointer-events:none}
 .reading-depth .reading-question{position:relative;z-index:1}
+/* Retire the cover after opening; avoid GPU backface layers covering the page. */
+.reading-depth .book-hinge{visibility:visible;transition:transform 1500ms cubic-bezier(.32,.05,.24,1),visibility 0s}
+.reading-depth .book-hinge.is-open{visibility:hidden;transition:transform 1500ms cubic-bezier(.32,.05,.24,1),visibility 0s 1500ms}
+@media(prefers-reduced-motion:reduce){.reading-depth .book-hinge.is-open{transition:none}}
