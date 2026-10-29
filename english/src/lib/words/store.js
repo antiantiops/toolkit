@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import {normalizeWord} from './normalize.mjs';
 import { weekStart } from './week.js';
 let db;
 function database() {
@@ -17,10 +18,29 @@ function database() {
   db.exec(`CREATE TABLE IF NOT EXISTS word_weeks (owner TEXT NOT NULL, week TEXT NOT NULL, word_id INTEGER NOT NULL, searches INTEGER NOT NULL DEFAULT 1, PRIMARY KEY(owner,week,word_id));`);
   if (!db.prepare('PRAGMA table_info(word_weeks)').all().some(c=>c.name==='position')) db.exec('ALTER TABLE word_weeks ADD COLUMN position INTEGER');
   for (const row of db.prepare('SELECT id,owner,updated FROM words WHERE id NOT IN (SELECT word_id FROM word_weeks)').all()) db.prepare('INSERT OR IGNORE INTO word_weeks(owner,week,word_id,searches) VALUES(?,?,?,1)').run(row.owner,weekStart(row.updated),row.id);
+  db.exec('CREATE TABLE IF NOT EXISTS word_migrations (name TEXT PRIMARY KEY)');
+  if(!db.prepare('SELECT 1 FROM word_migrations WHERE name=?').get('terminal-period-v1')){
+    db.exec('BEGIN IMMEDIATE');
+    try{
+      const hasContext=!!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='chat_word_context'").get();
+      for(const row of db.prepare('SELECT * FROM words ORDER BY id').all()){
+        const english=normalizeWord(row.english);if(!english||english===row.english)continue;
+        const target=db.prepare('SELECT * FROM words WHERE owner=? AND english=?').get(row.owner,english);
+        if(target){
+          db.prepare('UPDATE words SET searches=searches+?,updated=MAX(updated,?),needs_review=MAX(needs_review,?) WHERE id=?').run(row.searches,row.updated,row.needs_review,target.id);
+          for(const w of db.prepare('SELECT * FROM word_weeks WHERE owner=? AND word_id=?').all(row.owner,row.id))db.prepare(`INSERT INTO word_weeks(owner,week,word_id,searches,position) VALUES(?,?,?,?,?) ON CONFLICT(owner,week,word_id) DO UPDATE SET searches=word_weeks.searches+excluded.searches,position=CASE WHEN word_weeks.position IS NULL THEN excluded.position WHEN excluded.position IS NULL THEN word_weeks.position ELSE MIN(word_weeks.position,excluded.position) END`).run(row.owner,w.week,target.id,w.searches,w.position);
+          db.prepare('DELETE FROM word_weeks WHERE owner=? AND word_id=?').run(row.owner,row.id);
+          db.prepare('DELETE FROM words WHERE id=?').run(row.id);
+        }else db.prepare('UPDATE words SET english=? WHERE id=?').run(english,row.id);
+        if(hasContext){db.prepare('INSERT OR IGNORE INTO chat_word_context SELECT owner,?,meaning,example,kind,job FROM chat_word_context WHERE owner=? AND english=?').run(english,row.owner,row.english);db.prepare('DELETE FROM chat_word_context WHERE owner=? AND english=?').run(row.owner,row.english);}
+      }
+      db.prepare('INSERT INTO word_migrations VALUES(?)').run('terminal-period-v1');db.exec('COMMIT');
+    }catch(e){db.exec('ROLLBACK');throw e;}
+  }
   return db;
 }
 export function saveWord(owner, text) {
-  const english = text.trim().replace(/\s+/g,' ').toLowerCase();
+  const english = normalizeWord(text);
   if (!owner || english.length > 500 || !/[a-z]/i.test(english)) throw new Error('Invalid English text');
   const db = database();
   db.exec('BEGIN IMMEDIATE');

@@ -1,3 +1,4 @@
+import {normalizeWord} from './normalize.mjs';
 import {DatabaseSync} from 'node:sqlite';
 import {mkdirSync} from 'node:fs';
 import {dirname} from 'node:path';
@@ -11,7 +12,7 @@ export function claim(owner,id){return database().prepare("INSERT INTO chat_word
 export function job(owner,id){return database().prepare('SELECT status,items FROM chat_word_jobs WHERE owner=? AND id=?').get(owner,id);}
 export function finish(owner,id,candidates){listWords(owner);const d=database(),items=[];d.exec('BEGIN IMMEDIATE');try{
  if(job(owner,id)?.status!=='pending'){d.exec('COMMIT');return;}
- if(enabled(owner))for(const c of candidates){const english=c.english.toLowerCase().trim().replace(/\s+/g,' ');const exists=d.prepare('SELECT id FROM words WHERE owner=? AND english=?').get(owner,english);const now=Date.now();
+ if(enabled(owner))for(const c of candidates){const english=normalizeWord(c.english);const exists=d.prepare('SELECT id FROM words WHERE owner=? AND english=?').get(owner,english);const now=Date.now();
  const row=d.prepare('INSERT INTO words(owner,english,updated,searches) VALUES(?,?,?,1) ON CONFLICT(owner,english) DO UPDATE SET updated=excluded.updated,searches=words.searches+1 RETURNING id').get(owner,english,now);
  d.prepare('INSERT INTO word_weeks(owner,week,word_id,searches,position) VALUES(?,?,?,1,(SELECT MIN(COALESCE(position,-word_id))-1 FROM word_weeks WHERE owner=? AND week=?)) ON CONFLICT(owner,week,word_id) DO UPDATE SET searches=word_weeks.searches+1').run(owner,weekStart(),row.id,owner,weekStart());
  if(!exists){d.prepare('INSERT OR REPLACE INTO chat_word_context VALUES(?,?,?,?,?,?)').run(owner,english,c.meaning,c.example,c.kind,id);items.push({english,meaning:c.meaning});}}
