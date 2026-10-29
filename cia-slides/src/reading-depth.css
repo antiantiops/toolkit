@@ -35,3 +35,6 @@
 .reading-depth .book-hinge{visibility:visible;transition:transform 1500ms cubic-bezier(.32,.05,.24,1),visibility 0s}
 .reading-depth .book-hinge.is-open{visibility:hidden;transition:transform 1500ms cubic-bezier(.32,.05,.24,1),visibility 0s 1500ms}
 @media(prefers-reduced-motion:reduce){.reading-depth .book-hinge.is-open{transition:none}}
+/* Closed book must not expose either Day 15 page before the opening starts. */
+.reading-depth .book-sequence:not(.book-ready) .book-left-page,
+.reading-depth .book-sequence:not(.book-ready) .textbook-page{visibility:hidden}
