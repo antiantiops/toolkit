@@ -1,3 +1,4 @@
+import {RobotHead} from 'robot-heads';
 import {Languages,Image,FileText,PanelsTopLeft,Mic,Volume2,Copy,Star,Share2,History,Menu} from 'lucide-react';
 import {useEffect,useState,useRef} from 'react';
 export function ReadingTranslate({active,reset,step}:{active:boolean;reset:number;step:number}){
@@ -19,6 +20,6 @@ export function ReadingTranslate({active,reset,step}:{active:boolean;reset:numbe
  <div className="translate-bottom"><b>More translations</b><span>Expand all</span></div><div className="translate-alternatives">{typed==='Indicator'&&<><p><span>chỉ báo</span><small>Noun</small><span>indicator</span></p><p><span>dấu hiệu</span><small>Noun</small><span>sign, indicator</span></p></>}</div>
  <div className="translate-history"><span><History/><small>History</small></span><span><Star/><small>Saved</small></span></div></section>}
 
- {step===1&&<div className="translate-speaking" aria-label="Silent pronunciation illustration"><svg className="speaker-face" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46" fill="#e8f0fe"/><path d="M23 45Q20 12 50 12Q80 12 77 45" fill="#334155"/><ellipse cx="50" cy="49" rx="27" ry="32" fill="#efc4a5"/><path d="M23 38Q42 35 58 22Q67 36 77 38V29Q50 0 24 27Z" fill="#334155"/><circle cx="40" cy="46" r="2.5" fill="#172033"/><circle cx="60" cy="46" r="2.5" fill="#172033"/><ellipse className="speaker-mouth" cx="50" cy="64" rx="8" ry="5" fill="#9f3544"/><path d="M18 97Q19 80 38 78L50 89L62 78Q81 80 82 97" fill="#4285f4"/></svg><div><b>Indicator</b><p>/ˈɪn.də.keɪ.t̬ɚ/</p><div className="speaker-wave" aria-hidden="true">{Array.from({length:13},(_,i)=><i key={i} style={{animationDelay:`${i*.09}s`}}/>)}</div><small>DEMO · SILENT</small></div></div>}
+ {step===1&&<div className="translate-speaking" aria-label="Silent pronunciation illustration"><RobotHead className="speaker-robot" state="speaking" shape="rectangle" size={88} interactive={false} color="#4267c9" aria-label="Speaking robot"/><div><b>Indicator</b><p>/ˈɪn.də.keɪ.t̬ɚ/</p><div className="speaker-wave" aria-hidden="true">{Array.from({length:13},(_,i)=><i key={i} style={{animationDelay:`${i*.09}s`}}/>)}</div><small>DEMO · SILENT</small></div></div>}
  </div>:null;
 }
