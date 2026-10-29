@@ -48,6 +48,10 @@ export default function LessonChat({ context }) {
     setDragging(false);
   };
   const panel = useRef(null);
+  const [chatHeight, setChatHeight] = useState(null);
+  const heightDrag = useRef(null);
+  const resizeChat = height => setChatHeight(Math.max(Math.min(240, window.innerHeight - 24), Math.min(window.innerHeight - 24, height)));
+
   const bubble = useRef(null);
   const [origin, setOrigin] = useState("bottom right");
   const toggleChat = (next) => {
@@ -105,8 +109,16 @@ export default function LessonChat({ context }) {
       </svg>
       {busy && <span className="absolute right-0 top-0 h-3 w-3 animate-pulse rounded-full border-2 border-slate-900 bg-amber-300" />}
     </button>}
-    {<section ref={panel} inert={!open} aria-hidden={!open} data-open={open} style={{ transformOrigin: origin }} id="lesson-chat-panel" role="dialog" aria-label="Chat với AI về bài học" className="lesson-chat-motion fixed bottom-3 right-3 z-40 flex h-[min(70dvh,600px)] w-[calc(100%-1.5rem)] max-w-sm flex-col overflow-hidden rounded-2xl border border-slate-600 bg-slate-900 shadow-2xl">
-      <header data-chat-compact-header className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-slate-700 px-3">
+    {<section ref={panel} inert={!open} aria-hidden={!open} data-open={open} style={{ transformOrigin: origin, ...(chatHeight === null ? {} : {height: chatHeight}), maxHeight: "calc(100dvh - 24px)" }} id="lesson-chat-panel" role="dialog" aria-label="Chat với AI về bài học" className="lesson-chat-motion fixed bottom-3 right-3 z-40 flex h-[min(70dvh,600px)] w-[calc(100%-1.5rem)] max-w-sm flex-col overflow-hidden rounded-2xl border border-slate-600 bg-slate-900 shadow-2xl">
+      <header data-chat-compact-header className="relative flex h-11 shrink-0 items-center justify-between gap-2 border-b border-slate-700 px-3">
+        <button type="button" aria-label="Kéo để đổi chiều cao chat" title="Kéo lên để mở rộng, kéo xuống để thu gọn. Phím mũi tên để điều chỉnh."
+          className="absolute left-1/2 top-0 flex h-5 w-20 -translate-x-1/2 touch-none select-none items-start justify-center rounded-b-lg pt-1 cursor-ns-resize hover:bg-sky-200/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-300"
+          onPointerDown={e => { if(e.button !== 0)return; heightDrag.current={y:e.clientY,height:panel.current.getBoundingClientRect().height}; e.currentTarget.setPointerCapture(e.pointerId); }}
+          onPointerMove={e => { if(heightDrag.current)resizeChat(heightDrag.current.height + heightDrag.current.y - e.clientY); }}
+          onPointerUp={() => {heightDrag.current=null;}} onPointerCancel={() => {heightDrag.current=null;}} onLostPointerCapture={() => {heightDrag.current=null;}}
+          onKeyDown={e => {if(!["ArrowUp","ArrowDown","Home","End"].includes(e.key))return;e.preventDefault();resizeChat(e.key==="Home"?240:e.key==="End"?window.innerHeight-24:panel.current.getBoundingClientRect().height+(e.key==="ArrowUp"?40:-40));}}>
+          <span aria-hidden="true" className="h-1 w-10 rounded-full bg-sky-200/70" />
+        </button>
         <h2 className="min-w-0 truncate text-sm font-semibold text-sky-200">Chat <span className="font-normal text-slate-400">· {context.mode === "listening" ? "Listening" : context.mode === "grammar" ? "Grammar" : context.mode === "writing" ? "Writing" : "Vocabulary"}</span></h2>
         <button aria-label="Thu nhỏ chat" onClick={() => toggleChat(false)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-300">✕</button>
       </header>
