@@ -1,5 +1,6 @@
 "use client";
 import {joinImages} from '../lib/listening/join-images.mjs';
+import ListeningTitle from './ListeningTitle';
 import TranscriptSwitch from './TranscriptSwitch';
 import { useEffect, useRef, useState } from 'react';
 import ImageCrop from './ImageCrop';
@@ -105,7 +106,7 @@ export default function ListeningImage({onContextChange,historyEntry,clickableTe
       setClips([...resources.current]);
     } catch (e) { if (token === version.current) setError(formatErrorMessage(e)); } finally { if (token === version.current) setAudioBusy(false); }
   };
-  useEffect(()=>{if(historyEntry&&lesson)createAudio(lesson,dialogueVoices(lesson.sentences),true);},[historyEntry,lesson]);
+  useEffect(()=>{if(historyEntry&&lesson)createAudio(lesson,dialogueVoices(lesson.sentences),true);},[historyEntry,lesson?.sentences]);
   const saveAudio = async () => {
     try {
       const text = lesson.sentences.map(s => `${s.en}\n${s.vi}`).join('\n\n');
@@ -154,7 +155,7 @@ export default function ListeningImage({onContextChange,historyEntry,clickableTe
     {busy && <p role="status" className="text-teal-200">Đang phân tích nền: {stage || 'read-image'}. Có thể đổi tab, tải lại để tiếp tục.</p>}
     {error && <div role="alert" className="whitespace-pre-wrap break-words rounded-xl bg-red-950 p-3 text-sm text-red-200">{error}</div>}
     {lesson && <div className="space-y-4 rounded-3xl border border-white/10 bg-slate-950 p-3 sm:p-5">
-      <h3 className="font-bold text-teal-200">{lesson.title}</h3>
+      <ListeningTitle title={lesson.title} id={historyEntry?.id} onSaved={title=>setLesson(current=>({...current,title}))} />
       {!!Object.keys(voices).length && <div className="space-y-2 rounded-xl bg-slate-900 p-3"><p className="text-sm text-teal-200">Giọng từng nhân vật · US</p><p className="text-xs text-slate-400">Chưa rõ giới tính: gán giọng khác nhau, không đoán từ tên. Tên chỉ hiện trong transcript, không đọc thành tiếng.</p>{Object.entries(voices).map(([name,voice])=><label key={name} className="flex items-center justify-between gap-3 text-sm"><span className="min-w-0 break-words text-slate-300">{name}</span><select aria-label={`Giọng ${name}`} disabled={audioBusy||busy} value={voice} onChange={e=>{version.current++;release();setVoices(current=>({...current,[name]:e.target.value}));}} className="min-h-11 rounded-lg bg-slate-800 px-2 text-teal-100">{speakerVoices.map(v=><option key={v.id} value={v.id}>{v.label}</option>)}</select></label>)}</div>}
       {!clips.length && <button disabled={audioBusy} onClick={() => createAudio()} className="rounded-xl bg-teal-600 p-3 disabled:opacity-50">{audioBusy ? `Đang tạo MP3 ${audioProgress}/${lesson.sentences.length} câu…` : resources.current.length ? 'Thử lại các câu chưa tạo' : 'Tạo audio Listening'}</button>}
       <div className="overflow-hidden rounded-2xl border border-teal-900/60 bg-gradient-to-b from-teal-950/50 to-slate-950">
