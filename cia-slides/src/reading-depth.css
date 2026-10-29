@@ -38,3 +38,19 @@
 /* Closed book must not expose either Day 15 page before the opening starts. */
 .reading-depth .book-sequence:not(.book-ready) .book-left-page,
 .reading-depth .book-sequence:not(.book-ready) .textbook-page{visibility:hidden}
+/* Two projected halves avoid nested 3D backface compositing on laptop GPUs. */
+.reading-depth .book-hinge{transform:none;transform-style:flat;transition:none}
+.reading-depth .book-hinge.is-open{transform:none;visibility:hidden;transition:none;animation:depth-cover-fold 1500ms linear both}
+.reading-depth .book-cover{transform:none}
+.reading-depth .book-ready .book-left-page{transform-origin:right center;animation:depth-page-unfold 1500ms linear both}
+@keyframes depth-cover-fold{
+  0%{visibility:visible;transform:scaleX(1) skewY(0)}
+  49%{visibility:visible;transform:scaleX(.015) skewY(-8deg)}
+  50%,100%{visibility:hidden;transform:scaleX(0)}
+}
+@keyframes depth-page-unfold{
+  0%,49%{visibility:hidden;transform:scaleX(0) skewY(8deg)}
+  50%{visibility:visible;transform:scaleX(.015) skewY(8deg)}
+  100%{visibility:visible;transform:scaleX(1) skewY(0)}
+}
+@media(prefers-reduced-motion:reduce){.reading-depth .book-hinge.is-open,.reading-depth .book-ready .book-left-page{animation:none}}
