@@ -1,0 +1,4 @@
+import {chromium} from '/usr/local/lib/node_modules/playwright/index.mjs';
+import assert from 'node:assert/strict';
+const browser=await chromium.launch({args:['--no-sandbox']});
+try{const page=await browser.newPage();await page.clock.install();await page.goto((process.env.TEST_URL||'http://127.0.0.1:8242')+'/#8');await page.clock.runFor(16000);assert.equal(await page.locator('.translate-input').textContent(),'Indicator');await page.clock.runFor(3000);assert.equal(await page.locator('.translate-input').textContent(),'');await page.clock.runFor(4500);assert.equal(await page.locator('.translate-input').textContent(),'');await page.clock.runFor(6000);assert.match(await page.locator('.translate-input').textContent(),/^Current economic indicators/);console.log('PASS old word cleared before example; sentence typed after reading');}finally{await browser.close();}

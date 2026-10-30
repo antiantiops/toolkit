@@ -18,7 +18,7 @@ export function ReadingTranslate({active,reset,step}:{active:boolean;reset:numbe
  },[step,reset]);
  useEffect(()=>{if(examplePhase!==3)return;let n=0;if(matchMedia('(prefers-reduced-motion: reduce)').matches){setSentence(exampleText);return;}const timer=setInterval(()=>{setSentence(exampleText.slice(0,++n));if(n===exampleText.length)clearInterval(timer);},55);return()=>clearInterval(timer);},[examplePhase]);
  useEffect(()=>{setExamplePhase(0);setSentence('');},[reset,active]);
- const exampleMode=step>=2, input=exampleMode?(examplePhase>=3?sentence:'Indicator'):typed;
+ const exampleMode=step>=2, input=exampleMode?sentence:typed;
  return stage>0?<div ref={root} className={`reading-translate translate-stage-${stage} ${exampleMode?'translate-example':''} ${approach&&step<=1?'speaker-approach':''} ${step===1?'speaker-playing':''}`} style={{'--speaker-x':`${aim.x}px`,'--speaker-y':`${aim.y}px`} as React.CSSProperties} data-translate-stage={stage}>
  <div className="translate-launcher" aria-hidden="true"><svg viewBox="0 0 48 48"><path fill="#4285f4" d="M5 5h27v30H5z"/><path fill="#e8eaed" stroke="#9aa0a6" d="M20 14h24v29H20z"/><text x="9" y="28" fill="white" fontSize="24" fontFamily="Arial">G</text><text x="23" y="35" fill="#5f6368" fontSize="20">文</text></svg></div>
  <svg className="translate-pointer" viewBox="0 0 32 40" aria-hidden="true"><path d="M3 2V30L11 24L17 37L23 34L17 21H29Z" fill="white" stroke="#172033" strokeWidth="2"/></svg><i className="translate-click" aria-hidden="true"/>
