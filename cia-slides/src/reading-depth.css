@@ -148,3 +148,11 @@
 .recall-failure{position:absolute;inset:0;z-index:100;background:#0b1028df;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;border-radius:14px;animation:practice-arrive .5s both}
 .recall-failure h2{font:800 76px/1.1 Arial;text-align:center;margin:28px 0;color:white}
 @media(prefers-reduced-motion:reduce){.reading-demo-4,.recall-failure{animation:none}.recall-answer .recall-pen{animation:none;opacity:0}}
+.reading-actions li.action-current,.reading-actions li.action-done{color:#6d28d9;font-weight:700;opacity:1}
+.reading-actions.recall-actions-dim{opacity:1}
+.reading-slide:has(.recall-prompt-layer){position:relative}
+.recall-prompt-layer{position:absolute;inset:0;z-index:80;display:grid;place-items:center;background:#17203324}
+.recall-prompt{background:white;border:1px solid #ddd6fe;border-radius:18px;padding:36px 44px;box-shadow:0 24px 80px #17203340;text-align:center;animation:recall-modal-drop .8s cubic-bezier(.2,.8,.3,1) both}
+.recall-prompt h2{font:750 36px/1.2 Arial;margin:0 0 24px;color:#172033}
+@keyframes recall-modal-drop{from{opacity:0;transform:translateY(-480px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.recall-prompt{animation:none}}

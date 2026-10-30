@@ -7,7 +7,7 @@ try{for(const [width,lang,reduced] of [[1440,'en',false],[390,'vi',false],[1200,
  await page.clock.install();await page.goto((process.env.TEST_URL||'http://127.0.0.1:8243')+'/#8');await page.clock.runFor(36000);
  assert.equal(await page.locator('.reading-notebook').count(),0);
  assert.equal(await page.locator('.reading-action-demo').evaluate(e=>getComputedStyle(e).borderTopWidth),'0px');
- await page.clock.runFor(6500);assert.equal(await page.locator('.reading-demo-4').count(),1);
+ await page.clock.runFor(6500);assert.equal(await page.locator('.recall-prompt').count(),1);
  await page.waitForTimeout(1200);await page.screenshot({path:`/root/.openclaw/workspace-nim/media/recall-prompt-${width}.png`});
  await page.locator('.recall-next').click();await page.clock.runFor(2200);
  assert.equal(await page.locator('.recall-answer svg.recall-pen').count(),1);
