@@ -135,3 +135,7 @@
 @media(prefers-reduced-motion:reduce){.recall-pen{translate:220px 80px;rotate:20deg}}
 /* Glyph points down-right by default; writing tip must face down-left. */
 .practice-pen,.recall-pen{transform:scaleX(-1)}
+/* One animation clock positions SVG tip and reveals ink. Tip is SVG (0,48). */
+.practice-copy p{animation:none}
+.practice-pen{animation:none;transform:translateY(-48px);overflow:visible;pointer-events:none}
+.practice-copy p{width:max-content;max-width:100%}
