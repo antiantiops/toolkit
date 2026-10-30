@@ -139,3 +139,12 @@
 .practice-copy p{animation:none}
 .practice-pen{animation:none;transform:translateY(-48px);overflow:visible;pointer-events:none}
 .practice-copy p{width:max-content;max-width:100%}
+.reading-depth .reading-action-demo.recall-clean{background:none;border:0;box-shadow:none;padding:0;height:auto;min-height:0}
+.reading-demo-4{background:#fff;border:1px solid #d7dce5;border-radius:14px;padding:22px;animation:recall-popup-drop .65s cubic-bezier(.2,.8,.3,1) both;box-shadow:0 12px 28px #17203318}
+@keyframes recall-popup-drop{from{opacity:0;transform:translateY(-55px)}to{opacity:1;transform:translateY(0)}}
+.recall-answer .recall-pen{left:25px;top:auto;bottom:0;transform:none;translate:0 0;rotate:0deg;animation:recall-tip-write 3.4s 1s both;pointer-events:none}
+@keyframes recall-tip-write{0%{translate:35px -25px;opacity:0}25%,40%{translate:0 0;opacity:1}50%{translate:3px -8px}65%{translate:0 0}80%{translate:6px -5px}100%{translate:70px 40px;opacity:0}}
+.reading-slide:has(.recall-failure){position:relative}
+.recall-failure{position:absolute;inset:0;z-index:100;background:#0b1028df;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;border-radius:14px;animation:practice-arrive .5s both}
+.recall-failure h2{font:800 76px/1.1 Arial;text-align:center;margin:28px 0;color:white}
+@media(prefers-reduced-motion:reduce){.reading-demo-4,.recall-failure{animation:none}.recall-answer .recall-pen{animation:none;opacity:0}}
