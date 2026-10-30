@@ -133,3 +133,5 @@
 .recall-morning .reading-lens{visibility:hidden}
 .reading-depth .reading-action-demo:has(.recall-conclusion){height:260px}
 @media(prefers-reduced-motion:reduce){.recall-pen{translate:220px 80px;rotate:20deg}}
+/* Glyph points down-right by default; writing tip must face down-left. */
+.practice-pen,.recall-pen{transform:scaleX(-1)}
