@@ -110,3 +110,26 @@
 @media(prefers-reduced-motion:reduce){.practice-paper{animation:none}.practice-copy p{animation:none;clip-path:none}}
 
 @keyframes practice-arrive{from{opacity:0}to{opacity:1}}
+/* Copying is effort, not evidence of recall. Keep both sheets in one scene. */
+.practice-paper{transition:transform 1s ease,left 1s ease,filter 1s ease;min-height:440px}
+.practice-copy{margin-bottom:0}.practice-copy p{animation-duration:.45s;animation-delay:calc(var(--copy)*.55s + .4s)}
+.practice-stack{position:absolute;left:55px;top:15px;width:405px;height:440px;transform:translateZ(90px);pointer-events:none}
+.practice-stack i{position:absolute;inset:0;background:#eee7d3;border:1px solid #c2bca8;box-shadow:2px 5px 9px #17203322;transform:translate(8px,10px) rotate(2deg);animation:practice-arrive .6s 2s both}
+.practice-stack i+i{transform:translate(-6px,18px) rotate(-2deg);animation-delay:3.5s}
+.practice-pen{position:absolute;font:46px Georgia;left:45px;top:58px;animation:practice-pen-copy 5.5s linear forwards;color:#243c68}
+@keyframes practice-pen-copy{0%{translate:0 0}10%{translate:290px 0}11%{translate:0 28px}20%{translate:290px 28px}21%{translate:0 56px}30%{translate:290px 56px}31%{translate:0 84px}40%{translate:290px 84px}41%{translate:0 112px}50%{translate:290px 112px}51%{translate:0 140px}60%{translate:290px 140px}61%{translate:0 168px}70%{translate:290px 168px}71%{translate:0 196px}80%{translate:290px 196px}81%{translate:0 224px}92%{translate:290px 224px}100%{translate:300px 280px;rotate:25deg}}
+.practice-time{position:absolute;left:85px;top:480px;transform:translateZ(100px);display:flex;align-items:center;gap:10px;font:600 17px Arial;color:#344054;transition:opacity .5s}
+.practice-clock{width:25px;height:25px;border:2px solid #64748b;border-radius:50%;position:relative}.practice-clock::after{content:'';position:absolute;left:11px;top:3px;width:2px;height:10px;background:#64748b;transform-origin:bottom;animation:practice-clock-spin 1s linear 6}
+@keyframes practice-clock-spin{to{transform:rotate(360deg)}}
+.recall-morning .practice-paper{left:-12px;transform:translateZ(95px) rotateZ(-5deg) scale(.68);transform-origin:0 50%;filter:blur(1.2px)}
+.recall-morning .practice-stack{left:-12px;transform:translateZ(90px) rotateZ(-5deg) scale(.68);transform-origin:0 50%;transition:transform 1s,left 1s}
+.recall-morning .practice-time,.recall-morning .reading-lens{opacity:0;pointer-events:none}
+.recall-test{position:absolute;left:270px;top:25px;width:440px;height:430px;padding:34px;box-sizing:border-box;background:#fffefa;color:#172033;box-shadow:0 12px 35px #17203338;transform:translateZ(120px) rotateZ(5deg);z-index:25;animation:recall-test-enter 1s both;border-top:4px solid #7c3aed}
+.recall-test small{font:700 11px Arial;letter-spacing:2px;color:#6d28d9}.recall-test h2{font:700 30px Georgia;margin:24px 0}.recall-test>p{font:20px/1.5 Arial}.recall-answer{height:60px;border-bottom:2px solid #64748b;margin:18px 0;position:relative}.recall-attempt{font:italic 32px Georgia;position:absolute;bottom:0;left:15px;animation:recall-letter .1s 1.9s both}.recall-attempt::after{content:'';position:absolute;left:-4px;right:-5px;top:50%;height:2px;background:#344054;transform:rotate(-20deg) scaleX(0);animation:recall-cross .3s 3s forwards}.recall-pen{position:absolute;left:60px;top:245px;font:48px Georgia;animation:recall-hesitate 3.4s 1s both}.recall-test .recall-empty{color:#6d28d9;font-size:18px;animation:practice-arrive .4s 3.5s both}
+@keyframes recall-test-enter{from{opacity:0;translate:90px 30px}to{opacity:1;translate:0 0}}@keyframes recall-letter{from{opacity:0}to{opacity:1}}@keyframes recall-cross{to{transform:rotate(-20deg) scaleX(1)}}@keyframes recall-hesitate{0%{translate:70px -50px}25%,40%{translate:0 0}50%{translate:5px -3px}65%{translate:0 0}80%{translate:10px 0}100%{translate:220px 80px;rotate:20deg}}
+.recall-actions-dim{opacity:.28;transition:opacity 1s}.recall-next{background:#6d28d9;color:white;border:0;border-radius:8px;padding:12px 18px;font:600 17px Arial;cursor:pointer;margin-top:10px}.recall-next:focus-visible{outline:3px solid #a78bfa;outline-offset:3px}.recall-conclusion{opacity:0;transition:opacity .6s}.recall-conclusion.is-visible{opacity:1}.reading-depth .recall-conclusion h2{font-size:25px;line-height:1.2;margin:12px 0}.recall-emphasis{color:#6d28d9}
+@media(prefers-reduced-motion:reduce){.practice-pen,.practice-clock::after,.recall-test,.recall-attempt,.recall-attempt::after,.recall-pen{animation:none}.recall-attempt::after{transform:rotate(-20deg)}.recall-morning .practice-paper,.recall-morning .practice-stack,.recall-conclusion{transition:none}}
+.reading-world:has(.practice-paper) .reading-translate{visibility:hidden}
+.recall-morning .reading-lens{visibility:hidden}
+.reading-depth .reading-action-demo:has(.recall-conclusion){height:260px}
+@media(prefers-reduced-motion:reduce){.recall-pen{translate:220px 80px;rotate:20deg}}
