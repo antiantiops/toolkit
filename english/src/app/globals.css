@@ -161,3 +161,6 @@ html[data-theme="light"] .text-slate-500 { color:#3f3f46; }
 #theme-switch[aria-pressed="true"] .theme-sun{opacity:0;transform:rotate(90deg) scale(.5)}
 #theme-switch[aria-pressed="true"] .theme-moon{opacity:1;transform:rotate(0) scale(1)}
 @media(prefers-reduced-motion:reduce){#theme-switch .theme-sun,#theme-switch .theme-moon{transition:none}}
+
+html[data-theme="light"] [data-transcript-line][aria-current="true"]{background:#fff;color:#134e4a;border-radius:12px;box-shadow:inset 4px 0 #0f766e,inset 0 0 0 1px #5eead4;padding-left:16px;padding-right:16px}
+html[data-theme="light"] [data-transcript-line][aria-current="true"]>span:last-child{color:#115e59}
