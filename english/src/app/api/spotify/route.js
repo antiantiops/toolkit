@@ -13,7 +13,7 @@ export async function POST(request){
  fs.mkdirSync(root,{recursive:true});const dirs=fs.readdirSync(root).filter(n=>/^[A-Za-z0-9]{22}$/.test(n));
  if(!dirs.includes(id)&&dirs.filter(n=>!['completed','failed'].includes(read(path.join(root,n,'state.json'),{}).status)).length>=3)return reply({error:'Hàng đợi đầy, thử lại sau'},429);
  if(!dirs.includes(id)&&dirs.length>=200)return reply({error:'Cache đã đủ 200 bài; cần quản trị dọn dung lượng'},429);
- const dir=path.join(root,id);fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,owner),'');
+ const dir=path.join(root,id);if(body.retry&&fs.existsSync(path.join(dir,owner))&&read(path.join(dir,'state.json'),{}).status==='failed')fs.unlinkSync(path.join(dir,'state.json'));fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,owner),'');
  if(!fs.existsSync(path.join(dir,'request.json')))fs.writeFileSync(path.join(dir,'request.json'),JSON.stringify({id}),{flag:'wx'});
  return reply({id,...read(path.join(dir,'state.json'),{status:'queued'})},202);
  }catch{return reply({error:'Không tạo được yêu cầu tải'},400);}
@@ -22,4 +22,10 @@ export async function GET(request){
  const owner=cacheOwner(request);if(!owner)return reply({error:'Cần đăng nhập qua Kong'},401);
  const list=[];try{for(const id of fs.readdirSync(root)){if(!/^[A-Za-z0-9]{22}$/.test(id)||!fs.existsSync(path.join(root,id,owner)))continue;list.push({id,...read(path.join(root,id,'state.json'),{status:'queued'})});}}catch{}
  return reply({tracks:list});
+}
+
+export async function DELETE(request){
+ const owner=cacheOwner(request);if(!owner)return reply({error:'Cần đăng nhập qua Kong'},401);
+ const id=new URL(request.url).searchParams.get('id');if(!/^[A-Za-z0-9]{22}$/.test(id||''))return reply({error:'ID không hợp lệ'},400);
+ try{fs.unlinkSync(path.join(root,id,owner));}catch{}return reply({ok:true});
 }

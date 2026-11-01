@@ -1,4 +1,6 @@
 import glob,json,os,subprocess,time,re
+from mutagen.mp3 import MP3
+from mutagen.id3 import ID3
 ROOT='/cache'
 os.makedirs(ROOT,exist_ok=True)
 while True:
@@ -18,6 +20,12 @@ while True:
             file=files[0]
             if os.path.getsize(file)>100*1024*1024: raise RuntimeError('Bài vượt giới hạn 100 MB')
             os.replace(file,folder+'/audio.mp3')
-            save({'status':'completed','title':os.path.basename(file)[:-4]})
+            tags=ID3(folder+'/audio.mp3')
+            title=str(tags.get('TIT2',os.path.basename(file)[:-4]))
+            artist=str(tags.get('TPE1',''))
+            covers=tags.getall('APIC')
+            if covers:
+                with open(folder+'/cover','wb') as f: f.write(covers[0].data)
+            save({'status':'completed','title':title,'artist':artist,'duration':MP3(folder+'/audio.mp3').info.length,'cover':bool(covers),'created':time.time()})
         except Exception as e: save({'status':'failed','error':str(e)[:300]})
     time.sleep(2)
