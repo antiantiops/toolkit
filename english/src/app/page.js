@@ -870,12 +870,14 @@ export default function Home() {
         </div>
       )}
 
-      <h1 className="text-lg sm:text-3xl font-bold text-center mb-2 sm:mb-8 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+      <header className="relative mb-2 flex min-h-11 items-center justify-center px-11 sm:mb-4">
+      <h1 className="text-lg sm:text-3xl font-bold text-center bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
         📚 English Learner
       </h1>
+      <ThemeSwitch />
+      </header>
 
       {saveError && <p role="alert" className="mb-2 text-xs text-red-300">{saveError}</p>}
-      <ThemeSwitch />
       <Account />
       {/* Mode tabs */}
       <div role="navigation" aria-label="Chọn kỹ năng" className="flex gap-2 mb-3 sm:mb-6 overflow-x-auto whitespace-nowrap pb-2 [&>button]:shrink-0">

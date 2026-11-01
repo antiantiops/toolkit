@@ -154,3 +154,10 @@ html[data-theme="light"] .bg-cyan-600,
 html[data-theme="light"] .bg-sky-500,
 html[data-theme="light"] .bg-sky-600 { color:#fff; }
 html[data-theme="light"] .text-slate-500 { color:#3f3f46; }
+
+#theme-switch .theme-sun,#theme-switch .theme-moon{transform-origin:center;transition:transform .3s ease,opacity .3s ease}
+#theme-switch .theme-sun{opacity:1;transform:rotate(0) scale(1)}
+#theme-switch .theme-moon{opacity:0;transform:rotate(-45deg) scale(.5)}
+#theme-switch[aria-pressed="true"] .theme-sun{opacity:0;transform:rotate(90deg) scale(.5)}
+#theme-switch[aria-pressed="true"] .theme-moon{opacity:1;transform:rotate(0) scale(1)}
+@media(prefers-reduced-motion:reduce){#theme-switch .theme-sun,#theme-switch .theme-moon{transition:none}}
