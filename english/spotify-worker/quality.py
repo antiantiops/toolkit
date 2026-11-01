@@ -14,7 +14,7 @@ def process():
    if not m:raise ValueError('Không đo được loudness')
    data=json.loads(m.group());i=float(data['input_i']);peak=float(data['input_tp']);lra=float(data['input_lra'])
    if not all(math.isfinite(v) for v in [i,peak,lra]):raise ValueError('Audio im lặng hoặc số đo không hợp lệ')
-   gain=min(3.0,-16-i,-1.5-peak);gain=max(-12.0,gain)
+   gain=min(3.0,-1.5-peak)
    if peak+gain>-1.5+0.01:raise ValueError('Nguồn vượt giới hạn gain an toàn; giữ bản gốc')
    if abs(gain)<0.25:gain=0.0
    subprocess.run(['ffmpeg','-y','-v','error','-i',source,'-map','0:a:0','-af',f'volume={gain}dB','-c:a','flac','-sample_fmt','s32',folder+'/balanced.tmp.flac'],capture_output=True,timeout=180,check=True)
@@ -35,7 +35,7 @@ def tone():
     d=json.loads(re.search(r'\{\s*"input_i"[\s\S]*?\}',r.stderr).group());return float(d['input_i']),float(d['input_tp'])
    loud,peak=measure(eq)
    if not all(math.isfinite(v) for v in [loud,peak]):raise ValueError('Invalid audio')
-   gain=min(3,-16-loud,-1.5-peak)
+   gain=min(3,-1.5-peak)
    if gain < -18:raise ValueError('Unsafe gain')
    subprocess.run(['ffmpeg','-y','-v','error','-i',folder+'/audio.mp3','-map','0:a:0','-af',eq+f',volume={gain}dB','-c:a','flac','-sample_fmt','s32',folder+'/tone.tmp.flac'],capture_output=True,timeout=180,check=True)
    # Verify final encoded output, not only estimated gain.
