@@ -14,6 +14,7 @@ import ChatWordsNotice from './ChatWordsNotice';
 import FeatureNotice from "./FeatureNotice";
 import Account from "./Account";
 import ListeningAudio from "./ListeningAudio";
+import ListeningSpotify from "./ListeningSpotify";
 import BusinessPractice from "./BusinessPractice";
 import MyWords, { rememberEnglish } from "./MyWords";
 import { meanings, complete } from "../lib/lookup/local";
@@ -1675,7 +1676,7 @@ export default function Home() {
         {writing && <Writing tourStep={writingTourStep} writing={writing} cachedModelDraft={wModelDraft} onModelDraft={setWModelDraft} SpeakBtn={SpeakBtn} CopyBtn={CopyBtn} />}
       </>}
 
-      <div hidden={mode !== "listening"}><ListeningHistory onSelect={entry=>{setListeningEntry(entry);setListeningSource(entry.source);}} /><div className="mb-4 flex gap-2">{[["image","Ảnh bài nghe"],["audio","File audio"]].map(([value,label])=><button key={value} onClick={()=>setListeningSource(value)} className={`min-h-11 flex-1 rounded-xl px-4 text-sm font-semibold ${listeningSource===value?"bg-teal-600 text-white":"bg-slate-800 text-slate-400"}`}>{label}</button>)}</div><div hidden={listeningSource!=="image"}><ListeningImage key={listeningEntry?.id||"current-image"} historyEntry={listeningEntry?.source==="image"?listeningEntry:null} onContextChange={setImageChatContext} clickableText={clickableText} /></div><div hidden={listeningSource!=="audio"}><ListeningAudio key={listeningEntry?.id||"current-audio"} historyEntry={listeningEntry?.source==="audio"?listeningEntry:null} onContextChange={setAudioChatContext} clickableText={clickableText} /></div></div>
+      <div hidden={mode !== "listening"}><ListeningHistory onSelect={entry=>{setListeningEntry(entry);setListeningSource(entry.source);}} /><div className="mb-4 flex gap-2 overflow-x-auto">{[["image","Ảnh bài nghe"],["audio","File audio"],["spotify","Spotify"]].map(([value,label])=><button key={value} onClick={()=>setListeningSource(value)} className={`min-h-11 shrink-0 min-w-[140px] flex-1 rounded-xl px-4 text-sm font-semibold ${listeningSource===value?"bg-teal-600 text-white":"bg-slate-800 text-slate-400"}`}>{label}</button>)}</div><div hidden={listeningSource!=="image"}><ListeningImage key={listeningEntry?.id||"current-image"} historyEntry={listeningEntry?.source==="image"?listeningEntry:null} onContextChange={setImageChatContext} clickableText={clickableText} /></div><div hidden={listeningSource!=="spotify"}>{listeningSource==="spotify"&&<ListeningSpotify/>}</div><div hidden={listeningSource!=="audio"}><ListeningAudio key={listeningEntry?.id||"current-audio"} historyEntry={listeningEntry?.source==="audio"?listeningEntry:null} onContextChange={setAudioChatContext} clickableText={clickableText} /></div></div>
 
       {/* Lookup modal */}
       <LessonChat context={{ mode, ...(mode === "listening" ? {source:listeningSource} : {}), lesson: mode === "listening" ? (listeningSource === "audio" ? audioChatContext : imageChatContext) : mode === "grammar" ? grammar : mode === "writing" ? writing : words, practice: mode === "listening" ? null : mode === "grammar" ? gPractice : practice, translation: mode === "listening" ? null : quickResult, wordLookup: mode !== "listening" && lookup && !lookup.loading && !lookup.error ? lookup : null }} />
