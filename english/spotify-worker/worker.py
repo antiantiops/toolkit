@@ -1,12 +1,13 @@
 import glob,json,os,subprocess,time,re,tempfile,shutil
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3
-from quality import process,tone
+from quality import process,tone,edm
 ROOT='/cache'
 os.makedirs(ROOT,exist_ok=True)
 while True:
     process()
     tone()
+    edm()
     for marker in glob.glob(ROOT+'/*/redownload.json'):
         folder=os.path.dirname(marker)
         if not re.fullmatch(r'[A-Za-z0-9]{22}',os.path.basename(folder)):continue
@@ -19,7 +20,7 @@ while True:
                 # Keep previous source recoverable; publish only validated download.
                 shutil.copy2(folder+'/audio.mp3',folder+'/audio.before-redownload.mp3')
                 os.replace(files[0],folder+'/audio.mp3')
-                for name in ['quality.json','quality-request.json','tone.json','tone-request.json','tone.lock','balanced.flac','tone.flac']:
+                for name in ['quality.json','quality-request.json','tone.json','tone-request.json','tone.lock','edm.json','edm-request.json','edm.flac','balanced.flac','tone.flac']:
                     file=folder+'/'+name
                     if os.path.exists(file):os.replace(file,file+'.before-redownload')
                 covers=tags.getall('APIC')

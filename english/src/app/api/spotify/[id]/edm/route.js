@@ -1,0 +1,6 @@
+import fs from 'node:fs';import path from 'node:path';import {NextResponse} from 'next/server';import {cacheOwner} from '../../../session/owner';
+export const dynamic='force-dynamic';
+const reply=(data,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
+async function dir(request,params){const owner=cacheOwner(request);if(!owner)return null;const {id}=await params;if(!/^[A-Za-z0-9]{22}$/.test(id))return null;const d=path.join(process.env.SPOTIFY_CACHE_DIR||'/data/spotify',id);return fs.existsSync(path.join(d,owner))?d:null;}
+export async function GET(request,{params}){if(!cacheOwner(request))return reply({error:'Cần đăng nhập'},401);const d=await dir(request,params);if(!d)return reply({error:'Không có bài'},404);try{return reply(JSON.parse(fs.readFileSync(path.join(d,'edm.json'),'utf8')));}catch{return reply({status:fs.existsSync(path.join(d,'edm-request.json'))?'running':'idle'});}}
+export async function POST(request,{params}){if(!cacheOwner(request))return reply({error:'Cần đăng nhập'},401);const d=await dir(request,params);if(!d||!fs.existsSync(path.join(d,'audio.mp3')))return reply({error:'Chưa có audio'},404);if(!fs.existsSync(path.join(d,'edm-request.json')))try{fs.writeFileSync(path.join(d,'edm-request.json'),'{}',{flag:'wx'});}catch{}return reply({status:'queued'},202);}

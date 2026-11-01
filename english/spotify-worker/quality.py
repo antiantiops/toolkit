@@ -47,3 +47,20 @@ def tone():
   except Exception:result={'status':'failed','error':'Không tạo được EQ trong ngưỡng an toàn; giữ bản gốc.'}
   with open(report+'.tmp','w') as f:json.dump(result,f)
   os.replace(report+'.tmp',report)
+
+def edm():
+ for request in glob.glob('/cache/*/edm-request.json'):
+  folder=os.path.dirname(request);report=folder+'/edm.json'
+  if os.path.exists(report):continue
+  try:
+   filters='equalizer=f=80:t=q:w=0.8:g=2,equalizer=f=3000:t=q:w=0.8:g=1.5,treble=g=0.8:f=8000,aresample=192000,alimiter=limit=0.86:attack=5:release=80:level=false:latency=true,aresample=48000'
+   subprocess.run(['ffmpeg','-v','error','-y','-i',folder+'/audio.mp3','-map','0:a:0','-af',filters,'-c:a','flac',folder+'/edm.tmp.flac'],capture_output=True,timeout=300,check=True)
+   r=subprocess.run(['ffmpeg','-hide_banner','-i',folder+'/edm.tmp.flac','-af','loudnorm=print_format=json','-f','null','-'],capture_output=True,text=True,timeout=180,check=True)
+   measured=json.loads(re.search(r'\{\s*"input_i"[\s\S]*?\}',r.stderr).group())
+   peak=float(measured['input_tp']);loud=float(measured['input_i'])
+   if not math.isfinite(peak) or not math.isfinite(loud) or peak> -1:raise ValueError('Unsafe output')
+   os.replace(folder+'/edm.tmp.flac',folder+'/edm.flac')
+   result={'status':'completed','outputLufs':loud,'outputTruePeak':peak,'preset':'EDM DJ v1'}
+  except Exception:result={'status':'failed','error':'Không tạo được EDM trong ngưỡng peak an toàn; giữ file gốc.'}
+  with open(report+'.tmp','w') as f:json.dump(result,f)
+  os.replace(report+'.tmp',report)
