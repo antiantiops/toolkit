@@ -22,3 +22,24 @@
 /* Match screenshot aspect ratios: no contain letterboxing. */
 .bento-real-home{height:auto;width:68%;object-fit:initial;margin-top:7px;max-height:196px}.bento-writing .bento-real-feature{height:auto;width:79%;margin:6px auto 0;object-fit:initial}.bento-real-grammar{height:auto;width:145px;object-fit:initial}.bento-player-window{height:90px;width:fit-content;max-width:100%;border-radius:8px;margin:7px auto 0;overflow:hidden;background:#061322}.bento-player-window img{display:block;width:auto;height:100%;max-width:100%;object-fit:contain}.bento-listening>p{font-size:8px}.bento-listening h2{font-size:17px}
 .bento-writing .bento-real-feature{width:69%}
+/* Tall source needs a tall tile, not a thumbnail inside a landscape slot. */
+.bento-grid{grid-template-columns:1.15fr 1fr 1fr 1fr;grid-template-rows:205px 145px 122px}
+.bento-listening{grid-column:1;grid-row:1/4;display:flex;flex-direction:column;align-items:center;padding:18px 14px}
+.bento-listening h2{font-size:23px;align-self:stretch;margin:0 0 6px}
+.bento-listening>p{font-size:11px;align-self:stretch;line-height:1.4}
+.bento-player-window{height:368px;max-height:none;flex-shrink:0;margin:14px auto 0;border-radius:12px;box-shadow:0 10px 24px #052c4930}
+.bento-hero{grid-column:2/4;grid-row:1/3}
+.bento-words{grid-column:4;grid-row:1}
+.bento-chat{grid-column:4;grid-row:2}
+.bento-writing{grid-column:2;grid-row:3;padding:13px}
+.bento-writing h2{font-size:18px;margin:0 0 5px}
+.bento-writing .bento-real-feature{width:135px;max-width:100%;max-height:76px;margin:0 auto;object-fit:contain}
+.bento-vocabulary{grid-column:3/5;grid-row:3;padding:14px;gap:12px}
+.bento-vocabulary h2{font-size:23px}
+.bento-vocabulary p strong{font-size:14px}
+.bento-vocabulary small{font-size:9px;max-width:190px}
+.bento-real-grammar{width:125px;max-width:34%}
+.bento-context{display:none}
+.bento-writing .bento-real-feature{max-height:62px;width:auto}
+.bento-chat>svg{display:none}.bento-chat h2{font-size:18px;margin:0 0 7px}.bento-chat p{font-size:11px;max-width:125px}.bento-chat .bento-robot{width:48px;height:48px;right:12px;bottom:10px}.bento-chat .bento-robot>*{max-width:48px;max-height:48px}
+.bento-chat .bento-robot{right:25px;bottom:24px;overflow:visible}.bento-chat .bento-robot>*{transform:scale(.75);transform-origin:center}
