@@ -11,6 +11,7 @@ try{for(const width of [1440,390]){
  const p=await b.newPage({viewport:{width,height:950}});await p.addInitScript(()=>localStorage.setItem('english-theme','light'));
  await p.route('**/api/**',r=>{const u=new URL(r.request().url()),path=u.pathname,type=u.searchParams.get('type');let data={};
  if(path==='/api/session') data=type==='manifest'?{available:{vocab:true,grammar:true,writing:true}}:type==='vocab'?{session:{words:[word,{...word,word:'Innate'},{...word,word:'Reliable'},{...word,word:'Current'}]},next:null}:type==='grammar'?{session:{grammar}}:type==='writing'?{session:{writing}}:type==='listening'?{session:{listening:lesson}}:{session:{}};
+ else if(path==='/api/practice')data={groups:[{words:['book','pen','desk','run'],answer:'run',explanation:'Verb, not noun.'}],fills:[{word:'Foreseeable',sentence:'The result was ___.'}]};
  else if(path==='/api/grammar-practice')data={choose:[{sentence:'She ___ gone.',options:['A. have','B. has'],answer:'B',explanation:'She uses has.'}],rewrite:[]};
  else if(path==='/api/my-words')data={words:[{id:'test',english:'foreseeable future',searches:3,chat:{meaning:'tương lai gần',example:'In the foreseeable future.'}}],next:null,weeks:[]};
  else if(path==='/api/chat')data=u.searchParams.has('history')?{messages:[{role:'user',content:'Explain how'},{role:'assistant',content:answer}]}:{answer};
@@ -18,13 +19,15 @@ try{for(const width of [1440,390]){
  else if(path==='/api/listening-history') data=u.searchParams.has('id')?{entry:{id:'audio',source:'audio',lesson:{audio:{name:'Review audio'},result:{timed:true,segments:[{start:0,end:10,en:'An audio transcript example.',vi:'Ví dụ transcript audio.'}]}}}}:{entries:[{id:'audio',source:'audio',title:'Review audio',createdAt:Date.now()}]};
  else if(path==='/api/spotify')data={tracks:[{id:'test',title:'Review music',artist:'Demo',status:'completed',duration:90}]};
  else if(path.endsWith('/quality')||path.endsWith('/tone')||path.endsWith('/edm'))data={status:'completed',integratedLufs:-16,gainDb:1,outputLufs:-14,outputTruePeak:-1,aiSummary:'Review audio'};
- else if(path==='/api/word')data={...word,meaning:word.meaning};
+ else if(path==='/api/word')data={word:{...word,usage:'Use before a noun.'}};
  else if(path==='/api/writing-preferences')data={customPrompt:'Use clear English.'};
  return r.fulfill({json:data});});
  await p.goto(process.env.TEST_URL||'http://127.0.0.1:8264');await p.locator('#theme-switch').waitFor();await p.waitForTimeout(700);
  async function snap(name){await p.waitForTimeout(150);assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' overflow');await p.screenshot({path:`/root/.openclaw/workspace-nim/media/light-audit-${process.env.PHASE||'before'}-${width}-${name}.png`,fullPage:true});report.push({width,state:name});}
  const tab=name=>p.getByRole('navigation',{name:'Chọn kỹ năng'}).getByRole('button',{name:new RegExp(name)}).click();
  await snap('vocab-cards');await p.locator('details summary').filter({hasText:/Xem ví dụ/}).first().click().catch(()=>{});await snap('vocab-examples');
+ await p.getByPlaceholder('Ví dụ: I goed to school yesterday').fill('foreseeable');await p.getByRole('button',{name:'Tra',exact:true}).click();await p.getByTestId('lookup-meaning').waitFor();await snap('word-dialog');await p.getByRole('button',{name:'Đóng',exact:true}).click();
+ await p.getByRole('button',{name:'✍️ Practice test',exact:true}).click();await p.getByRole('button',{name:'run',exact:true}).waitFor();await snap('vocab-practice');await p.getByRole('button',{name:'book',exact:true}).click();await p.getByRole('button',{name:/Nộp bài/}).click();await snap('vocab-feedback');
  await tab('Grammar');await snap('grammar-sections');for(const d of await p.locator('details').all())if(await d.isVisible())await d.evaluate(e=>e.open=true);await snap('grammar-expanded');
  await p.getByRole('button',{name:'✍️ Luyện tập',exact:true}).click();await p.getByRole('button',{name:'A. have',exact:true}).waitFor();await snap('grammar-practice');await p.getByRole('button',{name:'A. have',exact:true}).click();await snap('grammar-selected');await p.getByRole('button',{name:/Nộp bài/}).click();await snap('grammar-feedback');
  await tab('Writing');for(const label of ['📖 1. Bài mẫu','📋 2. Đề bài & Word Bank','🧭 3. Dàn ý gợi ý','✍️ 4. Viết & Chấm AI']){await p.getByRole('button',{name:label,exact:true}).click();await snap('writing-'+label.match(/\d/)[0]);if(label.includes('3.')){await p.getByRole('button',{name:'+ Tùy chỉnh prompt',exact:true}).click();await p.locator('#writing-prompt-text').focus();await snap('writing-prompt-focus');}}
@@ -32,6 +35,6 @@ try{for(const width of [1440,390]){
  await tab('Listening');await snap('listening-image');const line=p.locator('[data-testid="listening-lyrics"] button').first();await line.evaluate(e=>{e.classList.remove('text-slate-500');e.classList.add('text-white');e.style.transition='none';e.setAttribute('aria-current','true')});await snap('listening-active');
  await p.locator('[data-listening-history] summary').click();await p.getByRole('button',{name:/Review audio/}).click();await snap('listening-audio');
  await p.getByRole('button',{name:'Spotify',exact:true}).click();await p.getByRole('button',{name:'Phát',exact:true}).click();await p.getByRole('button',{name:'Tùy chỉnh âm thanh',exact:true}).click();await snap('spotify-controls');
- await p.locator('#lesson-chat-toggle').click();await p.waitForTimeout(500);await snap('chat-markdown');await p.locator('#lesson-chat-panel .chat-markdown summary').click();await snap('chat-code-expanded');await p.locator('#lesson-chat-panel').getByRole('button',{name:'Thu nhỏ chat'}).click();
+ await p.locator('#lesson-chat-toggle').click();await p.waitForTimeout(500);await snap('chat-markdown');await p.locator('#lesson-chat-panel [data-prompt-block] details').evaluateAll(nodes=>nodes.forEach(e=>e.open=true));assert.equal(await p.locator('#lesson-chat-panel [data-prompt-block] pre').innerText(),'Example code');await snap('chat-code-expanded');await p.locator('#lesson-chat-panel').getByRole('button',{name:'Thu nhỏ chat'}).click();
  await p.locator('#theme-switch').click();assert.equal(await p.locator('html').getAttribute('data-theme'),'dark');await p.close();
 }}finally{await b.close();fs.writeFileSync(`/tmp/light-audit-${process.env.PHASE||'before'}.json`,JSON.stringify(report,null,2));}console.log('PASS',report.length,'populated UI states, fixtures only');
