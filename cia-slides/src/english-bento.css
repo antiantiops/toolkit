@@ -43,3 +43,6 @@
 .bento-writing .bento-real-feature{max-height:62px;width:auto}
 .bento-chat>svg{display:none}.bento-chat h2{font-size:18px;margin:0 0 7px}.bento-chat p{font-size:11px;max-width:125px}.bento-chat .bento-robot{width:48px;height:48px;right:12px;bottom:10px}.bento-chat .bento-robot>*{max-width:48px;max-height:48px}
 .bento-chat .bento-robot{right:25px;bottom:24px;overflow:visible}.bento-chat .bento-robot>*{transform:scale(.75);transform-origin:center}
+/* Shallow product-shot perspective; keep the complete screenshot inside its tile. */
+.bento-player-window{transform:perspective(900px) rotateY(12deg) rotateZ(-4deg);transform-origin:center;overflow:visible;border-radius:6px;box-shadow:-5px 3px 0 #16334a,-8px 5px 0 #102539,0 18px 25px #052c4945;outline:1px solid #41607866}
+.bento-player-window img{border-radius:4px}
