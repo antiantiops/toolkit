@@ -107,7 +107,7 @@ html[data-theme="light"] :is(.hover\:text-white:hover,.focus\:text-white:focus) 
 html[data-theme="light"] ::selection { background:#007aff30; color:#1c1c1e; }
 /* White is an action foreground only; lesson text follows the light surface. */
 html[data-theme="light"] .text-white { color:#1c1c1e; }
-html[data-theme="light"] .text-slate-600 { color:#636366; }
+html[data-theme="light"] .text-slate-600 { color:#3f3f46; }
 html[data-theme="light"] :is(.hover\:text-white:hover,.focus\:text-white:focus) { color:#1c1c1e; }
 html[data-theme="light"] #lesson-chat-toggle { color:#fff; }
 html[data-theme="light"] .chat-markdown :is(h1,h2,h3,h4,h5,h6,a) { color:#005a9c; }
@@ -153,4 +153,4 @@ html[data-theme="light"] .bg-cyan-500,
 html[data-theme="light"] .bg-cyan-600,
 html[data-theme="light"] .bg-sky-500,
 html[data-theme="light"] .bg-sky-600 { color:#fff; }
-html[data-theme="light"] .text-slate-500 { color:#636366; }
+html[data-theme="light"] .text-slate-500 { color:#3f3f46; }

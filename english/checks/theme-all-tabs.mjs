@@ -1,0 +1,37 @@
+import {chromium} from '/usr/local/lib/node_modules/playwright/index.mjs';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const word={word:'Foreseeable',meaning:'có thể dự đoán',ipa:'/fɔːˈsiːə.bəl/',partOfSpeech:'adjective',definition:'Reasonably anticipated.',definitionVietnamese:'Có thể dự đoán.',easyReading:'Nhấn âm 2.',example:'Losses were foreseeable.',exampleVietnamese:'Tổn thất có thể dự đoán.',collocations:[{phrase:'foreseeable future',meaning:'tương lai gần'}]};
+const grammar={title:'Present perfect',titleVietnamese:'Hiện tại hoàn thành',learningGoal:'Kể trải nghiệm',everydayContext:{english:'I have visited London.',vietnamese:'Tôi đã đến London.',question:'Khi nào dùng have?'},keyIdea:'Kết nối quá khứ và hiện tại.',summary:'Tóm tắt bài học.',rules:[{rule:'Subject + have/has + past participle',ruleVietnamese:'Cấu trúc hiện tại hoàn thành',examples:[{english:'I have worked here.',vietnamese:'Tôi đã làm ở đây.'}]}],comparison:{items:[{left:'I worked',right:'I have worked',explanation:'Khác mốc thời gian.'}]},commonMistakes:[{wrong:'She have gone.',right:'She has gone.',reason:'She đi với has.'}],checkYourself:[{question:'Have hay has?',answer:'She has.'}],notes:['Không dùng với yesterday.']};
+const writing={kind:'dual',title:'Business email',titleVietnamese:'Email công việc',goal:'Viết email rõ ràng',sample:{scenario:'Welcome a client',scenarioVietnamese:'Chào khách hàng',sections:['Opening','Purpose','Closing'].map(label=>({label,labelVietnamese:'Phần email',purpose:'Giao tiếp rõ ràng',sentences:[{english:'Thank you for your message.',vietnamese:'Cảm ơn tin nhắn của bạn.',why:'Lịch sự và tự nhiên.'}]}))},task:{scenario:'Introduce yourself to a client',requirements:['Introduce yourself'],wordBank:['honor','existing'],suggestedOutline:[]},checklist:['Greeting','Closing']};
+const lesson={title:'Listening review',sentences:[{en:'I am here to report on our experiment.',vi:'Tôi báo cáo thử nghiệm.'},{en:'The next sentence is readable.',vi:'Câu tiếp theo đọc rõ.'}]};
+const answer='### Giải thích\n\nĐây là **mệnh đề**, dùng `how`.\n\n> Ghi nhớ\n\n| Từ | Nghĩa |\n|---|---|\n|how|cách|\n\n```text\nExample code\n```';
+const b=await chromium.launch({args:['--no-sandbox']});const report=[];
+try{for(const width of [1440,390]){
+ const p=await b.newPage({viewport:{width,height:950}});await p.addInitScript(()=>localStorage.setItem('english-theme','light'));
+ await p.route('**/api/**',r=>{const u=new URL(r.request().url()),path=u.pathname,type=u.searchParams.get('type');let data={};
+ if(path==='/api/session') data=type==='manifest'?{available:{vocab:true,grammar:true,writing:true}}:type==='vocab'?{session:{words:[word,{...word,word:'Innate'},{...word,word:'Reliable'},{...word,word:'Current'}]},next:null}:type==='grammar'?{session:{grammar}}:type==='writing'?{session:{writing}}:type==='listening'?{session:{listening:lesson}}:{session:{}};
+ else if(path==='/api/grammar-practice')data={choose:[{sentence:'She ___ gone.',options:['A. have','B. has'],answer:'B',explanation:'She uses has.'}],rewrite:[]};
+ else if(path==='/api/my-words')data={words:[{id:'test',english:'foreseeable future',searches:3,chat:{meaning:'tương lai gần',example:'In the foreseeable future.'}}],next:null,weeks:[]};
+ else if(path==='/api/chat')data=u.searchParams.has('history')?{messages:[{role:'user',content:'Explain how'},{role:'assistant',content:answer}]}:{answer};
+ else if(path==='/api/feature-notices')data={show:false};else if(path==='/api/chat-words')data={enabled:true};else if(path==='/api/game-memory')data={memory:{}};
+ else if(path==='/api/listening-history') data=u.searchParams.has('id')?{entry:{id:'audio',source:'audio',lesson:{audio:{name:'Review audio'},result:{timed:true,segments:[{start:0,end:10,en:'An audio transcript example.',vi:'Ví dụ transcript audio.'}]}}}}:{entries:[{id:'audio',source:'audio',title:'Review audio',createdAt:Date.now()}]};
+ else if(path==='/api/spotify')data={tracks:[{id:'test',title:'Review music',artist:'Demo',status:'completed',duration:90}]};
+ else if(path.endsWith('/quality')||path.endsWith('/tone')||path.endsWith('/edm'))data={status:'completed',integratedLufs:-16,gainDb:1,outputLufs:-14,outputTruePeak:-1,aiSummary:'Review audio'};
+ else if(path==='/api/word')data={...word,meaning:word.meaning};
+ else if(path==='/api/writing-preferences')data={customPrompt:'Use clear English.'};
+ return r.fulfill({json:data});});
+ await p.goto(process.env.TEST_URL||'http://127.0.0.1:8264');await p.locator('#theme-switch').waitFor();await p.waitForTimeout(700);
+ async function snap(name){await p.waitForTimeout(150);assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' overflow');await p.screenshot({path:`/root/.openclaw/workspace-nim/media/light-audit-${process.env.PHASE||'before'}-${width}-${name}.png`,fullPage:true});report.push({width,state:name});}
+ const tab=name=>p.getByRole('navigation',{name:'Chọn kỹ năng'}).getByRole('button',{name:new RegExp(name)}).click();
+ await snap('vocab-cards');await p.locator('details summary').filter({hasText:/Xem ví dụ/}).first().click().catch(()=>{});await snap('vocab-examples');
+ await tab('Grammar');await snap('grammar-sections');for(const d of await p.locator('details').all())if(await d.isVisible())await d.evaluate(e=>e.open=true);await snap('grammar-expanded');
+ await p.getByRole('button',{name:'✍️ Luyện tập',exact:true}).click();await p.getByRole('button',{name:'A. have',exact:true}).waitFor();await snap('grammar-practice');await p.getByRole('button',{name:'A. have',exact:true}).click();await snap('grammar-selected');await p.getByRole('button',{name:/Nộp bài/}).click();await snap('grammar-feedback');
+ await tab('Writing');for(const label of ['📖 1. Bài mẫu','📋 2. Đề bài & Word Bank','🧭 3. Dàn ý gợi ý','✍️ 4. Viết & Chấm AI']){await p.getByRole('button',{name:label,exact:true}).click();await snap('writing-'+label.match(/\d/)[0]);if(label.includes('3.')){await p.getByRole('button',{name:'+ Tùy chỉnh prompt',exact:true}).click();await p.locator('#writing-prompt-text').focus();await snap('writing-prompt-focus');}}
+ await tab('My Words');await snap('my-words');
+ await tab('Listening');await snap('listening-image');const line=p.locator('[data-testid="listening-lyrics"] button').first();await line.evaluate(e=>{e.classList.remove('text-slate-500');e.classList.add('text-white');e.style.transition='none';e.setAttribute('aria-current','true')});await snap('listening-active');
+ await p.locator('[data-listening-history] summary').click();await p.getByRole('button',{name:/Review audio/}).click();await snap('listening-audio');
+ await p.getByRole('button',{name:'Spotify',exact:true}).click();await p.getByRole('button',{name:'Phát',exact:true}).click();await p.getByRole('button',{name:'Tùy chỉnh âm thanh',exact:true}).click();await snap('spotify-controls');
+ await p.locator('#lesson-chat-toggle').click();await p.waitForTimeout(500);await snap('chat-markdown');await p.locator('#lesson-chat-panel .chat-markdown summary').click();await snap('chat-code-expanded');await p.locator('#lesson-chat-panel').getByRole('button',{name:'Thu nhỏ chat'}).click();
+ await p.locator('#theme-switch').click();assert.equal(await p.locator('html').getAttribute('data-theme'),'dark');await p.close();
+}}finally{await b.close();fs.writeFileSync(`/tmp/light-audit-${process.env.PHASE||'before'}.json`,JSON.stringify(report,null,2));}console.log('PASS',report.length,'populated UI states, fixtures only');
