@@ -1,11 +1,12 @@
 import glob,json,os,subprocess,time,re
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3
-from quality import process
+from quality import process,tone
 ROOT='/cache'
 os.makedirs(ROOT,exist_ok=True)
 while True:
     process()
+    tone()
     for request in glob.glob(ROOT+'/*/request.json'):
         folder=os.path.dirname(request)
         if not re.fullmatch(r'[A-Za-z0-9]{22}',os.path.basename(folder)): continue
