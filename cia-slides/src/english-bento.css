@@ -46,3 +46,10 @@
 /* Shallow product-shot perspective; keep the complete screenshot inside its tile. */
 .bento-player-window{transform:perspective(900px) rotateY(12deg) rotateZ(-4deg);transform-origin:center;overflow:visible;border-radius:6px;box-shadow:-5px 3px 0 #16334a,-8px 5px 0 #102539,0 18px 25px #052c4945;outline:1px solid #41607866}
 .bento-player-window img{border-radius:4px}
+/* Lift screenshot details in the same perspective, not a second rotated plane. */
+.bento-player-window{position:relative;transform-style:preserve-3d}
+.bento-player-window .player-depth-layer{position:absolute;max-width:none;height:auto;margin:0;border-radius:3px;box-shadow:-3px 5px 6px #0006;pointer-events:none}
+.bento-player-window .player-depth-sentence{left:9.8139%;top:17.0455%;width:76.9882%;transform:translateZ(21px)}
+.bento-player-window .player-depth-translation{left:10.1523%;top:30.4924%;width:76.9882%;transform:translateZ(14px)}
+.bento-player-window .player-depth-progress{left:8.1218%;top:68.6553%;width:83.2487%;transform:translateZ(17px)}
+.bento-player-window .player-depth-controls{left:7.7834%;top:78.4091%;width:83.7563%;transform:translateZ(30px);border-radius:10px}
