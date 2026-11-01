@@ -97,3 +97,11 @@ details[open] > summary .example-chevron { transform: rotate(180deg); }
   .chat-tools-dots { animation: none; }
   .chat-tools-bulb { animation: none; opacity: 0; }
 }
+
+/* Apple-inspired silver surfaces; retain saturated action colors and original dark mode. */
+html[data-theme="light"] #lesson-chat-panel { background:#fff; border-color:#d1d1d6; box-shadow:0 24px 64px -12px #1c1c1e30,0 8px 24px #1c1c1e12; }
+html[data-theme="light"] #lesson-chat-panel > header { background:linear-gradient(110deg,#f5f5f7,#e8edf5); border-bottom-color:#d1d1d6; }
+html[data-theme="light"] #lesson-chat-panel > form { background:#f5f5f7; border-top-color:#d1d1d6; }
+html[data-theme="light"] :is(.bg-slate-800,.bg-slate-900,.bg-slate-950) { color:#303034; }
+html[data-theme="light"] :is(.hover\:text-white:hover,.focus\:text-white:focus) { color:#1c1c1e; }
+html[data-theme="light"] ::selection { background:#007aff30; color:#1c1c1e; }

@@ -13,6 +13,7 @@ import SpeakBtn from "./SpeakBtn";
 import ChatWordsNotice from './ChatWordsNotice';
 import FeatureNotice from "./FeatureNotice";
 import Account from "./Account";
+import ThemeSwitch from "./ThemeSwitch";
 import ListeningAudio from "./ListeningAudio";
 import ListeningSpotify from "./ListeningSpotify";
 import BusinessPractice from "./BusinessPractice";
@@ -874,6 +875,7 @@ export default function Home() {
       </h1>
 
       {saveError && <p role="alert" className="mb-2 text-xs text-red-300">{saveError}</p>}
+      <ThemeSwitch />
       <Account />
       {/* Mode tabs */}
       <div role="navigation" aria-label="Chọn kỹ năng" className="flex gap-2 mb-3 sm:mb-6 overflow-x-auto whitespace-nowrap pb-2 [&>button]:shrink-0">
