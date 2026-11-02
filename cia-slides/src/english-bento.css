@@ -105,4 +105,21 @@
 .coach-suggestion{position:absolute;right:17px;bottom:9px;width:169px;padding:6px 8px;background:#ede9fef2;border:1px solid #cab8e7;border-radius:8px;box-shadow:0 4px 8px #62448730;z-index:4;transform:rotate(-1deg)}.coach-suggestion:before{content:'';position:absolute;right:18px;top:-5px;width:8px;height:8px;background:#ede9fe;border-top:1px solid #cab8e7;border-left:1px solid #cab8e7;transform:rotate(45deg)}.bento-writing .coach-suggestion p{font-size:7.5px;line-height:1.35;color:#302344;margin:0}.coach-suggestion small{display:block;font-size:6px;color:#625772;margin-top:2px}.coach-suggestion>div{display:flex;gap:7px;margin-top:4px}.coach-suggestion button{border:0;background:transparent;padding:2px 0;color:#45385e;font-size:6px;cursor:pointer}.coach-suggestion button:first-child{background:#2d1b4e;color:#fff;border-radius:4px;padding:3px 7px}.coach-suggestion button:focus-visible{outline:2px solid #6366f1;outline-offset:2px}.coach-bottom-tags{display:flex;gap:4px;position:absolute;left:13px;bottom:6px}.coach-bottom-tags span{font-size:6px;color:#536174;background:#ffffff80;border:1px solid #e2e8f0;border-radius:7px;padding:2px 4px}
 @keyframes coach-hover{50%{transform:translateY(-3px) rotate(2deg)}}@keyframes coach-caret{50%{opacity:0}}@media(prefers-reduced-motion:reduce){.coach-mascot,.coach-email p i{animation:none}}
 .bento-vocabulary{grid-column:4;grid-row:3;padding:12px;display:block}.bento-vocabulary>svg,.bento-vocabulary .bento-real-grammar{display:none}.bento-vocabulary h2{font-size:23px}.bento-vocabulary small{display:block;margin-top:8px}.bento-hero .bento-real-home{max-height:185px;width:auto;max-width:85%}
-.bento-hero{padding-top:16px;padding-bottom:14px}.bento-hero h2{font-size:56px;margin:8px 0}.bento-hero .bento-center-sub{font-size:17px}.bento-hero .bento-real-home{max-height:150px;margin-top:10px}.bento-hero>p{font-size:11px;margin:4px 0}
+.bento-hero{padding-top:16px;padding-bottom:14px}.bento-hero h2{font-size:56px;margin:8px 0}.bento-hero .bento-center-sub{font-size:17px}.bento-hero .bento-real-home{max-height:150px;margin-top:10px}.bento-hero>p{font-size:11px;margin:4px 0}/* Square coach replaces the compressed horizontal strip. */
+.bento-writing{grid-column:4;grid-row:1/3;padding:12px}
+.bento-words{grid-column:2;grid-row:3;padding:16px}
+.bento-chat{grid-column:3;grid-row:3;padding:16px}
+.bento-vocabulary{grid-column:4;grid-row:3}
+.coach-scene{height:100%;padding:14px 12px;transform:perspective(1000px) rotateY(-3deg) rotateZ(-1deg)}
+.bento-writing .coach-scene h2{font-size:23px;line-height:1.05;max-width:155px;margin-top:7px}
+.coach-badge{font-size:9px}.bento-writing .coach-subtitle{font-size:10px;margin-top:5px;max-width:150px}
+.coach-email{width:100%;margin-top:19px;padding:10px 8px 15px;box-sizing:border-box}
+.coach-email>div{font-size:9px;line-height:1.7}.bento-writing .coach-email p{font-size:12px;white-space:normal;line-height:1.8;margin-top:8px;padding-right:10px}
+.coach-mascot{top:18px;right:0;transform:scale(.85)}
+.coach-ray{top:114px;right:35px;width:70px;transform:rotate(-48deg)}
+.coach-suggestion{right:9px;bottom:33px;width:calc(100% - 18px);box-sizing:border-box;padding:9px 10px;transform:rotate(-1deg)}
+.bento-writing .coach-suggestion p{font-size:10px;line-height:1.4}.coach-suggestion small{font-size:8px}.coach-suggestion button{font-size:8px}.coach-suggestion>div{margin-top:6px}
+.coach-bottom-tags{bottom:10px;left:8px;gap:3px}.coach-bottom-tags span{font-size:7px;padding:2px 4px}
+.bento-words h2{font-size:25px}.bento-words .bento-word-chips{margin:8px 0}.bento-chat h2{font-size:20px}
+/* Keep source sentence fully above the floating suggestion. */
+.coach-email{margin-top:12px;padding:7px 8px 9px}.coach-email>div{font-size:8px;line-height:1.5}.bento-writing .coach-email p{font-size:11px;line-height:1.6;margin-top:5px;padding-right:0}.coach-suggestion{bottom:27px;padding:7px 8px}.bento-writing .coach-suggestion p{font-size:9px}.coach-suggestion small{font-size:7px}.coach-suggestion>div{margin-top:4px}
