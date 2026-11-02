@@ -51,7 +51,7 @@ export function lessonRoutes(mode) {
       if (!cacheOwner(request)) return reply({error:"Cần đăng nhập qua Kong"},401);
       const job = jobs.get(new URL(request.url).searchParams.get('jobId'));
       if (!job || job.owner !== cacheOwner(request) || job.mode !== mode) return reply({ error: 'Job hết hạn hoặc server đã restart' }, 404);
-      return reply({ jobId: job.id, status: job.status, stage: job.stage, progress: { completed: (job.parts || []).filter(p => p.status === 'completed').length, total: 2 }, [mode]: job.status === 'completed' ? job.result : null, error: job.error || job.parts?.filter(p => p.status === 'failed').map(p => `Phần ${p.index + 1}: ${p.error}`).join('\n') });
+      return reply({ jobId: job.id, status: job.status, stage: job.stage, progress: { completed: (job.parts || []).filter(p => p.status === 'completed').length, total: job.parts?.length || 0 }, ...(mode === 'writing' ? { source: job.source || null, parts: (job.parts || []).map(p => ({index:p.index, fields:p.fields, status:p.status})), elapsedMs: Date.now() - job.createdAt } : {}), [mode]: job.status === 'completed' || (mode === 'writing' && Object.keys(job.result).length) ? job.result : null, error: job.error || job.parts?.filter(p => p.status === 'failed').map(p => `Phần ${p.index + 1}: ${p.error}`).join('\n') });
     },
   };
 }

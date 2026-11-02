@@ -4,6 +4,7 @@ import { normalizeGrammarAnswer } from "../lib/grammar/answers";
 import { fetchWithRetry, parseApiResponse, formatErrorMessage, pollLesson } from "./fetch-helper";
 import { useState, useRef, useCallback, useEffect } from "react";
 import ImageCrop from "./ImageCrop";
+import WritingProgress from "./WritingProgress";
 import LessonChat from "./LessonChat";
 import Listening from "./Listening";
 import ListeningImage from "./ListeningImage";
@@ -1674,7 +1675,8 @@ export default function Home() {
         </div>
 
         {/* Error notification */}
-        {wJob && <p role="status" className="mb-3 text-sm text-blue-200">{wJob.stage === "reconnecting" ? `Mất kết nối tạm thời. Đang tự nối lại, không cần gửi lại ảnh. Mã hỗ trợ: ${wJob.jobId}` : wJob.stage === "extract" ? "Đang đọc ảnh..." : `Đã xử lý ${wJob.progress?.completed || 0}/2 phần`}</p>}
+        {wJob && <p role="status" className="mb-3 text-sm text-blue-200">{wJob.stage === "reconnecting" ? `Mất kết nối tạm thời. Đang tự nối lại, không cần gửi lại ảnh. Mã hỗ trợ: ${wJob.jobId}` : wJob.stage === "extract" ? "Đang đọc ảnh..." : `Đã xử lý ${wJob.progress?.completed || 0}/${wJob.progress?.total || 4} phần`}</p>}
+        <WritingProgress job={wJob} />
         {wRetry && !wLoading && <button onClick={() => analyzeWriting()} className="mb-3 rounded-lg bg-amber-600 px-4 py-2">Thử lại phần lỗi</button>}
         <ErrorBanner message={wError} onDismiss={() => setWError(null)} />
         {writing && <Writing tourStep={writingTourStep} writing={writing} cachedModelDraft={wModelDraft} onModelDraft={setWModelDraft} SpeakBtn={SpeakBtn} CopyBtn={CopyBtn} />}
