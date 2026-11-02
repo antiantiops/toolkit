@@ -158,3 +158,10 @@
 .coach-suggestion{top:170px;bottom:auto}
 .coach-mascot{bottom:55px}
 @media(prefers-reduced-motion:reduce){.coach-email p span:after{transition:none}}
+
+/* Complete translated reference; larger original available by native link. */
+.bento-words{padding:12px;display:flex;flex-direction:row;align-items:center;gap:10px}
+.bento-words>div{flex:1;min-width:0}.bento-words h2{font-size:24px;margin:0 0 8px}
+.bento-words p{font-size:12px}.bento-words small{display:block;font-size:8px;color:#52625b;margin-top:8px}
+.words-image-frame{height:100%;flex:none;display:block;border-radius:7px;overflow:hidden;background:white;box-shadow:0 3px 10px #20352a24}
+.words-image-frame img{display:block;height:100%;width:auto}
