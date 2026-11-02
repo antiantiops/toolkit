@@ -27,7 +27,7 @@
 .bento-listening{grid-column:1;grid-row:1/4;display:flex;flex-direction:column;align-items:center;padding:18px 14px}
 .bento-listening h2{font-size:23px;align-self:stretch;margin:0 0 6px}
 .bento-listening>p{font-size:11px;align-self:stretch;line-height:1.4}
-.bento-player-window{height:368px;width:auto;aspect-ratio:591/1056;max-height:none;flex-shrink:0;margin:14px auto 0;border-radius:4px;box-shadow:0 10px 24px #052c4930}.bento-player-window img{width:100%;height:100%;object-fit:contain}
+.bento-player-window{height:368px;width:auto;aspect-ratio:554/1020;max-height:none;flex-shrink:0;margin:14px auto 0;border-radius:4px;box-shadow:0 10px 24px #052c4930}.bento-player-window img{width:100%;height:100%;object-fit:contain}
 .bento-hero{grid-column:2/4;grid-row:1/3}
 .bento-words{grid-column:4;grid-row:1}
 .bento-chat{grid-column:4;grid-row:2}
