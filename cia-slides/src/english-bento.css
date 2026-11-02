@@ -143,3 +143,10 @@
 .coach-suggestion{opacity:0;visibility:hidden;transform:translateY(8px);transition:opacity .6s,transform .6s,visibility .6s}
 .coach-stage-3 .coach-suggestion{opacity:1;visibility:visible;transform:translateY(0) translateZ(10px)}
 @media(prefers-reduced-motion:reduce){.coach-mascot,.coach-gaze-beam,.coach-suggestion{transition:none}}
+/* Flatten interior compositing: intersecting 3D planes clipped the robot canvas. */
+.coach-scene{transform-style:flat;isolation:isolate}
+.coach-email{transform:none;position:relative;z-index:2}
+.coach-mascot{z-index:5}
+.coach-gaze-beam{z-index:4}
+.coach-stage-3 .coach-suggestion{transform:none}
+.coach-suggestion{z-index:6}
