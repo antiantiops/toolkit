@@ -178,24 +178,25 @@
 .demo-chat-body{flex:1;min-height:0;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px}.demo-chat-message{flex-shrink:0;max-width:86%;padding:10px 13px;border-radius:14px;background:#fff;border:1px solid #e8e2f2;align-self:flex-start}.demo-chat-message.student{align-self:flex-end;background:#7045c4;border-color:#7045c4;color:#fff}.demo-chat-message small{font-size:9px;opacity:.7}.demo-chat-message p{font-size:14px;line-height:1.5;margin:4px 0 0;color:inherit}.demo-chat-caret{color:#a58bd4}.demo-chat-footer{padding:13px 18px;display:flex;align-items:center;justify-content:space-between;background:#fff;border-top:1px solid #e9e2f4;color:#8b8099;font-size:12px}.demo-chat-footer button{border:0;border-radius:8px;padding:8px 12px;background:#eee5fc;color:#6236ba;cursor:pointer}
 @keyframes demo-chat-open{from{opacity:0;transform:translate(80px,50px) scale(.35)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.bento-chat-window{animation:none}}
-/* Automatic miniature chat stays inside AI tile. */
-.bento-chat .bento-chat-backdrop{inset:42px 8px 8px;background:none;border-radius:10px;align-items:stretch}
-.bento-chat .bento-chat-window{width:100%;height:100%;max-width:none;max-height:none;border-radius:10px;box-shadow:0 4px 10px #553e7925;transform-origin:90% 95%;animation-duration:.6s}
-.bento-chat:has(.bento-chat-window)>div:not(.bento-chat-backdrop)>p{visibility:hidden}
-.bento-chat:has(.bento-chat-window) h2{font-size:15px;max-width:none}
-.bento-chat .demo-chat-header{padding:4px 7px}.bento-chat .demo-chat-header>div{display:flex;align-items:center;gap:4px}.bento-chat .demo-chat-header strong{font-size:9px}.bento-chat .demo-chat-header svg{width:11px;height:11px}.bento-chat .demo-chat-header small{font-size:6px}.bento-chat .demo-chat-header button{width:15px;height:15px;font-size:12px}
-.bento-chat .demo-chat-body{padding:5px;gap:5px}.bento-chat .demo-chat-message{padding:4px 6px;border-radius:7px;max-width:92%}.bento-chat .demo-chat-message small{font-size:6px}.bento-chat .demo-chat-message p{font-size:9px;line-height:1.35;margin:1px 0 0;max-width:none}
-.bento-chat .demo-chat-footer{padding:3px 6px;font-size:6px}.bento-chat .demo-chat-footer button{font-size:7px;padding:3px 5px}
-/* Reference: floating conversation, no application window or launcher. */
+/* Tile-local simulated conversation: composer first, then sent message. */
 .bento-chat{background:linear-gradient(125deg,#eedaf7,#d2bbfb 68%,#b6a0ef)}
-.bento-chat>div:first-of-type{position:relative;z-index:2;width:43%}.bento-chat h2,.bento-chat:has(.bento-chat-window) h2{font-size:20px;max-width:none;line-height:1.1}.bento-chat>div:first-of-type>p{visibility:visible!important;font-size:10px;line-height:1.35;max-width:105px}
-.bento-chat .bento-chat-backdrop{inset:12px 9px 6px 43%;z-index:3}
-.bento-chat .bento-chat-window{position:relative;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible}
-.bento-chat .demo-chat-body{padding:0 3px 22px 10px;gap:4px;overflow-y:auto;scrollbar-width:none}.bento-chat .demo-chat-message{position:relative;border:0;border-radius:7px;padding:4px 6px;max-width:92%;box-shadow:0 2px 4px #39215c20;overflow:visible}
-.bento-chat .demo-chat-message.student{color:#393342;background:#f5f3e9}.bento-chat .demo-chat-message.assistant{color:white;background:#625477;align-self:flex-start;margin-right:12px}
-.bento-chat .demo-chat-message small{display:block;font-size:5px;line-height:1;opacity:.85;margin-bottom:2px}.bento-chat .demo-chat-message p{font-size:7px;line-height:1.3}.bento-chat .demo-chat-message.assistant:before{content:'✦';position:absolute;left:-12px;top:7px;width:10px;height:10px;background:#eee5ff;border-radius:50%;color:#4f3769;text-align:center;font-size:8px}
-.bento-chat .demo-chat-footer{position:absolute;bottom:9px;left:9px;right:12px;height:14px;box-sizing:border-box;border:1px solid #ded3ef;border-radius:15px;background:#f7f5fa;padding:2px 5px;font-size:6px}.bento-chat .demo-chat-footer button{padding:0 3px;background:none;font-size:9px;margin-right:22px}
-.companion-head{position:absolute;right:-5px;bottom:5px;width:39px;height:39px;pointer-events:none;background:#e3d2ff;border-radius:50%;box-shadow:0 5px 6px #5d37883b}.companion-head>*{transform:scale(.6);transform-origin:top left}.companion-demo{position:absolute;bottom:0;left:15px;font-size:4px;color:#645674}
-.bento-chat>div:first-of-type{width:100%}.bento-chat h2,.bento-chat:has(.bento-chat-window) h2{font-size:17px;white-space:nowrap}.bento-chat>div:first-of-type>p{margin-top:8px;max-width:87px;font-size:9px}
-.bento-chat .bento-chat-backdrop{inset:38px 8px 6px 39%}.bento-chat .demo-chat-message p{font-size:6px;line-height:1.2}.bento-chat .demo-chat-message{padding:3px 5px}.bento-chat .demo-chat-body{gap:3px;padding-bottom:24px}.bento-chat .demo-chat-message small{font-size:4px}
-.bento-chat .demo-chat-body{padding-bottom:20px;gap:2px}.bento-chat .demo-chat-message{padding:2px 4px}.bento-chat .demo-chat-message p{font-size:5.5px;line-height:1.15}.bento-chat .demo-chat-message small{font-size:3.5px;margin-bottom:1px}
+.bento-chat>div:first-of-type{position:relative;z-index:2;width:100%}
+.bento-chat h2{font-size:17px;white-space:nowrap;line-height:1.1}
+.bento-chat>div:first-of-type>p{font-size:9px;margin-top:6px;max-width:none}
+.bento-chat .bento-chat-backdrop{inset:57px 10px 7px;background:none;border-radius:0;align-items:stretch}
+.bento-chat .bento-chat-window{position:relative;width:100%;height:100%;max-height:none;max-width:none;background:transparent;border:0;border-radius:0;box-shadow:none;overflow:visible;animation:none}
+.bento-chat .demo-chat-body{padding:0 1px 26px 47px;gap:9px;min-height:0;overflow-y:auto;scrollbar-width:none}
+.bento-chat .demo-chat-message{position:relative;flex-shrink:0;border:0;border-radius:8px;padding:5px 7px;max-width:94%;box-shadow:0 2px 4px #39215c20;animation:companion-send .35s ease-out}
+.bento-chat .demo-chat-message.student{color:#393342;background:#f5f3e9;align-self:flex-end}
+.bento-chat .demo-chat-message.assistant{color:white;background:#625477;align-self:flex-start;margin-right:9px}
+.bento-chat .demo-chat-message small{display:block;font-size:4.5px;line-height:1;opacity:.85;margin-bottom:2px}
+.bento-chat .demo-chat-message p{font-size:7.5px;line-height:1.3;margin:0;max-width:none}
+.bento-chat .demo-chat-message.assistant:before{content:none}
+.bento-chat .demo-chat-footer{position:absolute;bottom:5px;left:47px;right:0;min-height:18px;box-sizing:border-box;border:1px solid #ded3ef;border-radius:12px;background:#f7f5fa;padding:4px 6px;font-size:7px;gap:3px}
+.demo-chat-draft{flex:1;min-width:0;white-space:normal;line-height:1.25}
+.bento-chat .demo-chat-footer button{padding:0;background:none;font-size:10px;flex-shrink:0}
+.companion-head{position:absolute;left:-2px;bottom:6px;width:43px;height:43px;pointer-events:none;background:none;border-radius:0;box-shadow:none}
+.companion-head>*{transform:scale(.67);transform-origin:top left}
+.companion-demo{position:absolute;bottom:-3px;left:50px;font-size:4px;color:#645674}
+@keyframes companion-send{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.bento-chat .demo-chat-message{animation:none}}
