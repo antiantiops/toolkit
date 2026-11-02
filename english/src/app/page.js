@@ -431,6 +431,8 @@ export default function Home() {
     setWImage1(file);
     setWSkipSlot1(false);
     setWriting(null);
+    setWJob(null);
+    setWRetry(null);
     setWModelDraft(null);
     setWError(null);
     uploadWritingFile(file, 1);
@@ -441,6 +443,8 @@ export default function Home() {
     setWPreview2(URL.createObjectURL(file));
     setWImage2(file);
     setWriting(null);
+    setWJob(null);
+    setWRetry(null);
     setWModelDraft(null);
     setWError(null);
     uploadWritingFile(file, 2);
@@ -454,6 +458,8 @@ export default function Home() {
     setWPreview1(null);
     setWUpload1({ loading: false, id: null, size: 0, error: null });
     setWriting(null);
+    setWJob(null);
+    setWRetry(null);
     setWModelDraft(null);
   };
 
@@ -465,6 +471,8 @@ export default function Home() {
     setWPreview2(null);
     setWUpload2({ loading: false, id: null, size: 0, error: null });
     setWriting(null);
+    setWJob(null);
+    setWRetry(null);
     setWModelDraft(null);
   };
 
