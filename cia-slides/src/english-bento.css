@@ -136,17 +136,25 @@
 .coach-scene{transform-style:preserve-3d;transform:perspective(1000px) rotateX(4deg) rotateY(-12deg) rotateZ(-1.5deg);box-shadow:3px 3px 0 #d9d6e8,6px 6px 0 #c6c2d8,0 12px 24px #40375f25,inset 0 1px 1px #ffffffef}
 .coach-email{transform:translateZ(7px);box-shadow:0 5px 10px #64748b20}
 .coach-mascot{transition:transform .7s ease;transform:perspective(600px) rotateY(-12deg) rotateZ(-4deg)}
-.coach-stage-1 .coach-mascot,.coach-stage-2 .coach-mascot{transform:perspective(600px) rotateX(-22deg) rotateY(14deg) rotateZ(10deg)}
-.coach-stage-3 .coach-mascot{transform:perspective(600px) rotateX(-8deg) rotateY(12deg)}
+.coach-stage-2 .coach-mascot,.coach-stage-3 .coach-mascot{transform:perspective(600px) rotateX(-22deg) rotateY(14deg) rotateZ(10deg)}
+.coach-stage-4 .coach-mascot{transform:perspective(600px) rotateX(-8deg) rotateY(12deg)}
 .coach-gaze-beam{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;opacity:0;transition:opacity .5s}
-.coach-stage-2 .coach-gaze-beam{opacity:1}.coach-stage-2 .coach-email p span{background:#fef3c7;box-shadow:0 0 12px #fcd34d70;border-radius:3px;transition:background .5s}
+.coach-stage-3 .coach-gaze-beam{opacity:1}.coach-stage-3 .coach-email p span{background:#fef3c7;box-shadow:0 0 12px #fcd34d70;border-radius:3px;transition:background .5s}
 .coach-suggestion{opacity:0;visibility:hidden;transform:translateY(8px);transition:opacity .6s,transform .6s,visibility .6s}
-.coach-stage-3 .coach-suggestion{opacity:1;visibility:visible;transform:translateY(0) translateZ(10px)}
+.coach-stage-4 .coach-suggestion{opacity:1;visibility:visible;transform:translateY(0) translateZ(10px)}
 @media(prefers-reduced-motion:reduce){.coach-mascot,.coach-gaze-beam,.coach-suggestion{transition:none}}
 /* Flatten interior compositing: intersecting 3D planes clipped the robot canvas. */
 .coach-scene{transform-style:flat;isolation:isolate}
 .coach-email{transform:none;position:relative;z-index:2}
 .coach-mascot{z-index:5}
 .coach-gaze-beam{z-index:4}
-.coach-stage-3 .coach-suggestion{transform:none}
+.coach-stage-4 .coach-suggestion{transform:none}
 .coach-suggestion{z-index:6}
+
+/* Underline first, then gaze and full-width light, then thought. */
+.coach-email p span{position:relative;display:inline-block;text-decoration:none}
+.coach-email p span:after{content:'';position:absolute;left:0;right:0;bottom:-2px;height:2px;background:#e9b452;transform:scaleX(0);transform-origin:left;transition:transform .22s ease-out}
+.coach-scene:not(.coach-stage-0) .coach-email p span:after{transform:scaleX(1)}
+.coach-suggestion{top:170px;bottom:auto}
+.coach-mascot{bottom:55px}
+@media(prefers-reduced-motion:reduce){.coach-email p span:after{transition:none}}
