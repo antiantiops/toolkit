@@ -94,3 +94,18 @@
 .listening-model-player{transform:translateZ(8px);box-shadow:0 6px 12px rgba(15,23,42,.12),inset 0 1px 1px rgba(255,255,255,.9)}
 .listening-model-focus{transform:translateZ(8px)}
 .listening-model-controls{transform:translateZ(8px)}
+/* Writing lesson is a legible board, not a screenshot thumbnail. */
+.bento-grid{grid-template-rows:185px 125px 162px}
+.bento-writing{grid-column:2/4;grid-row:3;display:block;padding:11px 14px;background:linear-gradient(125deg,#ffe4b0,#fff0cf)}
+.bento-writing>svg{display:none}.writing-lesson-title{display:flex;align-items:center;gap:12px;margin-bottom:6px}.bento-writing .writing-lesson-title h2{font-size:19px;margin:0}.writing-lesson-title>span{font-size:10px;color:#765128}
+.writing-classroom{position:relative;height:113px;padding-right:89px}
+.email-board{position:relative;height:100%;padding:7px 12px;background:#fffdf7;border:1px solid #cba96e;border-radius:9px;box-shadow:0 3px 0 #d6b77d,0 7px 12px #80581c1a;transform:perspective(900px) rotateY(-3deg)}
+.email-board h3{font-size:10px;letter-spacing:.8px;margin:0 0 4px;color:#372952}.email-board h3 span{color:#8665bd}.email-board ol{padding:0;margin:0;list-style:none;counter-reset:email}
+.email-board li{counter-increment:email;display:grid;grid-template-columns:12px 62px 1fr;align-items:center;height:13px;font-size:9px;color:#4e4356;border-radius:3px;animation:email-teach 12s infinite;animation-delay:calc(var(--row)*2s)}
+.email-board li:before{content:counter(email);font-size:7px;color:#8e6db5}.email-board li b{font-weight:700}.email-board li span{font-size:9px;white-space:nowrap}
+.writing-coach{position:absolute;right:0;bottom:0;width:86px;height:113px}.coach-head{position:absolute;right:5px;top:4px;z-index:3}.coach-body{position:absolute;top:62px;right:13px;width:43px;height:36px;background:linear-gradient(110deg,#fdfbff,#b4a6db);border-radius:12px 12px 17px 17px;border:1px solid #a38bc9;box-shadow:0 4px 0 #8a72b7;display:flex;align-items:center;justify-content:center;gap:3px}.coach-body i{width:4px;height:4px;background:#8d66d0;border-radius:50%}.coach-arm{position:absolute;right:27px;top:1px;width:132px;height:113px;overflow:visible;z-index:4;pointer-events:none}.coach-pointer{transform-origin:101px 80px;animation:coach-teach 12s steps(6,end) infinite}.coach-shadow{position:absolute;bottom:1px;right:4px;width:65px;height:8px;border-radius:50%;background:#73532222;filter:blur(3px)}
+.bento-vocabulary{grid-column:4;grid-row:3;padding:12px;display:block}.bento-vocabulary>svg,.bento-vocabulary .bento-real-grammar{display:none}.bento-vocabulary h2{font-size:23px}.bento-vocabulary small{display:block;margin-top:8px}.bento-hero .bento-real-home{max-height:185px;width:auto;max-width:85%}
+@keyframes email-teach{0%,15%{background:#e8dcff;color:#38216c;box-shadow:inset 3px 0 #9162dd}16%,100%{background:transparent;box-shadow:none}}
+@keyframes coach-teach{from{transform:rotate(0deg)}to{transform:rotate(-37deg)}}
+@media(prefers-reduced-motion:reduce){.email-board li,.coach-pointer{animation:none}.email-board li:nth-child(3){background:#e8dcff;box-shadow:inset 3px 0 #9162dd}.coach-pointer{transform:rotate(-14deg)}}
+.bento-hero{padding-top:16px;padding-bottom:14px}.bento-hero h2{font-size:56px;margin:8px 0}.bento-hero .bento-center-sub{font-size:17px}.bento-hero .bento-real-home{max-height:150px;margin-top:10px}.bento-hero>p{font-size:11px;margin:4px 0}
