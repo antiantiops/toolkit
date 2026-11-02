@@ -165,8 +165,7 @@
 .bento-words p{font-size:12px}.bento-words small{display:block;font-size:8px;color:#52625b;margin-top:8px}
 .words-image-frame{height:100%;flex:none;display:block;border-radius:7px;overflow:hidden;background:white;box-shadow:0 3px 10px #20352a24}
 .words-image-frame img{display:block;height:100%;width:auto}
-/* Sequence: original tile arrives, then its supplied UI becomes presentation focus. */
-.words-zoom{position:fixed;z-index:20;right:8vw;top:17vh;width:min(42vw,520px);height:min(60vh,620px);display:grid;place-items:center;pointer-events:none;opacity:0;transform:perspective(1200px) rotateY(-15deg) rotateX(5deg) rotateZ(2deg) scale(.42);transform-origin:78% 55%;filter:drop-shadow(0 28px 28px #18254c42);transition:opacity .28s ease,transform 1.15s cubic-bezier(.18,.83,.22,1)}
-.words-zoom-show{opacity:1;transform:perspective(1200px) rotateY(-15deg) rotateX(5deg) rotateZ(2deg) scale(1)}
-.words-zoom img{display:block;max-width:100%;max-height:100%;border-radius:24px;border:3px solid #fff;box-shadow:0 3px 0 #cbd5e1,0 22px 46px #17255436}
-@media(prefers-reduced-motion:reduce){.words-zoom{transition:none}.words-zoom-show{transform:none}}
+/* Zoom stays clipped inside its own feature tile. */
+.words-image-frame{transition:transform 1.1s cubic-bezier(.18,.83,.22,1);transform-origin:right center}
+.words-focused .words-image-frame{transform:perspective(600px) rotateY(-13deg) rotateZ(-4deg) scale(1.65)}
+@media(prefers-reduced-motion:reduce){.words-image-frame{transition:none}}
