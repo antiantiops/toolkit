@@ -12,6 +12,6 @@ try{for(const [width,height,lang,reducedMotion] of [[1440,900,'en','no-preferenc
  await p.screenshot({path:`/root/.openclaw/workspace-nim/media/chat-demo-${process.env.TAG||'preview'}-${width}-${lang}.png`});
  await p.locator('.demo-chat-footer button').click();await p.waitForTimeout(150);assert.equal(await p.locator('.demo-chat-message').count(),0);
  await p.getByRole('button',{name:'Close chat',exact:true}).click();assert.equal(await p.locator('.bento-chat-window').count(),0);
- const bounds=await p.locator('.bento-chat').evaluate(e=>{const a=e.getBoundingClientRect(),b=e.querySelector('.chat-launch').getBoundingClientRect();return b.right<=a.right});assert.ok(bounds);
- console.log('PASS chat open, staged Q&A, final answer, replay, close, Escape',width,lang,reducedMotion);await p.close();
+ assert.equal(await p.locator('.chat-launch').count(),0);
+ console.log('PASS automatic conversation, final answer, replay, no chat bubble',width,lang,reducedMotion);await p.close();
 }}finally{await browser.close()}
