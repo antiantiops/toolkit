@@ -200,3 +200,15 @@
 .companion-demo{position:absolute;bottom:-3px;left:50px;font-size:4px;color:#645674}
 @keyframes companion-send{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){.bento-chat .demo-chat-message{animation:none}}
+/* Four retained messages; composer owns separate space, never overlays history. */
+.bento-chat .bento-chat-backdrop{inset:57px 10px 7px}
+.bento-chat .bento-chat-window{display:grid;grid-template-rows:minmax(0,1fr) 19px;row-gap:7px;padding-bottom:7px;box-sizing:border-box}
+.bento-chat .demo-chat-body{padding:0 0 0 40px;gap:4px;overflow:hidden;justify-content:flex-end}
+.bento-chat .demo-chat-message{padding:2px 5px;border-radius:6px;max-width:95%}
+.bento-chat .demo-chat-message p{font-size:4.8px;line-height:1.15}
+.bento-chat .demo-chat-message small{font-size:3px;margin-bottom:1px}
+.bento-chat .demo-chat-footer{position:relative;inset:auto;margin-left:40px;min-height:19px;height:19px;padding:3px 5px;font-size:6px;overflow:hidden}
+.companion-head{bottom:7px;width:36px;height:36px}.companion-head>*{transform:scale(.56)}
+.companion-demo{left:42px;bottom:-1px}
+.bento-chat .bento-chat-backdrop{top:53px}
+.bento-chat .demo-chat-body{justify-content:flex-start}

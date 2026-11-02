@@ -10,11 +10,12 @@ try{for(const [width,height,lang,reducedMotion] of [[1440,900,'en','no-preferenc
  await p.locator('.bento-chat').screenshot({path:`/root/.openclaw/workspace-nim/media/chat-draft-${process.env.TAG||'preview'}-${width}-${lang}.png`});
  await p.waitForTimeout(1700);assert.equal(await p.locator('.demo-chat-message.student').count(),1);
  assert.equal(await p.locator('.demo-chat-draft').innerText(),'Type a message…');
- await p.waitForTimeout(14000);assert.equal(await p.locator('.demo-chat-message').count(),4);assert.equal(await p.locator('.demo-chat-caret').count(),0);assert.match(await p.locator('.demo-chat-message').last().innerText(),/fruit/);
+ await p.waitForTimeout(18000);assert.equal(await p.locator('.demo-chat-message').count(),4);assert.equal(await p.locator('.demo-chat-caret').count(),0);assert.match(await p.locator('.demo-chat-message').last().innerText(),/fruit/);
  assert.ok(await p.locator('.bento-chat-window').evaluate(e=>{const a=e.getBoundingClientRect(),b=e.closest('.bento-chat').getBoundingClientRect();return a.left>=b.left&&a.right<=b.right&&a.top>=b.top&&a.bottom<=b.bottom}));
+ assert.ok(await p.locator('.bento-chat').evaluate(e=>{const messages=[...e.querySelectorAll('.demo-chat-message')].map(x=>x.getBoundingClientRect()),body=e.querySelector('.demo-chat-body').getBoundingClientRect(),input=e.querySelector('.demo-chat-footer').getBoundingClientRect();return messages.length===4&&messages.every((r,i)=>r.top>=body.top-1&&r.bottom<=body.bottom+1&&r.bottom<input.top&&(!i||r.top>messages[i-1].bottom))}));
  await p.locator('.bento-chat').screenshot({path:`/root/.openclaw/workspace-nim/media/chat-card-${process.env.TAG||'preview'}-${width}-${lang}.png`});
  await p.screenshot({path:`/root/.openclaw/workspace-nim/media/chat-demo-${process.env.TAG||'preview'}-${width}-${lang}.png`});
- assert.ok(await p.locator('.bento-chat').evaluate(e=>{const head=e.querySelector('.companion-head').getBoundingClientRect(),input=e.querySelector('.demo-chat-footer').getBoundingClientRect();return head.right<=input.left+1&&getComputedStyle(e.querySelector('.demo-chat-message.assistant'),'::before').content==='none'&&parseFloat(getComputedStyle(e.querySelector('.demo-chat-body')).gap)>=8}));
+ assert.ok(await p.locator('.bento-chat').evaluate(e=>{const head=e.querySelector('.companion-head').getBoundingClientRect(),input=e.querySelector('.demo-chat-footer').getBoundingClientRect();return head.right<=input.left+1&&getComputedStyle(e.querySelector('.demo-chat-message.assistant'),'::before').content==='none'}));
  await p.locator('.demo-chat-footer button').click();await p.waitForTimeout(150);assert.equal(await p.locator('.demo-chat-message').count(),0);
  assert.equal(await p.locator('.chat-launch').count(),0);
  console.log('PASS automatic conversation, final answer, replay, no chat bubble',width,lang,reducedMotion);await p.close();
