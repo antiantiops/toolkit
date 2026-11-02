@@ -178,3 +178,11 @@
 .demo-chat-body{flex:1;min-height:0;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px}.demo-chat-message{flex-shrink:0;max-width:86%;padding:10px 13px;border-radius:14px;background:#fff;border:1px solid #e8e2f2;align-self:flex-start}.demo-chat-message.student{align-self:flex-end;background:#7045c4;border-color:#7045c4;color:#fff}.demo-chat-message small{font-size:9px;opacity:.7}.demo-chat-message p{font-size:14px;line-height:1.5;margin:4px 0 0;color:inherit}.demo-chat-caret{color:#a58bd4}.demo-chat-footer{padding:13px 18px;display:flex;align-items:center;justify-content:space-between;background:#fff;border-top:1px solid #e9e2f4;color:#8b8099;font-size:12px}.demo-chat-footer button{border:0;border-radius:8px;padding:8px 12px;background:#eee5fc;color:#6236ba;cursor:pointer}
 @keyframes demo-chat-open{from{opacity:0;transform:translate(80px,50px) scale(.35)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.bento-chat-window{animation:none}}
+/* Automatic miniature chat stays inside AI tile. */
+.bento-chat .bento-chat-backdrop{inset:42px 8px 8px;background:none;border-radius:10px;align-items:stretch}
+.bento-chat .bento-chat-window{width:100%;height:100%;max-width:none;max-height:none;border-radius:10px;box-shadow:0 4px 10px #553e7925;transform-origin:90% 95%;animation-duration:.6s}
+.bento-chat:has(.bento-chat-window)>div:not(.bento-chat-backdrop)>p{visibility:hidden}
+.bento-chat:has(.bento-chat-window) h2{font-size:15px;max-width:none}
+.bento-chat .demo-chat-header{padding:4px 7px}.bento-chat .demo-chat-header>div{display:flex;align-items:center;gap:4px}.bento-chat .demo-chat-header strong{font-size:9px}.bento-chat .demo-chat-header svg{width:11px;height:11px}.bento-chat .demo-chat-header small{font-size:6px}.bento-chat .demo-chat-header button{width:15px;height:15px;font-size:12px}
+.bento-chat .demo-chat-body{padding:5px;gap:5px}.bento-chat .demo-chat-message{padding:4px 6px;border-radius:7px;max-width:92%}.bento-chat .demo-chat-message small{font-size:6px}.bento-chat .demo-chat-message p{font-size:9px;line-height:1.35;margin:1px 0 0;max-width:none}
+.bento-chat .demo-chat-footer{padding:3px 6px;font-size:6px}.bento-chat .demo-chat-footer button{font-size:7px;padding:3px 5px}
