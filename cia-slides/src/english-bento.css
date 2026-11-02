@@ -58,3 +58,22 @@
 .listening-model{width:92%;transform:perspective(1000px) rotateY(-17deg) rotateX(7deg) rotateZ(-3deg);transform-style:preserve-3d;transform-origin:center}
 .listening-model-transcript{transform:translateZ(0)}
 .listening-model-player{transform:translateZ(18px)}
+/* One solid stage, with typography and controls lifted from its face. */
+.listening-model{box-sizing:border-box;width:86%;height:380px;padding:9px 9px 20px;margin-top:14px;background:#f8fbfa;border:1px solid #c0d1cf;border-radius:13px;transform:perspective(900px) rotateY(13deg) rotateX(3deg) rotateZ(-5deg);box-shadow:-3px 3px 0 #284a58,-6px 6px 0 #173b4b,-9px 9px 0 #103043,0 22px 24px #183e4938}
+.listening-model-transcript{padding:10px 10px 9px;border-radius:11px;box-shadow:0 2px 4px #17695d15;transform:translateZ(2px)}
+.listening-model-player{margin-top:8px;padding:14px 8px 11px;border-radius:11px;box-shadow:0 2px 4px #153d3820;transform:translateZ(3px)}
+.listening-model-focus{transform:translateZ(17px)}
+.listening-model-focus>strong{font-size:18px;line-height:1.4;color:#08776c;text-shadow:0 2px 0 #e9fff9;filter:drop-shadow(-2px 4px 2px #0c675c25)}
+.listening-model-controls{transform:translateZ(22px)}
+.listening-model-play{box-shadow:0 4px 0 #065c55,0 10px 12px #087f7638}
+.listening-model-note{position:absolute;left:0;right:0;bottom:-24px;font-size:6px;transform:translateZ(0)}
+/* Review 2: fit the complete player on its chassis; separate depth without fuzzy type. */
+.listening-model{width:89%;height:383px;padding:9px 9px 12px;margin-top:12px}
+.listening-model-focus>strong{font-size:17px;line-height:1.36;filter:none;text-shadow:0 1px 0 #fff,0 3px 2px #0b62551c}
+.listening-model .listening-model-previous{font-size:10px;margin:9px 0 10px}
+.listening-model .listening-model-focus>p{font-size:10px;line-height:1.5;margin:9px 0 11px}
+.listening-model-player{padding:13px 8px 10px;margin-top:8px}
+.listening-model-controls{margin:9px 0}.listening-model-play{width:44px;height:44px}
+.listening-model-note{bottom:-22px}
+/* Decorative caption costs vertical space, hide it on the compact slide tile. */
+.listening-model-note{display:none}
