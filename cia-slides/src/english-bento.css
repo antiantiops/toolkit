@@ -132,3 +132,14 @@
 .coach-suggestion:before{top:auto;right:auto;left:-8px;bottom:18px;width:7px;height:7px;border:1px solid #cab8e7;border-radius:50%;background:#ede9fe}
 .coach-suggestion:after{content:'';position:absolute;left:-15px;bottom:12px;width:4px;height:4px;border:1px solid #cab8e7;border-radius:50%;background:#ede9fe}
 .bento-writing .coach-suggestion p{font-size:9px;line-height:1.4}.coach-suggestion small{font-size:7px}.coach-suggestion>div{gap:4px}.coach-suggestion button{font-size:7px}
+/* One-shot teaching sequence: gaze, illuminate, then explain. */
+.coach-scene{transform-style:preserve-3d;transform:perspective(1000px) rotateX(4deg) rotateY(-12deg) rotateZ(-1.5deg);box-shadow:3px 3px 0 #d9d6e8,6px 6px 0 #c6c2d8,0 12px 24px #40375f25,inset 0 1px 1px #ffffffef}
+.coach-email{transform:translateZ(7px);box-shadow:0 5px 10px #64748b20}
+.coach-mascot{transition:transform .7s ease;transform:perspective(600px) rotateY(-12deg) rotateZ(-4deg)}
+.coach-stage-1 .coach-mascot,.coach-stage-2 .coach-mascot{transform:perspective(600px) rotateX(-22deg) rotateY(14deg) rotateZ(10deg)}
+.coach-stage-3 .coach-mascot{transform:perspective(600px) rotateX(-8deg) rotateY(12deg)}
+.coach-gaze-beam{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;opacity:0;transition:opacity .5s}
+.coach-stage-2 .coach-gaze-beam{opacity:1}.coach-stage-2 .coach-email p span{background:#fef3c7;box-shadow:0 0 12px #fcd34d70;border-radius:3px;transition:background .5s}
+.coach-suggestion{opacity:0;visibility:hidden;transform:translateY(8px);transition:opacity .6s,transform .6s,visibility .6s}
+.coach-stage-3 .coach-suggestion{opacity:1;visibility:visible;transform:translateY(0) translateZ(10px)}
+@media(prefers-reduced-motion:reduce){.coach-mascot,.coach-gaze-beam,.coach-suggestion{transition:none}}
