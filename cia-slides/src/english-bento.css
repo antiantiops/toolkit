@@ -77,3 +77,20 @@
 .listening-model-note{bottom:-22px}
 /* Decorative caption costs vertical space, hide it on the compact slide tile. */
 .listening-model-note{display:none}
+/* Tuned shell only: soft slate edge, calm perspective, real ambient light. */
+.listening-model{
+  width:89%; height:383px; padding:9px 9px 12px; margin-top:12px;
+  background:#f8fbfa; border:1px solid #e2e8f0; border-radius:13px;
+  transform:perspective(1200px) rotateX(5deg) rotateY(10deg) rotateZ(-1.5deg);
+  transform-style:preserve-3d; transform-origin:center;
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,.9),
+    -4px 4px 0 #cbd5e1,
+    -6px 6px 0 #94a3b8,
+    0 8px 12px rgba(15,23,42,.13),
+    0 28px 52px rgba(15,23,42,.16);
+}
+.listening-model-transcript{transform:translateZ(8px);box-shadow:0 5px 10px rgba(15,23,42,.10),inset 0 1px 1px rgba(255,255,255,.72)}
+.listening-model-player{transform:translateZ(8px);box-shadow:0 6px 12px rgba(15,23,42,.12),inset 0 1px 1px rgba(255,255,255,.9)}
+.listening-model-focus{transform:translateZ(8px)}
+.listening-model-controls{transform:translateZ(8px)}
