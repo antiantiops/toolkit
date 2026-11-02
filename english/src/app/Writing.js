@@ -291,10 +291,10 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
                             {bankText(x.english)}
                           </button>
                           <SpeakBtn
-                            text={bankText(x.english)}
+                            text={x.english}
                             className="shrink-0 rounded-md bg-slate-800 px-2 py-1 text-xs hover:bg-slate-700"
                           />
-                          <CopyBtn text={bankText(x.english)} />
+                          <CopyBtn text={x.english} />
                         </div>
                         {isOpen && (
                           <div className="mt-2 space-y-1 border-t border-slate-700 pt-2 text-sm">
@@ -684,8 +684,8 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">🇬🇧 Tiếng Anh:</span>
                       <div className="flex items-center gap-1">
-                        <SpeakBtn text={bankText(selectedSentence.en)} className="rounded-lg bg-teal-900/80 px-2.5 py-1 text-xs text-white hover:bg-teal-800" />
-                        <CopyBtn text={bankText(selectedSentence.en)} />
+                        <SpeakBtn text={selectedSentence.en} className="rounded-lg bg-teal-900/80 px-2.5 py-1 text-xs text-white hover:bg-teal-800" />
+                        <CopyBtn text={selectedSentence.en} />
                       </div>
                     </div>
                     <p className="text-base font-semibold text-teal-200 leading-relaxed m-0">
@@ -926,7 +926,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
                   <div className="mb-2 flex items-center justify-between font-semibold text-purple-300">
                     <span>Bản viết lại hoàn chỉnh (tham khảo):</span>
                     <span className="flex items-center gap-1">
-                      <CopyBtn text={bankText(review.improved)} />
+                      <CopyBtn text={review.improved} />
                       <SpeakBtn
                         text={review.improved.slice(0, 900)}
                         className="rounded-md bg-purple-900 px-2 py-1 text-xs hover:bg-purple-800"
@@ -1041,7 +1041,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
                           text={(x.english || "").replace(/[\[\]]/g, "")}
                           className="shrink-0 rounded-md bg-slate-800 px-2 py-1 text-xs hover:bg-slate-700"
                         />
-                        <CopyBtn text={bankText(x.english)} />
+                        <CopyBtn text={x.english} />
                       </div>
                       <div className="mt-1 text-xs text-slate-400">{x.vietnamese}</div>
                     </div>
@@ -1091,10 +1091,10 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
                             {bankText(x.english)}
                           </button>
                           <SpeakBtn
-                            text={bankText(x.english)}
+                            text={x.english}
                             className="shrink-0 rounded-md bg-slate-800 px-2 py-1 text-xs hover:bg-slate-700"
                           />
-                          <CopyBtn text={bankText(x.english)} />
+                          <CopyBtn text={x.english} />
                         </div>
                         {isOpen && (
                           <div className="mt-2 space-y-1 border-t border-slate-700 pt-2 text-sm">

@@ -8,7 +8,7 @@ async function audioUrl(text,lang){
  const k=lang+'|'+text;
  if(tts.cache.has(k))return tts.cache.get(k);
  const res=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,lang})});
- if(!res.ok)throw Error('Không tải được giọng đọc');
+ if(!res.ok){const detail=await res.json().catch(()=>({}));throw Error(`Không tải được giọng đọc (HTTP ${res.status}${detail.requestId ? ` · ${detail.requestId}` : ''}). ${detail.error || 'Bấm loa để thử lại.'}`);}
  const url=URL.createObjectURL(await res.blob());
  if(tts.cache.size>=200){const old=tts.cache.keys().next().value;URL.revokeObjectURL(tts.cache.get(old));tts.cache.delete(old);}
  tts.cache.set(k,url);return url;
