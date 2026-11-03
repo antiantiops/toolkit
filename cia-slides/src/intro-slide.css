@@ -22,3 +22,15 @@
 .nim-chrome-cross{top:46%;left:83%;width:10%}
 /* Soft studio spots stay behind content; white stripe remains opaque. */
 .nim-intro{background:radial-gradient(ellipse 9% 10% at 91% 0%,#eeeeee73 0%,#b8b8b833 35%,transparent 100%),radial-gradient(ellipse 16% 40% at 95% 3%,#9baabd24 0%,transparent 90%),radial-gradient(ellipse 10% 18% at 100% 100%,#d4dce066 0%,#9baabd24 40%,transparent 100%),radial-gradient(ellipse 12% 8% at 16% 0%,#eeeeeea6 0%,#d6d6d647 30%,transparent 100%),radial-gradient(ellipse 28% 52% at 18% 0%,#aaaaaa30 0%,transparent 80%),radial-gradient(ellipse 12% 19% at 0% 100%,#dedede8c 0%,#a0a0a033 40%,transparent 100%),radial-gradient(circle at 32% 48%,#2e2e2e 0%,#141414 45%,#080808 85%)}
+.company-stripe{position:absolute;left:14%;top:0;bottom:0;width:16%;background:#fff}
+.company-copy{position:absolute;left:43%;top:50%;transform:translateY(-50%);width:53%}
+.nim-company h1{font-size:94px;line-height:1.04;letter-spacing:2px;margin:15px 0 24px}
+.nim-company .nim-intro-eyebrow{font-size:15px;letter-spacing:3px}
+.company-description{font:300 26px/1.5 'Inter',sans-serif;color:#d0d0d0;margin:0}
+.company-network{position:absolute;left:4%;top:24%;width:32%;height:51%;color:#a8bbcb;filter:drop-shadow(0 16px 24px #0008)}
+.company-network>svg{width:100%;height:100%;fill:#17232c;stroke:#b9ccd9}
+.company-shield,.company-server{position:absolute;display:grid;place-items:center;background:linear-gradient(135deg,#edf2f5,#556674 48%,#18232d 52%,#bac8d0);border:1px solid #d5dfe6;border-radius:16px;width:92px;height:92px;color:#e4f2fa;box-shadow:0 14px 24px #0007}
+.company-shield{right:0;top:5%;transform:rotate(12deg)}.company-server{left:0;bottom:0;transform:rotate(-10deg)}.company-shield svg,.company-server svg{width:55px;height:55px;stroke-width:1.4}
+.company-network>svg{fill:none;stroke:#b9ccd9;background:radial-gradient(ellipse closest-side,#17232c 94%,transparent 95%)}
+.nim-company .nim-intro-bottom{left:43%}
+.nim-company .nim-intro-bottom span:first-child{display:none}

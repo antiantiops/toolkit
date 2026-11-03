@@ -17,11 +17,11 @@ for(const lang of ['en','vi'])for(const width of [1440,390]){
  assert.ok(await page.evaluate(()=>document.fonts.check('400 42px "Bebas Neue"')));
  assert.ok(await page.evaluate(()=>document.fonts.check('300 22px Inter')));
  assert.equal(await page.locator('.nim-intro h1').textContent(),'NIM');
- assert.match(await page.locator('.page-indicator').innerText(),/01\s*\/ 09/);
+ assert.match(await page.locator('.page-indicator').innerText(),/01\s*\/ 10/);
  await page.screenshot({path:`/root/.openclaw/workspace-nim/media/nim-intro-${width}-${lang}.png`});
- await page.keyboard.press('ArrowRight');await page.locator('.nim-intro').waitFor({state:'detached'});
- await page.waitForTimeout(350);assert.match(await page.locator('.page-indicator').innerText(),/02\s*\/ 09/);
- await page.goto(`${process.env.BASE_URL||'http://localhost:8260'}/#9`);await page.locator('.english-bento').waitFor();
+ await page.keyboard.press('ArrowRight');await page.locator('.nim-intro:not(.nim-company)').waitFor({state:'detached'});
+ await page.locator('.nim-company').waitFor();await page.waitForTimeout(350);await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:`/root/.openclaw/workspace-nim/media/nim-company-${width}-${lang}.png`});assert.match(await page.locator('.page-indicator').innerText(),/02\s*\/ 10/);
+ await page.goto(`${process.env.BASE_URL||'http://localhost:8260'}/#10`);await page.locator('.english-bento').waitFor();
  assert.equal(await page.locator('.slide-nav button').last().isDisabled(),true);
  await page.reload();await page.locator('.english-bento').waitFor();
  await page.close();
