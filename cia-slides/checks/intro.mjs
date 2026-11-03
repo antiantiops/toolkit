@@ -6,6 +6,14 @@ for(const lang of ['en','vi'])for(const width of [1440,390]){
  await page.addInitScript(l=>localStorage.setItem('deck-language',l),lang);
  await page.goto(`${process.env.BASE_URL||'http://localhost:8260'}/#1`);
  await page.locator('.nim-intro').waitFor();
+ await page.evaluate(()=>document.fonts.ready);
+ assert.equal(await page.locator('.nim-intro-monogram').count(),0);
+ assert.equal(await page.locator('.nim-intro svg').count(),4);
+ assert.equal(await page.locator('.nim-intro-column').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(255, 255, 255)');
+ assert.equal(await page.locator('.nim-intro h1').evaluate(e=>getComputedStyle(e).fontSize),'150px');
+ assert.ok(await page.evaluate(()=>document.fonts.check('400 150px Anton')));
+ assert.ok(await page.evaluate(()=>document.fonts.check('400 42px "Bebas Neue"')));
+ assert.ok(await page.evaluate(()=>document.fonts.check('300 22px Inter')));
  assert.equal(await page.locator('.nim-intro h1').textContent(),'NIM');
  assert.match(await page.locator('.page-indicator').innerText(),/01\s*\/ 09/);
  await page.screenshot({path:`/root/.openclaw/workspace-nim/media/nim-intro-${width}-${lang}.png`});
