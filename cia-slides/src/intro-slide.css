@@ -52,3 +52,13 @@
 .infra-protected .infra-model{box-shadow:5px 7px 0 #1b2732,0 9px 20px #67e8f92b}
 .company-protected{position:absolute;left:50%;bottom:0;transform:translateX(-50%);display:flex;align-items:center;gap:7px;opacity:0;color:#b5ede8;font:400 12px 'Inter',sans-serif;letter-spacing:3px;transition:opacity .6s}.company-protected.is-protected{opacity:1}
 @media(prefers-reduced-motion:reduce){.company-light{animation:none;opacity:0}.infra-node,.infra-dome,.company-protected{transition:none}}
+.nim-company{background:radial-gradient(ellipse at 30% 15%,#0a303b80,transparent 62%),radial-gradient(ellipse at 65% 80%,#003d4720,transparent 60%),#020f19}
+.nim-company .company-copy{left:17%;top:6%;width:68%}
+.nim-company h1{font-size:65px;text-shadow:0 0 23px #67e8f93b}
+.nim-company .company-description{font-size:23px}
+.nim-company .company-systems{height:350px;margin-top:6px}
+.company-map>path:first-of-type{fill:url(#company-dots);stroke:none;opacity:.22}
+.company-map{background-image:linear-gradient(#67e8f905 1px,transparent 1px),linear-gradient(90deg,#67e8f905 1px,transparent 1px);background-size:45px 45px}
+.company-beam{filter:drop-shadow(0 0 7px #67e8f9)}
+.infra-protected .infra-dome{background:radial-gradient(ellipse at 50% 10%,#a5f3fc30,transparent 75%);box-shadow:inset 0 0 18px #67e8f921,0 0 16px #67e8f925}
+.nim-company .nim-intro-bottom{left:17%}

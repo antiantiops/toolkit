@@ -1,0 +1,6 @@
+import {chromium} from '/usr/local/lib/node_modules/playwright/index.mjs';
+import assert from 'node:assert/strict';
+const b=await chromium.launch({args:['--no-sandbox']});
+try{const p=await b.newPage({viewport:{width:1440,height:900}});await p.goto(`${process.env.BASE_URL||'http://localhost:8261'}/#2`);await p.waitForTimeout(700);assert.equal(await p.locator('.infra-protected').count(),0);
+for(let step=0;step<30;step++){await p.waitForTimeout(100);const hit=await p.locator('.company-beam circle').last().evaluate(e=>({x:Number(e.getAttribute('cx')),y:Number(e.getAttribute('cy'))}));const count=await p.locator('.infra-protected').count();assert.ok(count>=1&&count<=5);const targets=[{x:65,y:95},{x:255,y:70},{x:445,y:95},{x:350,y:240},{x:150,y:240},{x:65,y:95}];const a=targets[count-1],b=targets[count];const t=((hit.x-a.x)*(b.x-a.x)+(hit.y-a.y)*(b.y-a.y))/((b.x-a.x)**2+(b.y-a.y)**2);assert.ok(t>=-.01&&t<=1.01,'beam must remain on segment after latest protected node');}
+await p.waitForTimeout(1100);assert.equal(await p.locator('.company-protected.is-protected').count(),1);await p.close();}finally{await b.close()}console.log('PASS no early halo; beam contact matches each of five halo reveals');
