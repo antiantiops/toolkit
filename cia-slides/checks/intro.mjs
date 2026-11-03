@@ -10,7 +10,7 @@ for(const lang of ['en','vi'])for(const width of [1440,390]){
  assert.equal(await page.locator('.nim-intro-monogram').count(),0);
  assert.equal(await page.locator('.nim-chrome-overlap').count(),0);
  assert.equal(await page.locator('.nim-intro-robot').count(),2);
- assert.equal(await page.locator('.nim-chrome').count(),3);
+ assert.equal(await page.locator('.nim-chrome').count(),2);
  assert.equal(await page.locator('.nim-intro-column').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(255, 255, 255)');
  assert.equal(await page.locator('.nim-intro h1').evaluate(e=>getComputedStyle(e).fontSize),'174px');
  assert.ok(await page.evaluate(()=>document.fonts.check('400 150px Anton')));
