@@ -65,3 +65,16 @@
 /* Keep original white stripe; all company content stays on its right. */
 .nim-company .company-copy{left:40%;width:56%}
 .nim-company .nim-intro-bottom{left:40%}
+/* Shared white stripe travels between its actual slide positions. */
+.deck-intro-morph .nim-intro-column,.deck-intro-morph .company-stripe{view-transition-name:intro-stripe}
+.deck-intro-morph .nim-intro:not(.nim-company) .nim-intro-copy,.deck-intro-morph .company-copy{view-transition-name:intro-copy}
+.deck-intro-morph .nim-intro{view-transition-name:intro-backdrop}
+.deck-intro-morph::view-transition-group(intro-stripe){animation-duration:950ms;animation-timing-function:cubic-bezier(.65,0,.2,1);z-index:10}
+.deck-intro-morph::view-transition-old(intro-stripe),.deck-intro-morph::view-transition-new(intro-stripe){animation:none;mix-blend-mode:normal;height:100%}
+.deck-intro-morph::view-transition-group(intro-copy){animation-duration:850ms;animation-timing-function:cubic-bezier(.22,1,.36,1)}
+.deck-intro-morph::view-transition-old(intro-copy){animation:infra-copy-out 300ms ease-in both}
+.deck-intro-morph::view-transition-new(intro-copy){animation:infra-copy-in 650ms 200ms ease-out both}
+.deck-intro-morph::view-transition-group(intro-backdrop){animation-duration:950ms}
+.deck-intro-morph::view-transition-old(intro-backdrop),.deck-intro-morph::view-transition-new(intro-backdrop){mix-blend-mode:normal}
+@keyframes infra-copy-out{to{opacity:0;filter:blur(3px)}}
+@keyframes infra-copy-in{from{opacity:0;filter:blur(3px)}to{opacity:1;filter:blur(0)}}
