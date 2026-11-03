@@ -600,6 +600,11 @@ export default function Home() {
           if (requestId === lookupRequest.current) setLookup(current => current ? { ...current, pronunciation: data.pronunciation } : current);
         }).catch(() => {});
     }
+    if (/^[A-Za-z][A-Za-z'-]{0,63}$/.test(word)) {
+      fetch('/api/word-class?word=' + encodeURIComponent(word)).then(parseApiResponse).then(data => {
+        if (requestId === lookupRequest.current && data.partsOfSpeech?.length) setLookup(current => current ? { ...current, dictionaryParts: data.partsOfSpeech } : current);
+      }).catch(() => {});
+    }
     const quick = meaning ? Promise.resolve() : fetch("/api/quick-word", { method: "POST", headers: { "Content-Type": "application/json" }, body })
       .then(parseApiResponse)
       .then(data => setLookup(current => requestId === lookupRequest.current && current?.word === word && current.detailLoading ? { ...current, meaning: data.meaning, ipa: data.ipa || current.ipa, loading: false, quick: true } : current))
@@ -609,7 +614,7 @@ export default function Home() {
       const data = await parseApiResponse(res);
       if (lookupCache.current.size >= 100) lookupCache.current.delete(lookupCache.current.keys().next().value);
       lookupCache.current.set(key, data.word);
-      if (requestId === lookupRequest.current) setLookup(current => current ? { ...data.word, pronunciation: current.pronunciation, loading: false, detailLoading: false } : null);
+      if (requestId === lookupRequest.current) setLookup(current => current ? { ...data.word, pronunciation: current.pronunciation, dictionaryParts: current.dictionaryParts, loading: false, detailLoading: false } : null);
     } catch (e) {
       await quick;
       if (requestId === lookupRequest.current) setLookup(current => !current ? null : current.meaning ? { ...current, loading: false, detailLoading: false } : { word, error: formatErrorMessage(e), loading: false, detailLoading: false });
@@ -1704,9 +1709,9 @@ export default function Home() {
               </div>
               <button onClick={() => setLookup(null)} className="rounded-lg px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-white" aria-label="Đóng">✕</button>
             </div>
+            {(lookup.partOfSpeech || lookup.dictionaryParts?.length > 0) && <div data-testid="lookup-word-class" className="mt-2 text-sm font-semibold text-amber-200">{lookup.partOfSpeech || lookup.dictionaryParts.join(' · ')}{!lookup.partOfSpeech && <small className="ml-2 font-normal text-slate-400">Từ loại trong từ điển</small>}</div>}
             {lookup.pronunciation && <div data-testid="lookup-pronunciation" className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-violet-300"><span>🇬🇧 UK: {lookup.pronunciation.uk || "Chưa có"}</span><span>🇺🇸 US: {lookup.pronunciation.us || "Chưa có"}</span><small className="w-full text-xs text-slate-400">Nguồn: {lookup.pronunciation.source} · Phiên âm từ điển; có thể khác theo từ loại/ngữ cảnh.</small></div>}
             {lookup.loading && !lookup.meaning ? <div className="mt-5 text-slate-400">Đang tra nghĩa tiếng Việt...</div> : lookup.error ? <div className="mt-4 text-red-300">{lookup.error}</div> : <>
-              {lookup.partOfSpeech && <div className="mt-2"><span className="inline-block max-w-full rounded-lg border border-amber-500/40 bg-amber-950/50 px-2.5 py-1 text-xs font-semibold leading-relaxed text-amber-200">{lookup.partOfSpeech}</span></div>}
               {!lookup.pronunciation && <div className="mt-1 text-violet-300 italic">{lookup.ipa}</div>}
               {lookup.easyReading && <div className="mt-4 rounded-xl border border-sky-900 bg-sky-950/50 p-3 text-sm leading-relaxed text-sky-100"><span className="font-semibold text-sky-300">Dễ đọc: </span>{lookup.easyReading}</div>}
               <div data-testid="lookup-meaning" className="mt-4 text-lg font-medium text-white">{lookup.meaning}</div>
