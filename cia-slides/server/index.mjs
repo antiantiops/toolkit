@@ -1,7 +1,7 @@
 import http from 'node:http';
 import {gzipSync} from 'node:zlib';
 import {readFile,writeFile,mkdir,rename} from 'node:fs/promises';
-import {resolve,extname} from 'node:path';
+import {resolve,extname,dirname} from 'node:path';
 import {chat,validate,RequestError} from './provider.mjs';
 const notesFile=process.env.NOTES_FILE||'/data/slide-notes.json';
 let noteQueue=Promise.resolve();
@@ -14,7 +14,7 @@ http.createServer(async(req,res)=>{
  res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','same-origin');
  if(req.url==='/api/config'&&req.method==='GET')return json(res,200,{models,configured});
  if(req.url==='/api/notes'&&req.method==='GET'){try{return json(res,200,{notes:await notes()})}catch{return json(res,500,{error:'Không đọc được ghi chú.'})}}
- if(req.url==='/api/notes'&&req.method==='PUT'){try{let raw='';for await(const chunk of req){raw+=chunk;if(Buffer.byteLength(raw)>220000)throw new RequestError(413,'Ghi chú quá lớn.');}let body;try{body=JSON.parse(raw)}catch{throw new RequestError(400,'JSON không hợp lệ.')}const data=cleanNotes(body.notes);noteQueue=noteQueue.then(async()=>{await mkdir(resolve(notesFile,'..'),{recursive:true});const tmp=`${notesFile}.tmp`;await writeFile(tmp,JSON.stringify(data,null,2)+'\n',{mode:0o600});await rename(tmp,notesFile);});await noteQueue;return json(res,200,{notes:data});}catch(e){return json(res,e instanceof RequestError?e.status:500,{error:e instanceof RequestError?e.message:'Không lưu được ghi chú.'})}}
+ if(req.url==='/api/notes'&&req.method==='PUT'){try{let raw='';for await(const chunk of req){raw+=chunk;if(Buffer.byteLength(raw)>220000)throw new RequestError(413,'Ghi chú quá lớn.');}let body;try{body=JSON.parse(raw)}catch{throw new RequestError(400,'JSON không hợp lệ.')}const data=cleanNotes(body.notes);noteQueue=noteQueue.then(async()=>{await mkdir(dirname(notesFile),{recursive:true});const tmp=`${notesFile}.tmp`;await writeFile(tmp,JSON.stringify(data,null,2)+'\n',{mode:0o600});await rename(tmp,notesFile);});await noteQueue;return json(res,200,{notes:data});}catch(e){return json(res,e instanceof RequestError?e.status:500,{error:e instanceof RequestError?e.message:'Không lưu được ghi chú.'})}}
  if(req.url==='/api/chat'&&req.method==='POST'){
  if(req.headers.origin){try{if(new URL(req.headers.origin).host!==req.headers.host)return json(res,403,{error:'Origin không hợp lệ.'});}catch{return json(res,403,{error:'Origin không hợp lệ.'});}}
  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),60000);res.on('close',()=>{if(!res.writableEnded)controller.abort();});
