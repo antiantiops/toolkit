@@ -1,0 +1,2 @@
+import './intro-slide.css';
+export function IntroSlide(){return <main className="nim-intro" aria-label="About NIM"><div className="nim-intro-copy"><p className="nim-intro-eyebrow">My name is</p><h1>NIM</h1><p className="nim-intro-role">SITE RELIABILITY<br/>ENGINEERING</p></div><div className="nim-intro-art" aria-hidden="true"><div className="nim-intro-orbit"/><div className="nim-intro-monogram">N</div><span className="nim-intro-star">✦</span><div className="nim-intro-disc"/></div><div className="nim-intro-bottom"><span>ABOUT ME</span><span>NIM / SRE</span></div></main>;}
