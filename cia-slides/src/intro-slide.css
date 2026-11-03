@@ -34,3 +34,4 @@
 .company-network>svg{fill:none;stroke:#b9ccd9;background:radial-gradient(ellipse closest-side,#17232c 94%,transparent 95%)}
 .nim-company .nim-intro-bottom{left:43%}
 .nim-company .nim-intro-bottom span:first-child{display:none}
+.nim-company h1{font-size:68px;white-space:nowrap;letter-spacing:1px}
