@@ -62,3 +62,6 @@
 .company-beam{filter:drop-shadow(0 0 7px #67e8f9)}
 .infra-protected .infra-dome{background:radial-gradient(ellipse at 50% 10%,#a5f3fc30,transparent 75%);box-shadow:inset 0 0 18px #67e8f921,0 0 16px #67e8f925}
 .nim-company .nim-intro-bottom{left:17%}
+/* Keep original white stripe; all company content stays on its right. */
+.nim-company .company-copy{left:40%;width:56%}
+.nim-company .nim-intro-bottom{left:40%}
