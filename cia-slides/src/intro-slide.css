@@ -35,3 +35,20 @@
 .nim-company .nim-intro-bottom{left:43%}
 .nim-company .nim-intro-bottom span:first-child{display:none}
 .nim-company h1{font-size:68px;white-space:nowrap;letter-spacing:1px}
+.nim-company .company-copy{top:7%;transform:none;left:40%;width:56%}
+.nim-company h1{font-size:65px;margin:10px 0 15px}
+.nim-company .company-description{font-size:23px;line-height:1.45}
+.company-systems{position:relative;width:100%;height:340px;margin-top:14px;isolation:isolate}
+.company-map{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.company-map>path:first-child{fill:#8ba2b510;stroke:#9ab0c012;stroke-width:1}
+.company-link{fill:none;stroke:#a4baca36;stroke-width:1.5;stroke-dasharray:4 6}
+.company-light{fill:none;stroke:#a5f3fc;stroke-width:2;stroke-dasharray:8 92;stroke-linecap:round;filter:drop-shadow(0 0 5px #67e8f9);animation:infra-trace 3.75s linear forwards}
+@keyframes infra-trace{from{stroke-dashoffset:8}to{stroke-dashoffset:-100;opacity:0}}
+.infra-node{position:absolute;transform:translate(-50%,-50%);width:86px;height:78px;text-align:center;opacity:0;transition:opacity .5s}
+.infra-visible{opacity:1}.infra-model{position:relative;z-index:2;width:65px;height:53px;margin:0 auto 8px;display:grid;place-items:center;transform:perspective(500px) rotateX(12deg) rotateY(-18deg);background:linear-gradient(145deg,#d8e2e9,#64798b 35%,#202e3a 65%,#839baa);border:1px solid #b2c5d4;border-radius:10px;box-shadow:5px 7px 0 #1b2732,8px 12px 16px #0007;color:#e7f0f5}
+.infra-node>span{position:relative;z-index:3;font:300 13px 'Inter',sans-serif;color:#c1d1dd}
+.infra-dome{position:absolute;z-index:1;width:110px;height:85px;left:50%;top:-25px;transform:translateX(-50%) scale(.7);border:1px solid transparent;border-radius:70% 70% 35% 35%;opacity:0;background:radial-gradient(ellipse at 50% 10%,#a5f3fc25,transparent 70%);transition:opacity .6s,transform .6s,border-color .6s}
+.infra-protected .infra-dome{opacity:1;transform:translateX(-50%) scale(1);border-color:#a5f3fc80;box-shadow:inset 0 0 15px #67e8f918,0 0 12px #67e8f91c}
+.infra-protected .infra-model{box-shadow:5px 7px 0 #1b2732,0 9px 20px #67e8f92b}
+.company-protected{position:absolute;left:50%;bottom:0;transform:translateX(-50%);display:flex;align-items:center;gap:7px;opacity:0;color:#b5ede8;font:400 12px 'Inter',sans-serif;letter-spacing:3px;transition:opacity .6s}.company-protected.is-protected{opacity:1}
+@media(prefers-reduced-motion:reduce){.company-light{animation:none;opacity:0}.infra-node,.infra-dome,.company-protected{transition:none}}
