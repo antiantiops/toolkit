@@ -232,3 +232,5 @@
 .grammar-teacher-body:after{content:'';position:absolute;left:-6px;top:5px;width:5px;height:17px;border-radius:5px;background:#b8cbe5;transform:rotate(12deg)}
 .grammar-teacher svg{left:17px;top:23px;width:62px;height:52px;stroke-width:5;z-index:2}
 .grammar-teacher>span:first-child{top:17px;left:-2px;transform:scale(.85);z-index:3}
+
+.grammar-teacher svg .grammar-arm{stroke:#a6bad7;stroke-width:6}.grammar-teacher svg .grammar-hand{fill:#dce7f5;stroke:#92a9c9;stroke-width:1.5}
