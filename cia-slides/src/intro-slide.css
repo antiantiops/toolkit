@@ -3,11 +3,15 @@
 .nim-intro-column{position:absolute;left:58%;top:0;bottom:0;width:20%;background:#fff;z-index:0}
 .nim-intro-copy{position:absolute;left:10%;top:50%;transform:translateY(-50%);z-index:2;width:46%}
 .nim-intro .nim-intro-eyebrow{font-family:'Inter',sans-serif;font-size:22px;font-weight:300;line-height:1.4;color:#d0d0d0;margin:0 0 9px;letter-spacing:0}
-.nim-intro h1{font-family:'Anton','Bebas Neue',sans-serif;font-size:150px;font-weight:400;line-height:.9;letter-spacing:3px;margin:0 0 20px;color:#fff}
-.nim-intro .nim-intro-role{font-family:'Bebas Neue',sans-serif;font-size:42px;font-weight:400;line-height:1.02;letter-spacing:2px;margin:0;color:#f0f0f0}
+.nim-intro h1{font-family:'Anton','Bebas Neue',sans-serif;font-size:174px;font-weight:400;line-height:.9;letter-spacing:3px;margin:0 0 20px;color:#fff}
+.nim-intro .nim-intro-role{font-family:'Bebas Neue',sans-serif;font-size:46px;font-weight:400;line-height:1.02;letter-spacing:2px;margin:0;color:#f0f0f0}
 .nim-chrome{position:absolute;z-index:1;overflow:visible;pointer-events:none;filter:drop-shadow(0 12px 20px rgba(0,0,0,.7))}
 .nim-chrome-rings{top:12%;left:42%;width:18%;height:auto;transform:rotate(-10deg)}
 .nim-chrome-star{bottom:15%;left:38%;width:14%;height:auto;transform:rotate(-16deg)}
 .nim-chrome-cross{top:42%;left:82%;width:12%;height:auto;transform:rotate(12deg);opacity:.8}
-.nim-chrome-overlap{left:51%;top:64%;width:23%;height:auto;transform:rotate(-14deg)}
 .nim-intro-bottom{position:absolute;left:10%;right:4%;bottom:24px;display:flex;justify-content:space-between;z-index:3;font:300 11px 'Inter',sans-serif;letter-spacing:2px;color:#bdbdbd}
+
+.nim-intro-robots{position:absolute;left:58%;top:24%;width:20%;height:55%;z-index:2;pointer-events:none;isolation:isolate}
+.nim-intro-robot{position:absolute;filter:drop-shadow(0 15px 15px #0004)}
+.nim-intro-robot-main{left:-4%;top:0;transform:rotate(-9deg)}
+.nim-intro-robot-small{right:-8%;bottom:0;transform:rotate(13deg)}
