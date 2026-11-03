@@ -14,4 +14,9 @@
 .nim-intro-robots{position:absolute;left:58%;top:24%;width:20%;height:55%;z-index:2;pointer-events:none;isolation:isolate}
 .nim-intro-robot{position:absolute;filter:drop-shadow(0 15px 15px #0004)}
 .nim-intro-robot-main{left:-4%;top:0;transform:rotate(-9deg)}
-.nim-intro-robot-small{right:-8%;bottom:0;transform:rotate(13deg)}
+.nim-intro-robot-small{right:-8%;bottom:0;transform:rotate(13deg)}/* Keep the white stripe pristine, including decorative shadows. */
+.nim-intro-column{z-index:5}
+.nim-intro-robots{left:79%;top:13%;width:20%;height:70%;overflow:hidden}
+.nim-intro-robot-main{left:0;top:0;transform:rotate(-9deg) scale(.85);transform-origin:center}
+.nim-intro-robot-small{right:4%;bottom:0;transform:rotate(13deg)}
+.nim-chrome-cross{top:46%;left:83%;width:10%}
