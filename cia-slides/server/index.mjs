@@ -1,14 +1,20 @@
 import http from 'node:http';
 import {gzipSync} from 'node:zlib';
-import {readFile} from 'node:fs/promises';
+import {readFile,writeFile,mkdir,rename} from 'node:fs/promises';
 import {resolve,extname} from 'node:path';
 import {chat,validate,RequestError} from './provider.mjs';
+const notesFile=process.env.NOTES_FILE||'/data/slide-notes.json';
+let noteQueue=Promise.resolve();
+const cleanNotes=value=>{if(!value||typeof value!=='object'||Array.isArray(value))return {};const out={};for(const [key,text] of Object.entries(value)){if(/^(?:[1-9]|10)$/.test(key)&&typeof text==='string')out[key]=text.slice(0,20000);}return out;};
+const notes=async()=>{try{return cleanNotes(JSON.parse(await readFile(notesFile,'utf8')))}catch(e){if(e.code==='ENOENT')return {};throw e;}};
 const configured=!!(process.env.AI_BASE_URL&&process.env.AI_API_KEY&&process.env.AI_MODEL);
 const models=[{id:'demo',label:'Demo · Concept Brain',provider:'demo',model:'demo'},{id:'demo-creative',label:'Demo · Creative Brain',provider:'demo',model:'demo-creative'},...(configured?[{id:'connected',label:process.env.AI_MODEL,provider:'openai-compatible',model:process.env.AI_MODEL}]:[])];
 const json=(res,status,data)=>{if(!res.destroyed){res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(data));}};
 http.createServer(async(req,res)=>{
  res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','same-origin');
  if(req.url==='/api/config'&&req.method==='GET')return json(res,200,{models,configured});
+ if(req.url==='/api/notes'&&req.method==='GET'){try{return json(res,200,{notes:await notes()})}catch{return json(res,500,{error:'Không đọc được ghi chú.'})}}
+ if(req.url==='/api/notes'&&req.method==='PUT'){try{let raw='';for await(const chunk of req){raw+=chunk;if(Buffer.byteLength(raw)>220000)throw new RequestError(413,'Ghi chú quá lớn.');}let body;try{body=JSON.parse(raw)}catch{throw new RequestError(400,'JSON không hợp lệ.')}const data=cleanNotes(body.notes);noteQueue=noteQueue.then(async()=>{await mkdir(resolve(notesFile,'..'),{recursive:true});const tmp=`${notesFile}.tmp`;await writeFile(tmp,JSON.stringify(data,null,2)+'\n',{mode:0o600});await rename(tmp,notesFile);});await noteQueue;return json(res,200,{notes:data});}catch(e){return json(res,e instanceof RequestError?e.status:500,{error:e instanceof RequestError?e.message:'Không lưu được ghi chú.'})}}
  if(req.url==='/api/chat'&&req.method==='POST'){
  if(req.headers.origin){try{if(new URL(req.headers.origin).host!==req.headers.host)return json(res,403,{error:'Origin không hợp lệ.'});}catch{return json(res,403,{error:'Origin không hợp lệ.'});}}
  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),60000);res.on('close',()=>{if(!res.writableEnded)controller.abort();});
