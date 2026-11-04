@@ -55,10 +55,10 @@ export default function MyWords({onLookup}) {
       if(!Number.isFinite(dy)||!dy)return;
       const lifted=+el.dataset.wordId===flight;
       el.animate(lifted?[
-        {transform:`translateY(${dy}px) scale(1)`,boxShadow:'0 0 0 transparent',zIndex:20,offset:0},
-        {transform:`translateY(${dy-10}px) scale(1.025)`,boxShadow:'0 18px 32px #0005',zIndex:20,offset:.18},
-        {transform:'translateY(-6px) scale(1.025)',boxShadow:'0 18px 32px #0005',zIndex:20,offset:.84},
-        {transform:'translateY(0) scale(1)',boxShadow:'0 0 0 transparent',zIndex:20,offset:1}
+        {transform:`translateY(${dy}px) scale(1)`,boxShadow:'0 0 0 transparent',backgroundColor:'#0f172a',zIndex:20,offset:0},
+        {transform:`translateY(${dy-10}px) scale(1.025)`,boxShadow:'0 18px 32px #0005',backgroundColor:'#0f172a',zIndex:20,offset:.18},
+        {transform:'translateY(-6px) scale(1.025)',boxShadow:'0 18px 32px #0005',backgroundColor:'#0f172a',zIndex:20,offset:.84},
+        {transform:'translateY(0) scale(1)',boxShadow:'0 0 0 transparent',backgroundColor:'#0f172a',zIndex:20,offset:1}
       ]:[{transform:`translateY(${dy}px)`},{transform:'translateY(0)'}],{duration:lifted?620:440,easing:'cubic-bezier(.22,1,.36,1)'});
     });
     positions.current.clear();
