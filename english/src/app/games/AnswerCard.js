@@ -1,5 +1,6 @@
 "use client";
 import {useState} from 'react';
+import ContrastTip from "../ContrastTip";
 import SpeakBtn from '../SpeakBtn';
 function CopyBtn({text}) {
  const [copied,setCopied]=useState(false),[error,setError]=useState(false);
@@ -42,9 +43,9 @@ export default function AnswerCard({word:w}) {
                     {w.exampleVietnamese && <div className="text-slate-400 italic mt-1">{w.exampleVietnamese}</div>}
                   </div>
                   {w.pending && <div className="text-sm text-blue-300">Đang bổ sung nghĩa và mẹo dùng...</div>}
-                  {w.synonyms && <p className="mt-2 text-sm text-slate-300">Đồng nghĩa: {w.synonyms}</p>}
-                  {w.antonyms && <p className="mt-2 text-sm text-slate-300">Trái nghĩa: {w.antonyms}</p>}
-                  {w.contrastTip && <p className="mt-3 whitespace-pre-line text-sm text-amber-300">{w.contrastTip}</p>}
+                  {w.synonyms && !w.contrastTip && <p className="mt-2 text-sm text-slate-300">Đồng nghĩa: {w.synonyms}</p>}
+                  {w.antonyms && !w.contrastTip && <p className="mt-2 text-sm text-slate-300">Trái nghĩa: {w.antonyms}</p>}
+                  {w.contrastTip && <div data-testid="vocab-contrast-tip" className="mt-3 rounded-lg border border-amber-800/60 bg-amber-950/30 p-3 text-sm"><div className="font-semibold text-amber-300">Mẹo nhớ cực ngắn</div><ContrastTip raw={w.contrastTip} examples={w.contrastExamples} CopyBtn={CopyBtn} /></div>}
                   {w.collocations?.length > 0 && <div className="mt-3 rounded-lg border border-teal-800/70 bg-teal-950/40 p-3"><div className="text-xs font-semibold uppercase tracking-wide text-teal-300">Collocation</div>{w.collocations.map((c, ci) => <div key={ci} className="mt-2 text-sm"><div className="font-medium text-teal-100">{c.phrase}<CopyBtn text={c.phrase} /> <SpeakBtn text={c.phrase} className="text-xs text-teal-300 hover:text-white">🔊</SpeakBtn></div><div className="mt-1 text-teal-200/70">{c.meaning}{c.note && ` — ${c.note}`}</div></div>)}</div>}
                   {w.note && <div className="text-sm text-amber-400 mt-2">💡 {w.note}</div>}
                 </div>
