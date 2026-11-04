@@ -1,7 +1,7 @@
 import {useState,useEffect} from 'react';
 import './slide-notes.css';
-const titles=['About NIM','My Company & I','Bạn dùng AI nào?','Objectives','Sử dụng AI','Body + Brain','Thử thách','Truy cập dữ liệu','Vibe Coding','Reading','Build · Test · Improve','English · Everyday'];
-const pageNumber=()=>Math.min(12,Math.max(1,Number(location.hash.slice(1))||1));
+const titles=['About NIM','My Company & I','Bạn dùng AI nào?','Objectives','Sử dụng AI','Body + Brain','Thử thách','Truy cập dữ liệu','Reading','Vibe Coding','English · Everyday'];
+const pageNumber=()=>Math.min(11,Math.max(1,Number(location.hash.slice(1))||1));
 export function SlideNotes(){
  const[page,setPage]=useState(pageNumber),[notes,setNotes]=useState<Record<string,string>>({}),[status,setStatus]=useState('Đang tải ghi chú…');
  useEffect(()=>{const sync=()=>setPage(pageNumber());addEventListener('hashchange',sync);return()=>removeEventListener('hashchange',sync);},[]);
