@@ -453,18 +453,12 @@ html.deck-icon-morph::view-transition-old(*),html.deck-icon-morph::view-transiti
 
 /* Movement follows shared content, never an unrelated foreground overlay. */
 html.deck-icon-morph::view-transition-group(*){animation-duration:650ms}
-/* Projection palette: dark stage, crisp white copy, cyan emphasis. */
-.presentation{background:#07111f;color:#e2e8f0;color-scheme:dark}
-.slide-header>a:first-child,.page-indicator{color:#fff}.demo-link,.slide-footer,.page-indicator span{color:#e2e8f0}
-.slide-nav button{background:#13263b;border-color:#64748b;color:#fff}
-.slide-kicker{color:#e2e8f0!important}
-.audience-slide{position:relative;isolation:isolate;animation:none;background:#07111f}
-.audience-heading h1{color:#fff;text-shadow:none}.audience-heading h1 span{color:#67e8f9;background:none}
-.audience-heading>p,.audience-bottom{color:#e2e8f0}.audience-bottom strong{color:#67e8f9}
-.ai-bubble{background:#14283e;border-color:#71869d;color:#fff;box-shadow:0 7px 18px #0004}
-.ai-bubble>span:first-of-type{color:#fff}.ai-bubble:hover,.ai-bubble[aria-pressed=true]{background:#183b50;border-color:#67e8f9;color:#fff}
-.ai-bubble img{filter:none}.bubble-selected{background:#67e8f9;color:#07111f}
-.audience-stripe{position:absolute;left:0;top:0;bottom:0;width:5px;background:#fff;pointer-events:none}
+/* Projection tuning applies only to approved intro/company scenes. */
+.presentation:has(.nim-intro){background:#07111f;color:#e2e8f0;color-scheme:dark}
+.presentation:has(.nim-intro) .slide-header>a:first-child,.presentation:has(.nim-intro) .page-indicator{color:#fff}
+.presentation:has(.nim-intro) .demo-link,.presentation:has(.nim-intro) .slide-footer,.presentation:has(.nim-intro) .page-indicator span{color:#e2e8f0}
+.audience-slide{position:relative;isolation:isolate;animation:none}
+.audience-stripe{position:absolute;left:0;top:0;bottom:0;width:0;background:#fff;pointer-events:none}
 .nim-company{background:#07111f}.nim-company h1{text-shadow:none}.nim-company .company-description,.nim-intro .nim-intro-eyebrow,.infra-node>span{color:#e2e8f0}
 .company-link{stroke:#8ea9bf;stroke-width:2}.company-map>path:first-of-type{opacity:.35}
 .deck-company-audience-morph .company-stripe,.deck-company-audience-morph .audience-stripe{view-transition-name:company-audience-stripe}
@@ -477,8 +471,3 @@ html.deck-company-audience-morph::view-transition-old(company-audience-stripe),h
 html.deck-company-audience-morph::view-transition-new(company-audience-title){animation:audience-title-in 650ms 250ms both}
 html.deck-company-audience-morph::view-transition-old(company-audience-title){animation:audience-title-out 300ms both}
 @keyframes audience-title-in{from{opacity:0}to{opacity:1}}@keyframes audience-title-out{to{opacity:0}}
-.ai-bubble:nth-child(2) img,.ai-bubble:nth-child(7) img{filter:invert(1)}
-/* Preserve existing later-slide palettes until each composition is reviewed. */
-.presentation:not(:has(.nim-intro,.audience-slide)){background:#f8fafc;color:#0f172a;color-scheme:light}
-.presentation:not(:has(.nim-intro,.audience-slide)) .slide-header>a:first-child,.presentation:not(:has(.nim-intro,.audience-slide)) .page-indicator{color:#0f172a}
-.presentation:not(:has(.nim-intro,.audience-slide)) .demo-link,.presentation:not(:has(.nim-intro,.audience-slide)) .slide-footer,.presentation:not(:has(.nim-intro,.audience-slide)) .page-indicator span{color:#334155}
