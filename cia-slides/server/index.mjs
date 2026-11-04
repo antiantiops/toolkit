@@ -5,7 +5,7 @@ import {resolve,extname,dirname} from 'node:path';
 import {chat,validate,RequestError} from './provider.mjs';
 const notesFile=process.env.NOTES_FILE||'/data/slide-notes.json';
 let noteQueue=Promise.resolve();
-const cleanNotes=value=>{if(!value||typeof value!=='object'||Array.isArray(value))return {};const out={};for(const [key,text] of Object.entries(value)){if(/^(?:[1-9]|10|11)$/.test(key)&&typeof text==='string')out[key]=text.slice(0,20000);}return out;};
+const cleanNotes=value=>{if(!value||typeof value!=='object'||Array.isArray(value))return {};const out={};for(const [key,text] of Object.entries(value)){if(/^(?:[1-9]|10|11|12)$/.test(key)&&typeof text==='string')out[key]=text.slice(0,20000);}return out;};
 const notes=async()=>{try{return cleanNotes(JSON.parse(await readFile(notesFile,'utf8')))}catch(e){if(e.code==='ENOENT')return {};throw e;}};
 const configured=!!(process.env.AI_BASE_URL&&process.env.AI_API_KEY&&process.env.AI_MODEL);
 const models=[{id:'demo',label:'Demo · Concept Brain',provider:'demo',model:'demo'},{id:'demo-creative',label:'Demo · Creative Brain',provider:'demo',model:'demo-creative'},...(configured?[{id:'connected',label:process.env.AI_MODEL,provider:'openai-compatible',model:process.env.AI_MODEL}]:[])];
