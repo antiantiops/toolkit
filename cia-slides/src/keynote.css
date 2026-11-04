@@ -454,9 +454,6 @@ html.deck-icon-morph::view-transition-old(*),html.deck-icon-morph::view-transiti
 /* Movement follows shared content, never an unrelated foreground overlay. */
 html.deck-icon-morph::view-transition-group(*){animation-duration:650ms}
 /* Projection tuning applies only to approved intro/company scenes. */
-.presentation:has(.nim-intro){background:#07111f;color:#e2e8f0;color-scheme:dark}
-.presentation:has(.nim-intro) .slide-header>a:first-child,.presentation:has(.nim-intro) .page-indicator{color:#fff}
-.presentation:has(.nim-intro) .demo-link,.presentation:has(.nim-intro) .slide-footer,.presentation:has(.nim-intro) .page-indicator span{color:#e2e8f0}
 .audience-slide{position:relative;isolation:isolate;animation:none}
 .audience-stripe{position:absolute;left:0;top:0;bottom:0;width:0;background:#fff;pointer-events:none}
 .nim-company{background:#07111f}.nim-company h1{text-shadow:none}.nim-company .company-description,.nim-intro .nim-intro-eyebrow,.infra-node>span{color:#e2e8f0}
