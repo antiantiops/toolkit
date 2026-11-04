@@ -45,12 +45,22 @@ export default function MyWords({onLookup}) {
   const topCard = useRef(null), underCard = useRef(null), animating = useRef(false), animations = useRef([]);
   const [under,setUnder] = useState(null);
   const [ordering,setOrdering]=useState(false),[dragging,setDragging]=useState(null);
-  const reorderDrag=useRef(null), listRef=useRef(null), positions=useRef(new Map());
+  const reorderDrag=useRef(null), listRef=useRef(null), positions=useRef(new Map()), flyingWord=useRef(null);
   const [floating,setFloating]=useState(null),[dropTarget,setDropTarget]=useState(null);
   const capturePositions=()=>{positions.current=new Map([...listRef.current.querySelectorAll('[data-word-id]')].map(el=>[+el.dataset.wordId,el.getBoundingClientRect().top]));};
   useLayoutEffect(()=>{
-    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
-    listRef.current?.querySelectorAll('[data-word-id]').forEach(el=>{const old=positions.current.get(+el.dataset.wordId),dy=old-el.getBoundingClientRect().top;if(Number.isFinite(dy)&&dy)el.animate([{transform:`translateY(${dy}px)`},{transform:'translateY(0)'}],{duration:360,easing:'cubic-bezier(.22,1,.36,1)'});});
+    const flight=flyingWord.current;flyingWord.current=null;
+    if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches)listRef.current?.querySelectorAll('[data-word-id]').forEach(el=>{
+      const old=positions.current.get(+el.dataset.wordId),dy=old-el.getBoundingClientRect().top;
+      if(!Number.isFinite(dy)||!dy)return;
+      const lifted=+el.dataset.wordId===flight;
+      el.animate(lifted?[
+        {transform:`translateY(${dy}px) scale(1)`,boxShadow:'0 0 0 transparent',zIndex:20,offset:0},
+        {transform:`translateY(${dy-10}px) scale(1.025)`,boxShadow:'0 18px 32px #0005',zIndex:20,offset:.18},
+        {transform:'translateY(-6px) scale(1.025)',boxShadow:'0 18px 32px #0005',zIndex:20,offset:.84},
+        {transform:'translateY(0) scale(1)',boxShadow:'0 0 0 transparent',zIndex:20,offset:1}
+      ]:[{transform:`translateY(${dy}px)`},{transform:'translateY(0)'}],{duration:lifted?620:440,easing:'cubic-bezier(.22,1,.36,1)'});
+    });
     positions.current.clear();
   },[rows]);
   const reorder = async (id,beforeId) => {
@@ -67,7 +77,7 @@ export default function MyWords({onLookup}) {
     setOrdering(true);setError('');
     try{
       await parseApiResponse(await fetch('/api/my-words',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({week,id,edge})}));
-      await load(null,true);
+      await load(null,id);
     }catch(e){setError(formatErrorMessage(e));}finally{setOrdering(false);}
   };
   const startOrder=e=>{
@@ -114,7 +124,7 @@ export default function MyWords({onLookup}) {
   const load = async (cursor=null,animateOrder=false) => {
     const version = ++requestVersion.current;
     if(!animateOrder)setBusy(true); setError('');
-    try { const data=await parseApiResponse(await fetch('/api/my-words?week='+week+(cursor?'&before='+cursor:''),{cache:'no-store'})); if (version !== requestVersion.current) return; if(animateOrder)capturePositions(); setRows(current=>cursor?[...current,...data.words]:data.words); setNext(data.next); setWeeks(data.weeks); }
+    try { const data=await parseApiResponse(await fetch('/api/my-words?week='+week+(cursor?'&before='+cursor:''),{cache:'no-store'})); if (version !== requestVersion.current) return; if(animateOrder){capturePositions();flyingWord.current=animateOrder;} setRows(current=>cursor?[...current,...data.words]:data.words); setNext(data.next); setWeeks(data.weeks); }
     catch(e){if(version === requestVersion.current)setError(formatErrorMessage(e));} finally{if(version === requestVersion.current&&!animateOrder)setBusy(false);} 
   };
   useEffect(() => { setRows([]); setNext(null); setReview(false); setCard(0); load(); return () => { requestVersion.current++; }; }, [week]);
