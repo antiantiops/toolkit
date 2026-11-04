@@ -11,3 +11,8 @@ export function retryQueue(queue,position,question,correct){if(correct || questi
 export function prioritizeWords(words,memory={}) {return [...words].sort((a,b)=>(memory[normalize(b.word)]?.debt||0)-(memory[normalize(a.word)]?.debt||0));}
 
 export function repairTarget(word,round){return round%2===0?word.word:word.meaning;}
+
+// Accept both Vietnamese tone-placement conventions without dropping tone marks.
+export function normalizeRepair(value) {
+ return normalize(value).normalize('NFD').replace(/([ou])([\u0300\u0301\u0303\u0309\u0323])?([aey])([\u0300\u0301\u0303\u0309\u0323])?(?![\u0300-\u036f])/g,(match,first,a,second,b)=>['oa','oe','uy'].includes(first+second)&&!(a&&b)?first+second+(a||b||''):match).normalize('NFC');
+}

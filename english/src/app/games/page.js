@@ -6,7 +6,7 @@ import QuestBuddies from './QuestBuddies';
 import SpeakBtn from '../SpeakBtn';
 import AnswerCard from './AnswerCard';
 import {usageQuestion} from '../../lib/my-words-game.mjs';
-import {gameWords,buildDeck,choices,normalize,retryQueue,prioritizeWords,repairTarget} from '../../lib/vocab-game.mjs';
+import {gameWords,buildDeck,choices,normalize,retryQueue,prioritizeWords,repairTarget,normalizeRepair} from '../../lib/vocab-game.mjs';
 export default function Games(){
  const [myWords,setMyWords]=useState(false);
  const [memory,setMemory]=useState({}),[memoryError,setMemoryError]=useState("");
@@ -20,7 +20,7 @@ export default function Games(){
  const record=async(correct)=>{try{const r=await fetch('/api/game-memory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({word:word.word,correct})});if(!r.ok)throw Error();const data=await r.json();setMemory(prev=>({...prev,[data.word]:{debt:data.debt,mistakes:data.mistakes}}));setMemoryError('');}catch{setMemoryError('Không lưu được tiến độ từ này. Kết quả chơi vẫn giữ trong lượt hiện tại.');}};
  const check=(value)=>{if(feedback!==null)return;const correct=(q.mode==='choose'||q.mode==='listen')?value===word.meaning:normalize(value)===normalize(word.word);if(!q.retry)record(correct&&!hint);const points=correct&&!hint?(q.mode==='recall'?20:10):0;setScore(s=>s+points);const nextCombo=correct&&!hint?combo+1:0;setCombo(nextCombo);setBest(b=>Math.max(b,nextCombo));if(!correct)setMissed(m=>m.includes(q.index)?m:[...m,q.index]);setQueue(prev=>retryQueue(prev,position,q,correct));setFeedback({correct,points});};
  const next=()=>{if(!feedback.correct && repair===null){setRepair(0);setFeedback(null);setAnswer('');return;}const p=position+1;setPosition(p);setRepair(null);setFeedback(null);setAnswer('');setHint(false);if(queue[p])setOptions(queue[p].mode==='usage'?words.map(w=>w.word).sort(()=>Math.random()-.5):choices(words,queue[p].index));};
- const repairCheck=e=>{e.preventDefault();if(normalize(answer)!==normalize(repairTarget(word,repair))){setFeedback({correct:false,repair:true});return;}if(repair===4){setFeedback({correct:true,points:0,repair:true});setRepair(5);}else{setRepair(n=>n+1);setFeedback(null);}setAnswer('');};
+ const repairCheck=e=>{e.preventDefault();if(normalizeRepair(answer)!==normalizeRepair(repairTarget(word,repair))){setFeedback({correct:false,repair:true});return;}if(repair===4){setFeedback({correct:true,points:0,repair:true});setRepair(5);}else{setRepair(n=>n+1);setFeedback(null);}setAnswer('');};
  return <main className={`quest ${started?"quest-playing":""} mx-auto min-h-screen max-w-xl px-4 py-6 text-slate-100`}>
   <header className="mb-6 flex items-center justify-between"><Link href="/" className="min-h-11 rounded-xl border border-slate-700 px-3 py-3 text-sm">← Về bài học</Link><span className="text-xs font-semibold tracking-widest text-teal-300">WORD QUEST</span></header>
   {memoryError && <p role="alert" className="mb-3 text-sm text-amber-300">{memoryError}</p>}
