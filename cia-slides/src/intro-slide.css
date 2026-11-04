@@ -84,3 +84,12 @@
 @keyframes infra-copy-in{from{opacity:0;filter:blur(3px)}to{opacity:1;filter:blur(0)}}
 
 @media(prefers-reduced-motion:reduce){.nim-about-sweep,.nim-name-strip,.nim-intro-role{animation-duration:1ms!important}}
+
+/* Repeated vertical typography travels behind the opaque shared white stripe. */
+.nim-about-window{position:absolute;inset:0 auto 0 0;width:78%;overflow:hidden;z-index:4;pointer-events:none}
+.nim-about-track{position:absolute;left:0;top:6%;height:88%;display:flex;gap:18px;transform:translateX(-110%);opacity:0}
+.nim-about-track span{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;font:400 108px/.95 'Anton','Bebas Neue',sans-serif;letter-spacing:1px;color:#f8f8f8}
+.intro-about-ready .nim-about-track{animation:intro-about-columns 2500ms linear forwards}
+.nim-intro-copy{z-index:6}.nim-name-strip{margin-top:0}.nim-intro .nim-intro-role{margin-top:18px}
+@keyframes intro-about-columns{0%{transform:translateX(-100%);opacity:1}32%{transform:translateX(-8%);opacity:1}100%{transform:translateX(150%);opacity:1}}
+@media(prefers-reduced-motion:reduce){.nim-about-track{animation-duration:1ms!important}}
