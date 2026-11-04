@@ -2,8 +2,12 @@
 .nim-intro{position:relative;isolation:isolate;flex:1;min-height:0;width:100%;overflow:hidden;background:#0b0b0b;background:radial-gradient(circle at 32% 48%,#2e2e2e 0%,#141414 45%,#080808 85%);color:#fff;border-radius:6px}
 .nim-intro-column{position:absolute;left:58%;top:0;bottom:0;width:20%;background:#fff;z-index:0}
 .nim-intro-copy{position:absolute;left:10%;top:50%;transform:translateY(-50%);z-index:2;width:46%}
-.nim-intro .nim-intro-eyebrow{font-family:'Inter',sans-serif;font-size:22px;font-weight:300;line-height:1.4;color:#d0d0d0;margin:0 0 9px;letter-spacing:0}
-.nim-intro h1{font-family:'Anton','Bebas Neue',sans-serif;font-size:174px;font-weight:400;line-height:.9;letter-spacing:3px;margin:0 0 20px;color:#fff}
+.nim-about-sweep{width:max-content;font:400 88px/.9 'Anton','Bebas Neue',sans-serif;letter-spacing:2px;color:#fff;clip-path:inset(0 100% 0 0);filter:brightness(.35);white-space:nowrap}
+.nim-name-strip{position:relative;width:min(560px,100%);height:0;overflow:hidden;background:#fff;color:#101010;margin-top:22px;box-sizing:border-box;transform:translateX(-115%)}
+.nim-name-strip p{font:300 21px/1.1 'Inter',sans-serif;letter-spacing:1px;margin:0 0 6px;color:#303030}.nim-name-strip h1{font-family:'Anton','Bebas Neue',sans-serif;font-size:108px;font-weight:400;line-height:.82;letter-spacing:2px;margin:0;color:#111}
+.nim-intro-role{opacity:0;transform:translateY(10px)}
+.intro-about-ready .nim-about-sweep{animation:intro-about-sweep 900ms cubic-bezier(.22,1,.36,1) forwards}.intro-name-ready .nim-name-strip{animation:intro-name-strip 650ms cubic-bezier(.22,1,.36,1) forwards}.intro-role-ready .nim-intro-role{animation:intro-role-in 450ms ease-out forwards}
+@keyframes intro-about-sweep{to{clip-path:inset(0);filter:brightness(1)}}@keyframes intro-name-strip{0%{height:0;transform:translateX(-115%)}55%{height:160px;padding:18px 22px;transform:translateX(0)}100%{height:160px;padding:18px 22px;transform:translateX(0)}}@keyframes intro-role-in{to{opacity:1;transform:translateY(0)}}
 .nim-intro .nim-intro-role{font-family:'Bebas Neue',sans-serif;font-size:46px;font-weight:400;line-height:1.02;letter-spacing:2px;margin:0;color:#f0f0f0}
 .nim-chrome{position:absolute;z-index:1;overflow:visible;pointer-events:none;filter:drop-shadow(0 12px 20px rgba(0,0,0,.7))}
 .nim-chrome-rings{top:12%;left:42%;width:18%;height:auto;transform:rotate(-10deg)}
@@ -78,3 +82,5 @@
 .deck-intro-morph::view-transition-old(intro-backdrop),.deck-intro-morph::view-transition-new(intro-backdrop){mix-blend-mode:normal}
 @keyframes infra-copy-out{to{opacity:0;filter:blur(3px)}}
 @keyframes infra-copy-in{from{opacity:0;filter:blur(3px)}to{opacity:1;filter:blur(0)}}
+
+@media(prefers-reduced-motion:reduce){.nim-about-sweep,.nim-name-strip,.nim-intro-role{animation-duration:1ms!important}}
