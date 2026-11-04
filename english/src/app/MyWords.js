@@ -50,7 +50,7 @@ export default function MyWords({onLookup}) {
   const capturePositions=()=>{positions.current=new Map([...listRef.current.querySelectorAll('[data-word-id]')].map(el=>[+el.dataset.wordId,el.getBoundingClientRect().top]));};
   useLayoutEffect(()=>{
     if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
-    listRef.current?.querySelectorAll('[data-word-id]').forEach(el=>{const old=positions.current.get(+el.dataset.wordId),dy=old-el.getBoundingClientRect().top;if(Number.isFinite(dy)&&dy)el.animate([{transform:`translateY(${dy}px)`},{transform:'translateY(0)'}],{duration:220,easing:'ease-out'});});
+    listRef.current?.querySelectorAll('[data-word-id]').forEach(el=>{const old=positions.current.get(+el.dataset.wordId),dy=old-el.getBoundingClientRect().top;if(Number.isFinite(dy)&&dy)el.animate([{transform:`translateY(${dy}px)`},{transform:'translateY(0)'}],{duration:360,easing:'cubic-bezier(.22,1,.36,1)'});});
     positions.current.clear();
   },[rows]);
   const reorder = async (id,beforeId) => {
@@ -67,7 +67,7 @@ export default function MyWords({onLookup}) {
     setOrdering(true);setError('');
     try{
       await parseApiResponse(await fetch('/api/my-words',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({week,id,edge})}));
-      await load();
+      await load(null,true);
     }catch(e){setError(formatErrorMessage(e));}finally{setOrdering(false);}
   };
   const startOrder=e=>{
@@ -111,11 +111,11 @@ export default function MyWords({onLookup}) {
     if (Math.abs(dx)>=60 && Math.abs(dx)>Math.abs(dy)*1.3) moveCard(dx>0?1:-1);
     else setDrag(0);
   };
-  const load = async (cursor=null) => {
+  const load = async (cursor=null,animateOrder=false) => {
     const version = ++requestVersion.current;
-    setBusy(true); setError('');
-    try { const data=await parseApiResponse(await fetch('/api/my-words?week='+week+(cursor?'&before='+cursor:''),{cache:'no-store'})); if (version !== requestVersion.current) return; setRows(current=>cursor?[...current,...data.words]:data.words); setNext(data.next); setWeeks(data.weeks); }
-    catch(e){if(version === requestVersion.current)setError(formatErrorMessage(e));} finally{if(version === requestVersion.current)setBusy(false);}
+    if(!animateOrder)setBusy(true); setError('');
+    try { const data=await parseApiResponse(await fetch('/api/my-words?week='+week+(cursor?'&before='+cursor:''),{cache:'no-store'})); if (version !== requestVersion.current) return; if(animateOrder)capturePositions(); setRows(current=>cursor?[...current,...data.words]:data.words); setNext(data.next); setWeeks(data.weeks); }
+    catch(e){if(version === requestVersion.current)setError(formatErrorMessage(e));} finally{if(version === requestVersion.current&&!animateOrder)setBusy(false);} 
   };
   useEffect(() => { setRows([]); setNext(null); setReview(false); setCard(0); load(); return () => { requestVersion.current++; }; }, [week]);
   const weekLabel = value => {
@@ -157,8 +157,8 @@ export default function MyWords({onLookup}) {
     {error && <p role="alert" className="rounded-xl bg-red-950/30 p-3 text-sm text-red-300">{error}</p>}
     {!busy&&!error&&!rows.length&&<div className="rounded-xl border border-dashed border-slate-700 px-4 py-8 text-center"><p className="font-medium text-slate-300">Chưa có từ đã tra</p><p className="mt-2 text-sm text-slate-500">Tra Anh–Việt hoặc Việt–Anh để thêm vào bộ từ của bạn.</p></div>}
     {!review && !!rows.length && <div className="flex items-center justify-between border-t border-slate-800 pt-4"><h3 className="text-sm font-semibold text-slate-300">Từ trong tuần</h3><span className="text-xs text-slate-500">↻ Số lần xem lại tổng cộng</span></div>}
-    {!review && !!rows.length && <p role="status" className="text-xs text-slate-400">{ordering?"Đang lưu thứ tự…":dragging!==null?"Thả tay trên từ muốn đặt phía sau.":"Kéo tay nắm ⠿ để đặt từ lên trước. Hoặc bấm nút đưa lên đầu / xuống cuối. Thứ tự ôn lưu theo tuần."}</p>}
-    {!review && <ul ref={listRef} className="space-y-2">{rows.map((row,index)=><li data-word-id={row.id} key={row.id} className={`relative flex items-center gap-2 rounded-xl border p-3 ${dropTarget===row.id?'border-indigo-400 bg-indigo-950/60':'border-transparent bg-slate-950/40'} ${dragging===row.id?'opacity-30':''}`}>
+    {!review && !!rows.length && <p role="status" className="min-h-10 text-xs text-slate-400">{ordering?"Đang lưu thứ tự…":dragging!==null?"Thả tay trên từ muốn đặt phía sau.":"Kéo tay nắm ⠿ để đặt từ lên trước. Hoặc bấm nút đưa lên đầu / xuống cuối. Thứ tự ôn lưu theo tuần."}</p>}
+    {!review && <ul ref={listRef} style={{overflowAnchor:'none'}} className="space-y-2">{rows.map((row,index)=><li data-word-id={row.id} key={row.id} className={`relative flex items-center gap-2 rounded-xl border p-3 ${dropTarget===row.id?'border-indigo-400 bg-indigo-950/60':'border-transparent bg-slate-950/40'} ${dragging===row.id?'opacity-30':''}`}>
       {dropTarget===row.id&&<span aria-hidden="true" className="absolute -top-1 inset-x-2 h-1 rounded-full bg-indigo-400"/>}
       <div className="flex w-9 shrink-0 flex-col items-center">
         <button disabled={busy||ordering||index===0} aria-label={`Đưa ${row.english} lên đầu`} title="Đưa lên đầu danh sách tuần" onClick={()=>moveToEdge(row.id,'top')} className="h-6 w-9 rounded text-sm text-slate-400 hover:bg-indigo-500/10 disabled:opacity-25"><svg aria-hidden="true" viewBox="0 0 24 24" className="mx-auto h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 4h16M12 20V8m-5 5 5-5 5 5"/></svg></button>
