@@ -1,5 +1,6 @@
 "use client";
 import ContrastTip from "./ContrastTip";
+import PronunciationRecorder from "./PronunciationRecorder";
 import { prioritizeWords } from "../lib/vocab-game.mjs";
 import { normalizeGrammarAnswer } from "../lib/grammar/answers";
 import { fetchWithRetry, parseApiResponse, formatErrorMessage, pollLesson } from "./fetch-helper";
@@ -1624,6 +1625,7 @@ export default function Home() {
             </div>
             {(lookup.partOfSpeech || lookup.dictionaryParts?.length > 0) && <div data-testid="lookup-word-class" className="mt-2 text-sm font-semibold text-amber-200">{lookup.partOfSpeech || lookup.dictionaryParts.join(' · ')}{!lookup.partOfSpeech && <small className="ml-2 font-normal text-slate-400">Từ loại trong từ điển</small>}</div>}
             {lookup.pronunciation && <div data-testid="lookup-pronunciation" className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-violet-300"><span>🇬🇧 UK: {lookup.pronunciation.uk || "Chưa có"}</span><span>🇺🇸 US: {lookup.pronunciation.us || "Chưa có"}</span><small className="w-full text-xs text-slate-400">Nguồn: {lookup.pronunciation.source} · Phiên âm từ điển; có thể khác theo từ loại/ngữ cảnh.</small></div>}
+            <PronunciationRecorder key={lookup.word} word={lookup.word} />
             {lookup.loading && !lookup.meaning ? <div className="mt-5 text-slate-400">Đang tra nghĩa tiếng Việt...</div> : lookup.error ? <div className="mt-4 text-red-300">{lookup.error}</div> : <>
               {!lookup.pronunciation && <div className="mt-1 text-violet-300 italic">{lookup.ipa}</div>}
               {lookup.easyReading && <div className="mt-4 rounded-xl border border-sky-900 bg-sky-950/50 p-3 text-sm leading-relaxed text-sky-100"><span className="font-semibold text-sky-300">Dễ đọc: </span>{lookup.easyReading}</div>}
