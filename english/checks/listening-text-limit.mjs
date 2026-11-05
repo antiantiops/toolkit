@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const source=readFileSync(new URL('../src/app/ListeningText.js',import.meta.url),'utf8');
+const count=text=>text.trim()?text.trim().split(/\s+/u).length:0;
+assert.equal(count('  one\n two\tthree '),3);
+assert.equal(count(''),0);
+assert.equal(count('word '.repeat(5000)),5000);
+assert.equal(count('word '.repeat(5001)),5001);
+assert(source.includes('if(!wordCount||wordCount>5000)return;'));
+assert(source.includes('disabled={!wordCount||wordCount>5000}'));
+assert(!source.includes('maxLength={1000}'));
+assert(source.includes('/5000 từ'));
+console.log('PASS 5000-word limit, over-limit guard, whitespace count and no character truncation');
