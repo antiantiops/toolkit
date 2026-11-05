@@ -4,6 +4,8 @@ import vm from 'node:vm';
 const ui=fs.readFileSync('src/app/PronunciationRecorder.js','utf8');
 const api=fs.readFileSync('src/app/api/pronunciation-assess/route.js','utf8');
 const page=fs.readFileSync('src/app/page.js','utf8');
+assert(page.includes('lookup.practice &&'));
+assert(page.includes('aria-expanded={!!lookup.practice}'));
 assert.match(page, /<PronunciationRecorder key=\{lookup.word\} word=\{lookup.word\}/);
 for(const marker of ['getUserMedia','30000','URL.revokeObjectURL','controller.current?.abort()','media.getTracks().forEach','Gửi đánh giá','Nghe lại bản ghi']) assert(ui.includes(marker),marker);
 assert(api.includes("model: 'ag/gemini-3.8-flash-high'"));

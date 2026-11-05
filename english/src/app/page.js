@@ -1621,11 +1621,16 @@ export default function Home() {
                 <div className="break-words text-xl font-bold text-sky-300">{lookup.word}</div>
                 <SpeakBtn text={lookup.word} title="Nghe từ" aria-label="Nghe từ" className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-base text-white hover:bg-emerald-500" />
               </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <button type="button" title="Luyện phát âm" aria-label="Luyện phát âm" aria-expanded={!!lookup.practice} aria-controls="word-pronunciation-practice" onClick={() => setLookup(current => ({ ...current, practice: !current.practice }))} className="inline-flex h-11 w-11 items-center justify-center rounded-full text-violet-300 hover:bg-violet-900/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6"><path d="M6 9a6 6 0 0 1 12 0c0 3-1.5 4.3-3.3 5.7-1.2.9-1.4 2-1.8 3.2A3 3 0 0 1 7 17"/><path d="M9 9a3 3 0 0 1 6 0c0 1.6-1 2.3-2 3l-1 1"/><path d="M9 9v3"/></svg>
+                </button>
               <button onClick={() => setLookup(null)} className="rounded-lg px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-white" aria-label="Đóng">✕</button>
+              </div>
             </div>
             {(lookup.partOfSpeech || lookup.dictionaryParts?.length > 0) && <div data-testid="lookup-word-class" className="mt-2 text-sm font-semibold text-amber-200">{lookup.partOfSpeech || lookup.dictionaryParts.join(' · ')}{!lookup.partOfSpeech && <small className="ml-2 font-normal text-slate-400">Từ loại trong từ điển</small>}</div>}
             {lookup.pronunciation && <div data-testid="lookup-pronunciation" className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-violet-300"><span>🇬🇧 UK: {lookup.pronunciation.uk || "Chưa có"}</span><span>🇺🇸 US: {lookup.pronunciation.us || "Chưa có"}</span><small className="w-full text-xs text-slate-400">Nguồn: {lookup.pronunciation.source} · Phiên âm từ điển; có thể khác theo từ loại/ngữ cảnh.</small></div>}
-            <PronunciationRecorder key={lookup.word} word={lookup.word} />
+            {lookup.practice && <div id="word-pronunciation-practice"><PronunciationRecorder key={lookup.word} word={lookup.word} /></div>}
             {lookup.loading && !lookup.meaning ? <div className="mt-5 text-slate-400">Đang tra nghĩa tiếng Việt...</div> : lookup.error ? <div className="mt-4 text-red-300">{lookup.error}</div> : <>
               {!lookup.pronunciation && <div className="mt-1 text-violet-300 italic">{lookup.ipa}</div>}
               {lookup.easyReading && <div className="mt-4 rounded-xl border border-sky-900 bg-sky-950/50 p-3 text-sm leading-relaxed text-sky-100"><span className="font-semibold text-sky-300">Dễ đọc: </span>{lookup.easyReading}</div>}
