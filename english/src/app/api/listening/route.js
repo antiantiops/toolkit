@@ -24,8 +24,16 @@ export async function POST(request) {
       if(cacheOnly)return NextResponse.json({error:'Audio đã lưu không còn. Bấm tạo audio để tạo lại.'},{status:404});
       // ponytail: local persistent cache; use shared storage when running multiple hosts.
       for(const name of fs.readdirSync(dir))if(/^[a-f0-9]{64}\.mp3$/.test(name)){try{const old=path.join(dir,name);if(Date.now()-fs.statSync(old).mtimeMs>=604800000)fs.unlinkSync(old);}catch{}}
-      const res = await fetch(`${base}/v1/audio/speech`, { method: "POST", headers, signal: AbortSignal.timeout(90000), body: JSON.stringify({ model: `edge-tts/${voice}`, input: speechText(paragraph), response_format: "mp3" }) });
-      if (!res.ok) throw new Error(`Tạo MP3 lỗi (${res.status})`);
+      const payload=JSON.stringify({ model: `edge-tts/${voice}`, input: speechText(paragraph), response_format: "mp3" });
+      let res;
+      // ponytail: Edge TTS transiently returns 502; retry at server boundary so stale browser bundles also recover.
+      for(let attempt=0;attempt<3;attempt++){
+        try { res=await fetch(`${base}/v1/audio/speech`, { method: "POST", headers, signal: AbortSignal.timeout(90000), body: payload }); }
+        catch(e){ if(attempt===2)throw e; await new Promise(resolve=>setTimeout(resolve,1500*2**attempt)); continue; }
+        if(![502,503,504].includes(res.status)||attempt===2)break;
+        await res.body?.cancel();await new Promise(resolve=>setTimeout(resolve,1500*2**attempt));
+      }
+      if (!res?.ok) throw new Error(`Tạo MP3 lỗi (${res?.status||'kết nối'})`);
       const audio = await res.arrayBuffer();
       if (audio.byteLength < 1000) throw new Error("Audio không hợp lệ");
       const temp=file+'.'+randomUUID()+'.tmp';
