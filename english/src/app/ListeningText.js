@@ -1,17 +1,19 @@
 "use client";
 import {useEffect,useState} from 'react';
 import ListeningImage from './ListeningImage';
-export default function ListeningText({onContextChange,clickableText}) {
+export default function ListeningText({onContextChange,clickableText,historyEntry=null}) {
  const [text,setText]=useState(''),[lesson,setLesson]=useState(null);
  useEffect(()=>{onContextChange?.({source:'text',text:lesson?.sentences.map(s=>s.en).join(' ')||text});},[text,lesson,onContextChange]);
  const wordCount=text.trim()?text.trim().split(/\s+/u).length:0;
- function generate(){
+ async function generate(){
   if(!wordCount||wordCount>5000)return;
   const parts=Array.from(new Intl.Segmenter('en',{granularity:'sentence'}).segment(text.trim()),s=>s.segment.trim()).filter(Boolean);
   // ponytail: split long sentences at whitespace for bounded TTS; upgrade to provider timestamps for word-level sync.
   const sentences=parts.flatMap(s=>s.match(/.{1,550}(?:\s+|$)|\S{1,550}/gs)||[s]).map(en=>({en:en.trim(),vi:''}));
-  setLesson({title:'Bài nghe từ văn bản',sentences});
+  const next={title:'Bài nghe từ văn bản',sentences};setLesson(next);
+  fetch('/api/listening-text',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(next)}).catch(()=>{});
  }
+ if(historyEntry)return <ListeningImage historyEntry={historyEntry} clickableText={clickableText} />;
  return <section data-testid="listening-text" className="space-y-4">
   <h2 className="text-xl font-semibold text-teal-300">Nghe từ văn bản</h2>
   <p className="text-sm text-slate-300">Dán tiếng Anh để tạo bài nghe theo câu. Giữ nguyên nội dung. Giọng Mỹ.</p>
