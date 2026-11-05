@@ -1,9 +1,11 @@
 export function validateTranscript(value) {
-  if (!value || typeof value.title !== 'string' || !value.title.trim() || value.title.length > 200 || !Array.isArray(value.sentences) || !value.sentences.length || value.sentences.length > 30) throw new Error('Invalid listening transcript');
-  for (const s of value.sentences) if (!s || typeof s.en !== 'string' || !s.en.trim() || s.en.length > 600 || typeof s.vi !== 'string' || s.vi.length > 1000) throw new Error('Invalid listening sentence');
-  if (value.sentences.reduce((n, s) => n + s.en.length, 0) > 6000) throw new Error('Listening text too long');
-  for (const s of value.sentences) if (s.speaker !== undefined && (typeof s.speaker !== 'string' || s.speaker.length > 80) || s.gender !== undefined && !['male','female','unknown'].includes(s.gender)) throw new Error('Invalid speaker');
-  return { title: value.title.trim(), sentences: value.sentences.map(s => ({ en: s.en.trim(), vi: s.vi.trim(), speaker: (s.speaker || "").trim(), gender: s.gender || "unknown" })) };
+  const textSource=value?.source==='text', sentences=value?.sentences;
+  if (!value || typeof value.title !== 'string' || !value.title.trim() || value.title.length > 200 || !Array.isArray(sentences) || !sentences.length || sentences.length > (textSource?1000:30)) throw new Error('Invalid listening transcript');
+  for (const s of sentences) if (!s || typeof s.en !== 'string' || !s.en.trim() || s.en.length > 600 || typeof s.vi !== 'string' || s.vi.length > 1000) throw new Error('Invalid listening sentence');
+  const text=sentences.map(s=>s.en).join(' ');
+  if (textSource ? text.trim().split(/\s+/u).length>5000 : text.length>6000) throw new Error('Listening text too long');
+  for (const s of sentences) if (s.speaker !== undefined && (typeof s.speaker !== 'string' || s.speaker.length > 80) || s.gender !== undefined && !['male','female','unknown'].includes(s.gender)) throw new Error('Invalid speaker');
+  return { title: value.title.trim(), source:textSource?'text':undefined, sentences: sentences.map(s => ({ en: s.en.trim(), vi: s.vi.trim(), speaker: (s.speaker || "").trim(), gender: s.gender || "unknown" })) };
 }
 const synchsafe = n => new Uint8Array([(n >>> 21) & 127, (n >>> 14) & 127, (n >>> 7) & 127, n & 127]);
 export function stripId3(bytes) {
