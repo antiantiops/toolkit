@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
+import MouthGuide from './MouthGuide';
 
 async function wav(blob) {
   const context = new AudioContext();
@@ -17,7 +18,7 @@ async function wav(blob) {
   } finally { await context.close(); }
 }
 
-export default function PronunciationRecorder({ word }) {
+export default function PronunciationRecorder({ word, ipa }) {
   const [state, setState] = useState('idle'), [clip, setClip] = useState(null), [result, setResult] = useState(null), [error, setError] = useState('');
   const live = useRef(false), recorder = useRef(null), stream = useRef(null), timer = useRef(null), controller = useRef(null), url = useRef(null);
   useEffect(() => {
@@ -61,7 +62,7 @@ export default function PronunciationRecorder({ word }) {
   }
   const busy = ['permission', 'encoding', 'sending'].includes(state);
   return <section data-testid="pronunciation-recorder" aria-label="Luyện phát âm" className="mt-4 rounded-xl border border-violet-700/60 bg-violet-950/20 p-3 text-sm">
-    <h3 className="font-semibold text-violet-200">Luyện phát âm</h3>
+    <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold text-violet-200">Luyện phát âm</h3><MouthGuide ipa={ipa} /></div>
     <p className="mt-1 text-slate-300">Đọc “{word}”. Tối đa 30 giây. Bấm Gửi để chuyển bản ghi cho Gemini 3.8 Flash High; AI góp ý, không phải điểm chuẩn.</p>
     <div className="mt-3 flex flex-wrap gap-2">
       <button type="button" disabled={busy} onClick={state === 'recording' ? () => recorder.current?.stop() : start} className="min-h-11 rounded-lg bg-violet-600 px-3 py-2 text-white disabled:opacity-50">{state === 'recording' ? 'Dừng ghi âm' : clip ? 'Thu lại' : 'Ghi âm'}</button>
