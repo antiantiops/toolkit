@@ -11,7 +11,10 @@ for(const marker of ['getUserMedia','30000','URL.revokeObjectURL','controller.cu
 assert(api.includes("model: 'ag/gemini-3.8-flash-high'"));
 assert(api.includes("type: 'input_audio'"));
 assert(api.includes('cacheOwner(request)'));
-assert(api.includes('active.delete(owner)'));
+assert(api.includes('running.delete(job.id)'));
+assert(api.includes("reply(view(job),202)"));
+assert(api.includes('createHash'));
+assert(api.includes('fs.renameSync')); 
 const samples=Float32Array.from([-1,-.5,0,.5,1]);let closed=false;
 class AudioContext {async decodeAudioData(){return {duration:1,sampleRate:16000,getChannelData:()=>samples};}async close(){closed=true;}}
 const encode=vm.runInNewContext(ui.slice(ui.indexOf('async function wav('),ui.indexOf('\nexport default'))+'; wav',{AudioContext,Blob,ArrayBuffer,DataView,Math,Error});

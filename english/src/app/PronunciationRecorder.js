@@ -19,14 +19,17 @@ async function wav(blob) {
 }
 
 export default function PronunciationRecorder({ word, ipa }) {
-  const [state, setState] = useState('idle'), [clip, setClip] = useState(null), [result, setResult] = useState(null), [error, setError] = useState('');
+  const [state, setState] = useState('idle'), [clip, setClip] = useState(null), [result, setResult] = useState(null), [error, setError] = useState(''), [notice,setNotice] = useState(''), [jobId,setJobId] = useState(null);
   const live = useRef(false), recorder = useRef(null), stream = useRef(null), timer = useRef(null), controller = useRef(null), url = useRef(null);
   useEffect(() => {
     live.current = true;
+    let saved;try { saved=sessionStorage.getItem('pronunciation-job:'+word); }catch{}
+    if(saved) {setJobId(saved);setState('sending');poll(saved);}
+
     return () => { live.current = false; clearTimeout(timer.current); if (recorder.current?.state === 'recording') recorder.current.stop(); stream.current?.getTracks().forEach(t => t.stop()); controller.current?.abort(); if (url.current) URL.revokeObjectURL(url.current); };
   }, []);
   async function start() {
-    setError(''); setResult(null); setState('permission');
+    setError(''); setResult(null); setNotice(''); setJobId(null); try{sessionStorage.removeItem('pronunciation-job:'+word);}catch{} setState('permission');
     try {
       if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') throw Error('Ghi âm cần HTTPS và trình duyệt hỗ trợ microphone.');
       const media = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -49,16 +52,45 @@ export default function PronunciationRecorder({ word, ipa }) {
       setClip(null); rec.start(); setState('recording'); timer.current = setTimeout(() => { if (rec.state === 'recording') rec.stop(); }, 30000);
     } catch (e) { stream.current?.getTracks().forEach(t => t.stop()); if (live.current) { setError(e.name === 'NotAllowedError' ? 'Microphone bị từ chối. Cho phép microphone trong cài đặt trình duyệt rồi thử lại.' : e.message); setState('idle'); } }
   }
-  async function assess() {
-    setState('sending'); setError(''); setResult(null); controller.current = new AbortController();
-    const timeout = setTimeout(() => controller.current?.abort(), 125000);
+  function remember(id) { setJobId(id);try{sessionStorage.setItem('pronunciation-job:'+word,id);}catch{} }
+  async function request(options, endpoint='/api/pronunciation-assess') {
+    const abort=new AbortController();controller.current=abort;
+    const timeout=setTimeout(()=>abort.abort(),20000);
+    try { const response=await fetch(endpoint,{...options,signal:abort.signal});const data=await response.json();if(!response.ok){const e=Error(data.error||'Yêu cầu thất bại');e.http=response.status;throw e;}return data; }
+    finally {clearTimeout(timeout);}
+  }
+  async function poll(id) {
+    const deadline=Date.now()+6*60*1000;
+    while(live.current&&Date.now()<deadline) {
+      try {
+        const data=await request({},'/api/pronunciation-assess?jobId='+id);
+        if(!live.current)return;
+        if(data.status==='completed') {setResult(data.result);setNotice('');setState('ready');return;}
+        if(data.status==='failed') {setError(data.error);setNotice('');setState('ready');return;}
+        setNotice(data.status==='retrying'||data.attempt>1?'Gemini phản hồi chậm. Server đang thử lại, không cần gửi thêm.':'Server đã lưu bản ghi. Đang chờ Gemini đánh giá…');
+      } catch(e) {
+        if(!live.current)return;
+        if(e.http&&e.http!==429&&e.http<500) {setError(e.message);setNotice('');setState('ready');if(e.http===404){setJobId(null);try{sessionStorage.removeItem('pronunciation-job:'+word);}catch{}}return;}
+        setNotice('Kết nối gián đoạn. Đang nối lại để nhận kết quả; không gửi lại audio.');
+      }
+      await new Promise(r=>setTimeout(r,3000));
+    }
+    if(live.current){setNotice('Bản ghi đã lưu. Bấm Kiểm tra kết quả để nối lại.');setState('ready');}
+  }
+  async function assess(retry=false) {
+    if(state==='sending')return;
+    setState('sending');setError('');setResult(null);setNotice(jobId?'Đang nối lại bản ghi đã lưu…':'Đang gửi bản ghi lên server…');
     try {
-      const form = new FormData(); form.set('word', word); form.set('file', clip.blob, 'pronunciation.wav');
-      const response = await fetch('/api/pronunciation-assess', { method: 'POST', body: form, signal: controller.current.signal });
-      const data = await response.json(); if (!response.ok) throw Error(data.error || 'Đánh giá thất bại.');
-      if (live.current) { setResult(data.result); setState('ready'); }
-    } catch (e) { if (live.current) { setError(e.name === 'AbortError' ? 'Quá thời gian đánh giá. Bản ghi còn đây, thử gửi lại.' : e.message); setState('ready'); } }
-    finally { clearTimeout(timeout); }
+      if(jobId&&!retry){await poll(jobId);return;}
+      let options;
+      if(jobId) options={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jobId,retry:true})};
+      else {const form=new FormData();form.set('word',word);form.set('file',clip.blob,'pronunciation.wav');options={method:'POST',body:form};}
+      const data=await request(options);
+      if(!live.current)return;
+      if(data.result){if(data.jobId)remember(data.jobId);setResult(data.result);setNotice('');setState('ready');return;}
+      if(!data.jobId)throw Error('Server chưa xác nhận lưu bản ghi. Thử gửi lại.');
+      remember(data.jobId);await poll(data.jobId);
+    } catch(e) {if(live.current){setError(e.http?e.message:'Chưa nhận xác nhận từ server. Bản ghi còn đây; gửi lại sẽ tự nhận diện, không tạo đánh giá trùng.');setNotice('');setState('ready');}}
   }
   const busy = ['permission', 'encoding', 'sending'].includes(state);
   return <section data-testid="pronunciation-recorder" aria-label="Luyện phát âm" className="mt-4 rounded-xl border border-violet-700/60 bg-violet-950/20 p-3 text-sm">
@@ -66,10 +98,12 @@ export default function PronunciationRecorder({ word, ipa }) {
     <p className="mt-1 text-slate-300">Đọc “{word}”. Tối đa 30 giây. Bấm Gửi để chuyển bản ghi cho Gemini 3.8 Flash High; AI góp ý, không phải điểm chuẩn.</p>
     <div className="mt-3 flex flex-wrap gap-2">
       <button type="button" disabled={busy} onClick={state === 'recording' ? () => recorder.current?.stop() : start} className="min-h-11 rounded-lg bg-violet-600 px-3 py-2 text-white disabled:opacity-50">{state === 'recording' ? 'Dừng ghi âm' : clip ? 'Thu lại' : 'Ghi âm'}</button>
-      {clip && <button type="button" disabled={busy || state === 'recording'} onClick={assess} className="min-h-11 rounded-lg bg-sky-700 px-3 py-2 text-white disabled:opacity-50">{state === 'sending' ? 'Đang đánh giá…' : 'Gửi đánh giá'}</button>}
+      {(clip || jobId) && <button type="button" disabled={busy || state === 'recording'} onClick={() => assess(!!error && !!jobId)} className="min-h-11 rounded-lg bg-sky-700 px-3 py-2 text-white disabled:opacity-50">{state === 'sending' ? 'Đang xử lý…' : jobId ? error ? 'Thử đánh giá lại' : 'Kiểm tra kết quả' : 'Gửi đánh giá'}</button>}
     </div>
     <p role="status" className="mt-2 text-slate-300">{state === 'recording' ? 'Đang ghi âm… tự dừng sau 30 giây.' : state === 'permission' ? 'Chờ quyền microphone…' : state === 'encoding' ? 'Đang chuẩn bị bản ghi…' : ''}</p>
     {clip && <audio aria-label="Nghe lại bản ghi" controls src={clip.url} className="mt-2 w-full min-w-0" />}
+    {notice && <p role="status" className="mt-2 text-amber-200">{notice}</p>}
+    {jobId && <p className="mt-1 break-all text-[10px] text-slate-400">Mã bản ghi: {jobId.slice(0,12)} · lưu 24 giờ</p>}
     {error && <p role="alert" className="mt-2 text-red-300">{error}</p>}
     {result && <div aria-live="polite" className="mt-3 space-y-2 text-slate-200">
       <p className="font-semibold text-violet-200">{result.status === 'retry' ? 'Cần thu lại' : 'Góp ý từ AI'}</p>

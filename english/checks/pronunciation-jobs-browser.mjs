@@ -1,0 +1,18 @@
+import {chromium} from '/usr/local/lib/node_modules/playwright/index.mjs';
+import assert from 'node:assert/strict';
+const b=await chromium.launch({args:['--no-sandbox','--use-fake-ui-for-media-stream','--use-fake-device-for-media-stream']});
+try {
+for(const width of [390,1440]){
+ const context=await b.newContext({viewport:{width,height:900},permissions:['microphone']});const p=await context.newPage();
+ await p.route('**/api/my-words**',r=>r.fulfill({json:{words:[],ok:true}}));
+ await p.route('**/api/feature-notices',r=>r.fulfill({json:{show:false}}));
+ await p.route('**/api/lookup',r=>r.fulfill({json:{result:{corrected:'Prove',meaning:'chứng minh',original:'Prove'}}}));
+ await p.route('**/api/word',r=>r.fulfill({json:{word:{word:'Prove',meaning:'chứng minh',partOfSpeech:'verb',easyReading:'UK: PRU-v · US: PRU-v'}}}));
+ await p.route('**/api/quick-word',r=>r.fulfill({json:{meaning:'chứng minh'}}));
+ let posts=0, polls=0;const id='a'.repeat(64);
+ await p.route('**/api/pronunciation-assess**',async r=>{if(r.request().method()==='POST'){posts++;await r.fulfill({status:202,json:{jobId:id,status:'queued'}});}else{polls++;if(polls===1){await r.abort();return;}await r.fulfill({json:polls<3?{jobId:id,status:'running',attempt:1}:{jobId:id,status:'completed',result:{status:'feedback',heard:'prove',summary:'Âm cuối cần rõ hơn.',tips:['Luyện âm cuối.']}}});}});
+ await p.goto('http://127.0.0.1:3099');await p.waitForTimeout(2000); const input=p.getByPlaceholder('Ví dụ: I goed to school yesterday');await input.fill('Prove');await input.press('Enter');
+ const panel=p.getByTestId('pronunciation-recorder');assert.equal(await panel.count(),0);await p.getByRole('button',{name:'Luyện nói',exact:true}).click();await panel.waitFor();await panel.getByRole('button',{name:'Ghi âm',exact:true}).click();await panel.getByRole('button',{name:'Dừng ghi âm'}).waitFor();await p.waitForTimeout(700);await panel.getByRole('button',{name:'Dừng ghi âm'}).click();await panel.getByRole('button',{name:'Gửi đánh giá',exact:true}).click();await panel.getByText('Âm cuối cần rõ hơn.').waitFor();assert.equal(posts,1);assert(polls>=3);await p.getByRole('button',{name:'Thu gọn luyện nói'}).click();await p.getByRole('button',{name:'Luyện nói',exact:true}).click();await panel.getByText('Âm cuối cần rõ hơn.').waitFor();assert.equal(posts,1);
+ assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await p.screenshot({path:`/root/.openclaw/workspace-nim/media/pronunciation-${width}.png`});await panel.getByRole('button',{name:'Ghi âm',exact:true}).click();await panel.getByRole('button',{name:'Dừng ghi âm'}).waitFor();await p.getByRole('button',{name:'Đóng',exact:true}).click();await p.waitForTimeout(200);assert(await p.evaluate(()=>document.querySelectorAll('audio[src^="blob:"]').length===0));console.log('PASS',width,'record WAV, preview, send, feedback, retry, close cleanup (fake microphone, mocked AI)');await context.close();
+}
+}finally{await b.close()}
