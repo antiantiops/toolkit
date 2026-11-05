@@ -18,6 +18,7 @@ import FeatureNotice from "./FeatureNotice";
 import Account from "./Account";
 import ThemeSwitch from "./ThemeSwitch";
 import ListeningAudio from "./ListeningAudio";
+import ListeningText from "./ListeningText";
 import ListeningSpotify from "./ListeningSpotify";
 import BusinessPractice from "./BusinessPractice";
 import MyWords, { rememberEnglish } from "./MyWords";
@@ -73,6 +74,7 @@ export default function Home() {
   const skipVocabRestore = useRef(false);
   const [listeningSource,setListeningSource]=useState("image");
   const [listeningEntry,setListeningEntry]=useState(null);
+  const [textChatContext,setTextChatContext]=useState(null);
   const [audioChatContext,setAudioChatContext]=useState(null),[imageChatContext,setImageChatContext]=useState(null);
 
   // --- Vocab state ---
@@ -1609,10 +1611,10 @@ export default function Home() {
         {writing && <Writing tourStep={writingTourStep} writing={writing} cachedModelDraft={wModelDraft} onModelDraft={setWModelDraft} SpeakBtn={SpeakBtn} CopyBtn={CopyBtn} />}
       </>}
 
-      <div hidden={mode !== "listening"}><ListeningHistory onSelect={entry=>{setListeningEntry(entry);setListeningSource(entry.source);}} /><div className="mb-4 flex gap-2 overflow-x-auto">{[["image","Ảnh bài nghe"],["audio","File audio"],["spotify","Spotify"]].map(([value,label])=><button key={value} onClick={()=>setListeningSource(value)} className={`min-h-11 shrink-0 min-w-[140px] flex-1 rounded-xl px-4 text-sm font-semibold ${listeningSource===value?"bg-teal-600 text-white":"bg-slate-800 text-slate-400"}`}>{label}</button>)}</div><div hidden={listeningSource!=="image"}><ListeningImage key={listeningEntry?.id||"current-image"} historyEntry={listeningEntry?.source==="image"?listeningEntry:null} onContextChange={setImageChatContext} clickableText={clickableText} /></div><div hidden={listeningSource!=="spotify"}>{listeningSource==="spotify"&&<ListeningSpotify/>}</div><div hidden={listeningSource!=="audio"}><ListeningAudio key={listeningEntry?.id||"current-audio"} historyEntry={listeningEntry?.source==="audio"?listeningEntry:null} onContextChange={setAudioChatContext} clickableText={clickableText} /></div></div>
+      <div hidden={mode !== "listening"}><ListeningHistory onSelect={entry=>{setListeningEntry(entry);setListeningSource(entry.source);}} /><div className="mb-4 flex gap-2 overflow-x-auto">{[["image","Ảnh bài nghe"],["audio","File audio"],["text","Văn bản"],["spotify","Spotify"]].map(([value,label])=><button key={value} onClick={()=>setListeningSource(value)} className={`min-h-11 shrink-0 min-w-[140px] flex-1 rounded-xl px-4 text-sm font-semibold ${listeningSource===value?"bg-teal-600 text-white":"bg-slate-800 text-slate-400"}`}>{label}</button>)}</div><div hidden={listeningSource!=="image"}><ListeningImage key={listeningEntry?.id||"current-image"} historyEntry={listeningEntry?.source==="image"?listeningEntry:null} onContextChange={setImageChatContext} clickableText={clickableText} /></div><div hidden={listeningSource!=="text"}><ListeningText onContextChange={setTextChatContext} /></div><div hidden={listeningSource!=="spotify"}>{listeningSource==="spotify"&&<ListeningSpotify/>}</div><div hidden={listeningSource!=="audio"}><ListeningAudio key={listeningEntry?.id||"current-audio"} historyEntry={listeningEntry?.source==="audio"?listeningEntry:null} onContextChange={setAudioChatContext} clickableText={clickableText} /></div></div>
 
       {/* Lookup modal */}
-      <LessonChat context={{ mode, ...(mode === "listening" ? {source:listeningSource} : {}), lesson: mode === "listening" ? (listeningSource === "audio" ? audioChatContext : imageChatContext) : mode === "grammar" ? grammar : mode === "writing" ? writing : words, practice: mode === "listening" ? null : mode === "grammar" ? gPractice : practice, translation: mode === "listening" ? null : quickResult, wordLookup: mode !== "listening" && lookup && !lookup.loading && !lookup.error ? lookup : null }} />
+      <LessonChat context={{ mode, ...(mode === "listening" ? {source:listeningSource} : {}), lesson: mode === "listening" ? (listeningSource === "text" ? textChatContext : listeningSource === "audio" ? audioChatContext : listeningSource === "image" ? imageChatContext : null) : mode === "grammar" ? grammar : mode === "writing" ? writing : words, practice: mode === "listening" ? null : mode === "grammar" ? gPractice : practice, translation: mode === "listening" ? null : quickResult, wordLookup: mode !== "listening" && lookup && !lookup.loading && !lookup.error ? lookup : null }} />
       {lookup && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/75 p-3" onClick={() => setLookup(null)}>
           <div className="max-h-[85dvh] overflow-y-auto w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-slate-600 bg-slate-900 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
