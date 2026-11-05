@@ -1,7 +1,7 @@
 "use client";
 import {joinImages} from '../lib/listening/join-images.mjs';
 import ListeningTitle from './ListeningTitle';
-import TranscriptSwitch from './TranscriptSwitch';
+import ListeningPlayback from './ListeningPlayback';
 import { useEffect, useRef, useState } from 'react';
 import ImageCrop from './ImageCrop';
 import { transcriptParagraph } from '../lib/transcript-paragraph.mjs';
@@ -20,7 +20,7 @@ function duration(url) {
     probe.onerror = () => finish(new Error('Không đọc được MP3')); probe.src = url;
   });
 }
-export default function ListeningImage({onContextChange,historyEntry,clickableText=text=>text}) {
+export default function ListeningImage({onContextChange,historyEntry,clickableText=text=>text,inputLesson=null,autoGenerate=false}) {
   const [pages,setPages]=useState([]), [croppedPages,setCroppedPages]=useState([]), [pageIndex,setPageIndex]=useState(0), [joining,setJoining]=useState(false);
   const [crop, setCrop] = useState(null), [preview, setPreview] = useState(null), [upload, setUpload] = useState(null), [confirm, setConfirm] = useState(false);
   const [lesson, setLesson] = useState(null), [busy, setBusy] = useState(false), [error, setError] = useState(''), [stage, setStage] = useState('');
@@ -49,6 +49,7 @@ export default function ListeningImage({onContextChange,historyEntry,clickableTe
     catch (e) { setError(formatErrorMessage(e)); } finally { setBusy(false); }
   };
   useEffect(() => {
+    if(inputLesson)return () => {version.current++; URL.revokeObjectURL(fullAudio.current);resources.current.forEach(c=>URL.revokeObjectURL(c.url));};
     (historyEntry?Promise.resolve({session:{listening:historyEntry.lesson}}):fetch('/api/session?type=listening').then(parseApiResponse)).then(data => { if (!loaded.current && data.session?.listening?.sentences?.length) { const restored=validateTranscript(data.session.listening); setLesson(restored);const restoredVoices=dialogueVoices(restored.sentences);setVoices(restoredVoices); !historyEntry && fetch('/api/session?type=previews').then(parseApiResponse).then(p => { if (!loaded.current) setPreview(p.session?.lPreview || null); }).catch(() => {}); } }).catch(() => {});
     if (!historyEntry && sessionStorage.getItem('listening-image-pending-job')) { loaded.current = true; analyze(); }
     return () => { version.current++; URL.revokeObjectURL(fullAudio.current); resources.current.forEach(c => URL.revokeObjectURL(c.url)); };
@@ -107,6 +108,7 @@ export default function ListeningImage({onContextChange,historyEntry,clickableTe
     } catch (e) { if (token === version.current) setError(formatErrorMessage(e)); } finally { if (token === version.current) setAudioBusy(false); }
   };
   useEffect(()=>{if(historyEntry&&lesson)createAudio(lesson,dialogueVoices(lesson.sentences),true);},[historyEntry,lesson?.sentences]);
+  useEffect(()=>{if(inputLesson){setLesson(inputLesson);setVoices({});if(autoGenerate)createAudio(inputLesson,{});}},[inputLesson]);
   const saveAudio = async () => {
     try {
       const text = lesson.sentences.map(s => `${s.en}\n${s.vi}`).join('\n\n');
@@ -130,6 +132,7 @@ export default function ListeningImage({onContextChange,historyEntry,clickableTe
     return ()=>{for(const name of Object.keys(handlers))try{media.setActionHandler(name,null);}catch{}};
   },[audioUrl,total]);
   return <section id="image-listening" className="space-y-4">
+    {!inputLesson&&<>
     <h2 className="text-xl font-bold text-teal-200">Listening từ ảnh</h2>
     <p className="text-sm text-slate-400">Tạo bài nghe từ trang sách. Khoanh một hoặc nhiều vùng theo thứ tự đọc, ghép thành một bài nghe. Chỉ vùng chọn được gửi AI.</p>
     <input ref={fileInput} type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e => { const files = Array.from(e.target.files || []); e.target.value = ''; chooseFiles(files); }} />
@@ -152,49 +155,18 @@ export default function ListeningImage({onContextChange,historyEntry,clickableTe
     </div>
     {preview && <img src={preview} alt="Ảnh bài Listening" className="mx-auto max-h-72 max-w-full rounded-xl" />}
     {upload?.id && !lesson && !busy && <button onClick={() => analyze(upload.id)} className="w-full rounded-xl bg-teal-600 p-3">Phân tích ảnh đã lưu</button>}
+    </>}
     {busy && <p role="status" className="text-teal-200">Đang phân tích nền: {stage || 'read-image'}. Có thể đổi tab, tải lại để tiếp tục.</p>}
     {error && <div role="alert" className="whitespace-pre-wrap break-words rounded-xl bg-red-950 p-3 text-sm text-red-200">{error}</div>}
     {lesson && <div className="space-y-4 rounded-3xl border border-white/10 bg-slate-950 p-3 sm:p-5">
-      <ListeningTitle title={lesson.title} id={historyEntry?.id} onSaved={title=>setLesson(current=>({...current,title}))} />
+      {inputLesson?<h3 className="font-bold text-teal-200">{lesson.title}</h3>:<ListeningTitle title={lesson.title} id={historyEntry?.id} onSaved={title=>setLesson(current=>({...current,title}))} />}
       {!!Object.keys(voices).length && <div className="space-y-2 rounded-xl bg-slate-900 p-3"><p className="text-sm text-teal-200">Giọng từng nhân vật · US</p><p className="text-xs text-slate-400">Chưa rõ giới tính: gán giọng khác nhau, không đoán từ tên. Tên chỉ hiện trong transcript, không đọc thành tiếng.</p>{Object.entries(voices).map(([name,voice])=><label key={name} className="flex items-center justify-between gap-3 text-sm"><span className="min-w-0 break-words text-slate-300">{name}</span><select aria-label={`Giọng ${name}`} disabled={audioBusy||busy} value={voice} onChange={e=>{version.current++;release();setVoices(current=>({...current,[name]:e.target.value}));}} className="min-h-11 rounded-lg bg-slate-800 px-2 text-teal-100">{speakerVoices.map(v=><option key={v.id} value={v.id}>{v.label}</option>)}</select></label>)}</div>}
       {!clips.length && <button disabled={audioBusy} onClick={() => createAudio()} className="rounded-xl bg-teal-600 p-3 disabled:opacity-50">{audioBusy ? `Đang tạo MP3 ${audioProgress}/${lesson.sentences.length} câu…` : resources.current.length ? 'Thử lại các câu chưa tạo' : 'Tạo audio Listening'}</button>}
-      <div className="overflow-hidden rounded-2xl border border-teal-900/60 bg-gradient-to-b from-teal-950/50 to-slate-950">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-5 pt-4"><div className="text-xs font-semibold uppercase tracking-widest text-teal-300"><span>Transcript</span><span className="mt-1 block text-[10px] text-slate-400">{clips.length ? `${index + 1} / ${lesson.sentences.length}` : 'Chưa có audio'}</span></div><TranscriptSwitch paragraphView={paragraphView} onChange={setParagraphView} /></div>
-        {paragraphView?<div data-image-transcript-paragraph className="max-h-[48dvh] space-y-4 overflow-y-auto px-5 py-4 text-base leading-relaxed sm:px-8"><p className="whitespace-pre-wrap text-slate-100">{clickableText(transcriptParagraph(lesson.sentences,'en'))}</p><div className="border-t border-slate-700 pt-3"><h4 className="mb-2 text-xs font-semibold text-teal-300">Bản dịch tiếng Việt</h4><p className="whitespace-pre-wrap text-sm text-slate-300">{transcriptParagraph(lesson.sentences,'vi')}</p></div></div>:<div ref={lyricsRef} data-testid="listening-lyrics" aria-label="Transcript Listening" className="relative max-h-[48dvh] min-h-64 overflow-y-auto overscroll-contain px-5 py-24 sm:px-8">
-          {lesson.sentences.map((s, i) => <button key={i} disabled={!clips.length} data-transcript-line aria-current={clips.length && i === index ? 'true' : undefined} onClick={() => selectSentence(i)} className={`block w-full py-5 text-left transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 disabled:opacity-100 motion-reduce:transition-none ${clips.length && i === index ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}>
-            {s.speaker&&<span className="mb-2 block text-xs font-medium text-teal-400">{s.speaker}</span>}
-            <span className="block break-words text-[25px] font-semibold leading-relaxed tracking-tight sm:text-3xl">{s.en}</span>
-            <span className={`mt-3 block text-base leading-relaxed ${clips.length && i === index ? 'text-teal-200' : 'text-slate-600'}`}>{s.vi}</span>
-          </button>)}
-        </div>
-        }
-        <p className="px-5 pb-4 text-xs text-slate-400">{paragraphView?'Bấm từ tiếng Anh để tra nghĩa':'Bấm câu để nghe lại · Tự cuộn theo câu đang phát'}</p>
-      </div>
-      {!!clips.length && <div data-testid="listening-player" className="sticky bottom-2 z-10 space-y-4 rounded-2xl border border-white/10 bg-slate-900/95 px-4 py-5 shadow-2xl backdrop-blur-xl">
-        <audio ref={audio} src={audioUrl} loop={repeat} preload="auto"
-          onTimeUpdate={updateTime} onPause={() => setPlaying(false)}
-          onLoadedMetadata={() => { audio.current.playbackRate = speed; }}
-          onPlay={() => { setPlaying(true); if ('mediaSession' in navigator && typeof MediaMetadata !== 'undefined') navigator.mediaSession.metadata = new MediaMetadata({ title: lesson.title, artist: 'English Learner' }); }}
-          onEnded={() => setPlaying(false)} />
-        <div className="space-y-1">
-          <input aria-label="Vị trí phát toàn bài" type="range" min="0" max={total} step="0.1" value={Math.min(total, elapsed)} onChange={e => seek(Number(e.target.value))} className="h-6 w-full cursor-pointer accent-teal-300" />
-          <div className="flex justify-between text-xs tabular-nums text-slate-400"><span>{clock(elapsed)}</span><span>{clock(total)}</span></div>
-        </div>
-        <div className="flex items-center justify-between gap-2">
-          <label className="text-sm text-slate-300"><span className="sr-only">Tốc độ</span><select aria-label="Tốc độ phát" value={speed} onChange={e => { const value = Number(e.target.value); setSpeed(value); audio.current.playbackRate = value; }} className="rounded-full border border-white/10 bg-slate-800 px-2 py-2">{[.6,.7,.8,1,1.2].map(v => <option key={v} value={v}>{v}×</option>)}</select></label>
-          <div className="flex items-center gap-3">
-            <button aria-label="Câu trước" disabled={index === 0} onClick={() => selectSentence(index - 1)} className="flex h-11 w-11 items-center justify-center rounded-full text-slate-200 hover:bg-white/10 disabled:opacity-25"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6"><path d="M6 5h2v14H6zm12 0v14L9 12z"/></svg></button>
-            <button aria-label={playing ? 'Tạm dừng' : 'Phát bài nghe'} onClick={() => { if (audio.current.paused) audio.current.play().catch(e => setError(formatErrorMessage(e))); else audio.current.pause(); }} className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-300 text-slate-950 shadow-lg shadow-teal-400/15 hover:bg-teal-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" className="h-7 w-7">{playing ? <path d="M6 4h4v16H6zm8 0h4v16h-4z"/> : <path d="m8 4 13 8-13 8z"/>}</svg></button>
-            <button aria-label="Câu tiếp" disabled={index === clips.length - 1} onClick={() => selectSentence(index + 1)} className="flex h-11 w-11 items-center justify-center rounded-full text-slate-200 hover:bg-white/10 disabled:opacity-25"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6"><path d="M16 5h2v14h-2zM6 5l9 7-9 7z"/></svg></button>
-          </div>
-          <button type="button" aria-label="Lặp lại toàn bài" aria-pressed={repeat} title={repeat ? 'Tắt lặp lại toàn bài' : 'Bật lặp lại toàn bài'} onClick={() => setRepeat(value => !value)} className={`flex min-h-11 min-w-11 flex-col items-center justify-center rounded-xl px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 ${repeat ? 'bg-teal-300/15 text-teal-200' : 'text-slate-400 hover:bg-white/10'}`}><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5"><path d="m17 2 4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4m14-1v2a3 3 0 0 1-3 3H3"/></svg><span>{repeat ? 'Lặp: bật' : 'Lặp: tắt'}</span></button>
-        </div>
-        <details className="border-t border-white/5 pt-3 text-sm text-slate-400">
+      <ListeningPlayback sentences={lesson.sentences} index={index} ready={clips.length} paragraphView={paragraphView} setParagraphView={setParagraphView} lyricsRef={lyricsRef} clickableText={clickableText} selectSentence={selectSentence} audio={audio} audioUrl={audioUrl} repeat={repeat} setRepeat={setRepeat} speed={speed} setSpeed={setSpeed} total={total} elapsed={elapsed} seek={seek} updateTime={updateTime} playing={playing} setPlaying={setPlaying} setError={setError} title={lesson.title}>        <details className="border-t border-white/5 pt-3 text-sm text-slate-400">
           <summary className="cursor-pointer text-center hover:text-teal-200">Tải file & thông tin</summary>
           <div className="mt-3 flex flex-wrap gap-2"><button onClick={saveAudio} className="rounded-lg bg-slate-800 px-3 py-2 text-teal-200">MP3 + lời nhúng</button><button onClick={() => download(new Blob([measuredLrc(lesson.sentences, clips.map(c => c.duration))], { type: 'text/plain;charset=utf-8' }), 'listening.lrc')} className="rounded-lg bg-slate-800 px-3 py-2 text-teal-200">Lyrics LRC</button></div>
           <p className="mt-3 text-xs leading-relaxed">LRC đo ở 1×. MP3 nối từng câu có thể có khoảng nghỉ. Lời nhúng và phát nền tùy trình nghe hỗ trợ.</p>
-        </details>
-      </div>}
+        </details></ListeningPlayback>
       <button onClick={() => download(new Blob([lesson.title + '\n\n' + lesson.sentences.map(s => `${s.en}\n${s.vi}`).join('\n\n')], { type: 'text/plain;charset=utf-8' }), 'listening-transcript.txt')} className="text-sm text-teal-200 underline">Tải transcript Anh–Việt</button>
 
     </div>}
