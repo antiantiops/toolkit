@@ -14,7 +14,7 @@ export default function MouthGuide({ ipa = '' }) {
   const ordered = [...matching, ...guides.filter(g => !matching.includes(g))];
   const current = guides.find(g => g.video === selected) || ordered[0];
   return <>
-    <button type="button" aria-expanded={open} aria-controls="mouth-guide" onClick={() => setOpen(v => !v)} className="min-h-11 rounded-lg border border-violet-600/70 bg-violet-900/30 px-2.5 text-xs font-medium text-violet-200">{open ? 'Ẩn khẩu hình' : 'Xem khẩu hình'}</button>
+    <button type="button" aria-expanded={open} aria-controls="mouth-guide" onClick={() => setOpen(v => !v)} className="min-h-8 rounded-md border border-violet-600/50 bg-violet-900/20 px-2 text-[11px] font-medium leading-tight text-violet-200">{open ? 'Ẩn khẩu hình' : 'Xem khẩu hình'}</button>
     {open && <div id="mouth-guide" className="mt-3 basis-full space-y-3 rounded-lg border border-slate-700 p-3 text-sm text-slate-200">
       <p>Video khẩu hình · Rachel’s English · giọng Mỹ. Chọn âm để xem; đây là hướng dẫn từng âm, không phải video riêng cho từ.</p>
       {matching.length === 0 && <p className="text-slate-400">Chưa có video khớp IPA của từ. Có thể chọn trong bộ âm mẫu bên dưới.</p>}
