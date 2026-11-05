@@ -1622,8 +1622,9 @@ export default function Home() {
                 <SpeakBtn text={lookup.word} title="Nghe từ" aria-label="Nghe từ" className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-base text-white hover:bg-emerald-500" />
               </div>
               <div className="flex shrink-0 items-center gap-1">
-                <button type="button" title="Luyện phát âm" aria-label="Luyện phát âm" aria-expanded={!!lookup.practice} aria-controls="word-pronunciation-practice" onClick={() => setLookup(current => ({ ...current, practice: !current.practice }))} className="inline-flex h-11 w-11 items-center justify-center rounded-full text-violet-300 hover:bg-violet-900/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400">
-                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6"><path d="M6 9a6 6 0 0 1 12 0c0 3-1.5 4.3-3.3 5.7-1.2.9-1.4 2-1.8 3.2A3 3 0 0 1 7 17"/><path d="M9 9a3 3 0 0 1 6 0c0 1.6-1 2.3-2 3l-1 1"/><path d="M9 9v3"/></svg>
+                <button type="button" title="Ghi âm để luyện phát âm" aria-label={lookup.practice ? "Thu gọn luyện nói" : "Luyện nói"} aria-expanded={!!lookup.practice} aria-controls="word-pronunciation-practice" onClick={() => setLookup(current => ({ ...current, practice: !current.practice }))} className="inline-flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-violet-700/60 bg-violet-950/40 px-2.5 text-xs font-medium text-violet-200 hover:bg-violet-900/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 shrink-0"><path d="M6 9a6 6 0 0 1 12 0c0 3-1.5 4.3-3.3 5.7-1.2.9-1.4 2-1.8 3.2A3 3 0 0 1 7 17"/><path d="M9 9a3 3 0 0 1 6 0c0 1.6-1 2.3-2 3l-1 1"/><path d="M9 9v3"/></svg>
+                  <span>{lookup.practice ? "Thu gọn" : "Luyện nói"}</span>
                 </button>
               <button onClick={() => setLookup(null)} className="rounded-lg px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-white" aria-label="Đóng">✕</button>
               </div>
