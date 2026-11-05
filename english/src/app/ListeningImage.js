@@ -87,7 +87,7 @@ export default function ListeningImage({onContextChange,historyEntry,clickableTe
     try {
       for (let i = resources.current.length; i < current.sentences.length; i++) {
         if (token !== version.current) return;
-        const res = await fetchWithRetry('/api/listening', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paragraph: spokenSentence(current.sentences[i]), cacheOnly, voice: selectedVoices[current.sentences[i].speaker] || "en-US-AriaNeural" }), timeout: 100000 }, 0);
+        const res = await fetchWithRetry('/api/listening', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paragraph: spokenSentence(current.sentences[i]), cacheOnly, voice: selectedVoices[current.sentences[i].speaker] || "en-US-AriaNeural" }), timeout: 100000 }, 2, 1500);
         if (token !== version.current) return;
         if (!res.ok) await parseApiResponse(res);
         if (!res.headers.get('content-type')?.includes('audio/')) throw new Error('TTS response không phải audio');
