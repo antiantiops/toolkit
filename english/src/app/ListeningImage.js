@@ -45,7 +45,7 @@ export default function ListeningImage({onContextChange,historyEntry,clickableTe
     catch (e) { setError(formatErrorMessage(e)); } finally { setBusy(false); }
   };
   useEffect(() => {
-    if(inputLesson)return () => {version.current++; URL.revokeObjectURL(fullAudio.current);resources.current.forEach(c=>URL.revokeObjectURL(c.url));};
+    if(inputLesson)return () => {audio.current?.pause();version.current++; URL.revokeObjectURL(fullAudio.current);resources.current.forEach(c=>URL.revokeObjectURL(c.url));};
     (historyEntry?Promise.resolve({session:{listening:historyEntry.lesson}}):fetch('/api/session?type=listening').then(parseApiResponse)).then(data => { if (!loaded.current && data.session?.listening?.sentences?.length) { const restored=validateTranscript(data.session.listening); setLesson(restored);const restoredVoices=dialogueVoices(restored.sentences);setVoices(restoredVoices); !historyEntry && fetch('/api/session?type=previews').then(parseApiResponse).then(p => { if (!loaded.current) setPreview(p.session?.lPreview || null); }).catch(() => {}); } }).catch(() => {});
     if (!historyEntry && sessionStorage.getItem('listening-image-pending-job')) { loaded.current = true; analyze(); }
     return () => { version.current++; URL.revokeObjectURL(fullAudio.current); resources.current.forEach(c => URL.revokeObjectURL(c.url)); };
@@ -78,7 +78,7 @@ export default function ListeningImage({onContextChange,historyEntry,clickableTe
   };
   const createAudio = async (current = lesson, selectedVoices = voices, cacheOnly = false) => {
     setAudioBusy(true); setError(''); setAudioProgress(0);
-    const token = version.current;
+    const token = ++version.current;
     // Decode without HTMLAudio metadata probes: mobile browsers can reject detached probes.
     try {
       for (let i = resources.current.length; i < current.sentences.length; i++) {
@@ -89,6 +89,7 @@ export default function ListeningImage({onContextChange,historyEntry,clickableTe
         if (!res.headers.get('content-type')?.includes('audio/')) throw new Error('TTS response không phải audio');
         const blob = await res.blob(); if (blob.size < 1000) throw new Error('MP3 rỗng');
         const decoded = await decodeSpeech(blob);
+        if (token !== version.current) return;
         const url = URL.createObjectURL(blob);
         try {
           const seconds = decoded.duration;

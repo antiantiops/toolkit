@@ -20,7 +20,7 @@ export default function ListeningPlayback({sentences,index,ready,paragraphView,s
         <audio ref={audio} src={audioUrl} loop={repeat} preload="auto"
           onTimeUpdate={updateTime} onPause={() => setPlaying(false)}
           onLoadedMetadata={() => { audio.current.playbackRate = speed; onDuration?.(audio.current.duration); }}
-          onPlay={() => { setPlaying(true); if ('mediaSession' in navigator && typeof MediaMetadata !== 'undefined') navigator.mediaSession.metadata = new MediaMetadata({ title: title, artist: 'English Learner' }); }}
+          onPlay={() => { document.querySelectorAll("audio").forEach(player => { if (player !== audio.current) player.pause(); }); setPlaying(true); if ('mediaSession' in navigator && typeof MediaMetadata !== 'undefined') navigator.mediaSession.metadata = new MediaMetadata({ title: title, artist: 'English Learner' }); }}
           onEnded={() => setPlaying(false)} />
         <div className="space-y-1">
           <input aria-label="Vị trí phát toàn bài" type="range" min="0" max={total} step="0.1" value={Math.min(total, elapsed)} onChange={e => seek(Number(e.target.value))} className="h-6 w-full cursor-pointer accent-teal-300" />
