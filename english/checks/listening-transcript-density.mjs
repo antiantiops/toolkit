@@ -1,0 +1,2 @@
+import assert from 'node:assert/strict';import fs from 'node:fs';
+const s=fs.readFileSync(new URL('../src/app/ListeningPlayback.js',import.meta.url),'utf8');assert.match(s,/text-lg font-semibold leading-7 tracking-tight sm:text-xl/);assert.match(s,/mt-2 block text-sm leading-6 sm:text-base/);assert.doesNotMatch(s,/text-\[25px\].*sm:text-3xl/);console.log('PASS compact English and Vietnamese transcript sizes');

@@ -9,8 +9,8 @@ export default function ListeningPlayback({sentences,index,ready,paragraphView,s
         {paragraphView?<div data-transcript-paragraph className="max-h-[48dvh] space-y-4 overflow-y-auto px-5 py-4 text-base leading-relaxed sm:px-8"><p className="whitespace-pre-wrap text-slate-100">{clickableText(transcriptParagraph(sentences,'en'))}</p>{sentences.some(s=>s.vi)&&<div className="border-t border-slate-700 pt-3"><h4 className="mb-2 text-xs font-semibold text-teal-300">Bản dịch tiếng Việt</h4><p className="whitespace-pre-wrap text-sm text-slate-300">{transcriptParagraph(sentences,'vi')}</p></div>}</div>:<div ref={lyricsRef} data-testid="listening-lyrics" aria-label="Transcript Listening" className="relative max-h-[48dvh] min-h-64 overflow-y-auto overscroll-contain px-5 py-24 sm:px-8">
           {sentences.map((s, i) => <button key={i} disabled={!ready} data-transcript-line aria-current={ready && i === index ? 'true' : undefined} onClick={() => selectSentence(i)} className={`block w-full py-5 text-left transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 disabled:opacity-100 motion-reduce:transition-none ${ready && i === index ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}>
             {s.speaker&&<span className="mb-2 block text-xs font-medium text-teal-400">{s.speaker}</span>}
-            <span className="block break-words text-[25px] font-semibold leading-relaxed tracking-tight sm:text-3xl">{s.en}</span>
-            <span className={`mt-3 block text-base leading-relaxed ${ready && i === index ? 'text-teal-200' : 'text-slate-600'}`}>{s.vi}</span>
+            <span className="block break-words text-lg font-semibold leading-7 tracking-tight sm:text-xl">{s.en}</span>
+            <span className={`mt-2 block text-sm leading-6 sm:text-base ${ready && i === index ? 'text-teal-200' : 'text-slate-600'}`}>{s.vi}</span>
           </button>)}
         </div>
         }
