@@ -1,4 +1,5 @@
 "use client";
+import {decodeSpeech, speechWav} from '../lib/listening/pcm-audio.mjs';
 import {joinImages} from '../lib/listening/join-images.mjs';
 import ListeningTitle from './ListeningTitle';
 import ListeningPlayback from './ListeningPlayback';
@@ -14,15 +15,6 @@ function download(blob, name) {
 function joinAudio(blobs) {
   if(blobs.every(blob=>/mpeg|mp3/.test(blob.type)))return Promise.all(blobs.map(async blob=>stripId3(new Uint8Array(await blob.arrayBuffer())))).then(bytes=>new Blob(bytes,{type:'audio/mpeg'}));
   return (async()=>{const ctx=new AudioContext(),decoded=await Promise.all(blobs.map(async blob=>ctx.decodeAudioData(await blob.arrayBuffer()))),rate=Math.max(...decoded.map(audio=>audio.sampleRate)),channels=Math.max(...decoded.map(audio=>audio.numberOfChannels)),frames=decoded.reduce((n,a)=>n+Math.ceil(a.duration*rate),0),out=new Int16Array(frames*channels);let offset=0;for(const audio of decoded){for(let i=0;i<Math.ceil(audio.duration*rate);i++)for(let channel=0;channel<channels;channel++)out[(offset+i)*channels+channel]=Math.max(-1,Math.min(1,audio.getChannelData(Math.min(channel,audio.numberOfChannels-1))[Math.min(i,audio.length-1)]||0))*32767;offset+=Math.ceil(audio.duration*rate);}await ctx.close();const header=new ArrayBuffer(44),view=new DataView(header),write=(at,text)=>[...text].forEach((c,i)=>view.setUint8(at+i,c.charCodeAt(i)));write(0,'RIFF');view.setUint32(4,36+out.byteLength,true);write(8,'WAVEfmt ');view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,channels,true);view.setUint32(24,rate,true);view.setUint32(28,rate*channels*2,true);view.setUint16(32,channels*2,true);view.setUint16(34,16,true);write(36,'data');view.setUint32(40,out.byteLength,true);return new Blob([header,out],{type:'audio/wav'});})();
-}
-function duration(url) {
-  return new Promise((resolve, reject) => {
-    const probe = new Audio();
-    const timer = setTimeout(() => finish(new Error('Không đo được thời lượng MP3')), 15000);
-    const finish = error => { clearTimeout(timer); const d = probe.duration; probe.removeAttribute('src'); probe.load(); error ? reject(error) : resolve(d); };
-    probe.onloadedmetadata = () => finish(Number.isFinite(probe.duration) && probe.duration > 0 ? null : new Error('Thời lượng MP3 không hợp lệ'));
-    probe.onerror = () => finish(new Error('Không đọc được MP3')); probe.src = url;
-  });
 }
 export default function ListeningImage({onContextChange,historyEntry,clickableText=text=>text,inputLesson=null,autoGenerate=false}) {
   const [pages,setPages]=useState([]), [croppedPages,setCroppedPages]=useState([]), [pageIndex,setPageIndex]=useState(0), [joining,setJoining]=useState(false);
@@ -87,7 +79,7 @@ export default function ListeningImage({onContextChange,historyEntry,clickableTe
   const createAudio = async (current = lesson, selectedVoices = voices, cacheOnly = false) => {
     setAudioBusy(true); setError(''); setAudioProgress(0);
     const token = version.current;
-    // ponytail: sequential sentence MP3s, measured browser durations. Upgrade to provider timestamps for gapless audio.
+    // Decode without HTMLAudio metadata probes: mobile browsers can reject detached probes.
     try {
       for (let i = resources.current.length; i < current.sentences.length; i++) {
         if (token !== version.current) return;
@@ -96,15 +88,15 @@ export default function ListeningImage({onContextChange,historyEntry,clickableTe
         if (!res.ok) await parseApiResponse(res);
         if (!res.headers.get('content-type')?.includes('audio/')) throw new Error('TTS response không phải audio');
         const blob = await res.blob(); if (blob.size < 1000) throw new Error('MP3 rỗng');
+        const decoded = await decodeSpeech(blob);
         const url = URL.createObjectURL(blob);
         try {
-          const seconds = await duration(url);
+          const seconds = decoded.duration;
           if (token !== version.current) { URL.revokeObjectURL(url); return; }
-          resources.current.push({ url, blob, duration: seconds }); setAudioProgress(i + 1);
+          resources.current.push({ url, blob, decoded, duration: seconds }); setAudioProgress(i + 1);
         } catch (e) { URL.revokeObjectURL(url); throw e; }
       }
-      const joined=URL.createObjectURL(await joinAudio(resources.current.map(c=>c.blob)));
-      await duration(joined).catch(e=>{URL.revokeObjectURL(joined);throw e;});
+      const joined=URL.createObjectURL(speechWav(resources.current.map(c=>c.decoded)));
       if(token!==version.current){URL.revokeObjectURL(joined);return;}
       URL.revokeObjectURL(fullAudio.current);fullAudio.current=joined;setAudioUrl(joined);
       setClips([...resources.current]);
