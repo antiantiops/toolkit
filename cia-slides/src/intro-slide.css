@@ -3,8 +3,8 @@
 .nim-intro-column{position:absolute;left:58%;top:0;bottom:0;width:20%;background:#fff;z-index:0}
 .nim-intro-copy{position:absolute;left:10%;top:50%;transform:translateY(-50%);z-index:2;width:46%}
 .nim-about-sweep{width:max-content;font:400 88px/.9 'Anton','Bebas Neue',sans-serif;letter-spacing:2px;color:#fff;clip-path:inset(0 100% 0 0);filter:brightness(.35);white-space:nowrap}
-.nim-name-strip{position:relative;width:min(560px,100%);height:160px;padding:18px 22px;overflow:hidden;opacity:0;background:#fff;color:#101010;margin-top:22px;box-sizing:border-box;transform:translateX(-40px)}
-.nim-name-strip p{font:300 21px/1.1 'Inter',sans-serif;letter-spacing:1px;margin:0 0 6px;color:#303030}.nim-name-strip h1{font-family:'Anton','Bebas Neue',sans-serif;font-size:108px;font-weight:400;line-height:.82;letter-spacing:2px;margin:0;color:#111}
+.nim-name-strip{position:relative;width:min(560px,100%);padding:0;overflow:hidden;opacity:0;background:transparent;color:#fff;margin-top:22px;box-sizing:border-box;transform:translateX(-40px)}
+.nim-name-strip p{font:300 21px/1.1 'Inter',sans-serif;letter-spacing:1px;margin:0 0 6px;color:#d6d6d6}.nim-name-strip h1{font-family:'Anton','Bebas Neue',sans-serif;font-size:108px;font-weight:400;line-height:.82;letter-spacing:2px;margin:0;color:#fff}
 .nim-intro-role{opacity:0;transform:translateY(10px)}
 .intro-about-ready .nim-about-sweep{animation:intro-about-sweep 900ms cubic-bezier(.22,1,.36,1) forwards}.intro-name-ready .nim-name-strip{animation:intro-name-strip 650ms cubic-bezier(.22,1,.36,1) forwards}.intro-role-ready .nim-intro-role{animation:intro-role-in 450ms ease-out forwards}
 @keyframes intro-about-sweep{to{clip-path:inset(0);filter:brightness(1)}}@keyframes intro-name-strip{from{opacity:0;transform:translateX(-40px);clip-path:inset(0 100% 0 0)}to{opacity:1;transform:translateX(0);clip-path:inset(0)}}@keyframes intro-role-in{to{opacity:1;transform:translateY(0)}}
