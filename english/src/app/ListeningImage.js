@@ -11,6 +11,10 @@ function download(blob, name) {
   const url = URL.createObjectURL(blob), link = document.createElement('a');
   link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+function joinAudio(blobs) {
+  if(blobs.every(blob=>/mpeg|mp3/.test(blob.type)))return Promise.all(blobs.map(async blob=>stripId3(new Uint8Array(await blob.arrayBuffer())))).then(bytes=>new Blob(bytes,{type:'audio/mpeg'}));
+  return (async()=>{const ctx=new AudioContext(),decoded=await Promise.all(blobs.map(async blob=>ctx.decodeAudioData(await blob.arrayBuffer()))),rate=Math.max(...decoded.map(audio=>audio.sampleRate)),channels=Math.max(...decoded.map(audio=>audio.numberOfChannels)),frames=decoded.reduce((n,a)=>n+Math.ceil(a.duration*rate),0),out=new Int16Array(frames*channels);let offset=0;for(const audio of decoded){for(let i=0;i<Math.ceil(audio.duration*rate);i++)for(let channel=0;channel<channels;channel++)out[(offset+i)*channels+channel]=Math.max(-1,Math.min(1,audio.getChannelData(Math.min(channel,audio.numberOfChannels-1))[Math.min(i,audio.length-1)]||0))*32767;offset+=Math.ceil(audio.duration*rate);}await ctx.close();const header=new ArrayBuffer(44),view=new DataView(header),write=(at,text)=>[...text].forEach((c,i)=>view.setUint8(at+i,c.charCodeAt(i)));write(0,'RIFF');view.setUint32(4,36+out.byteLength,true);write(8,'WAVEfmt ');view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,channels,true);view.setUint32(24,rate,true);view.setUint32(28,rate*channels*2,true);view.setUint16(32,channels*2,true);view.setUint16(34,16,true);write(36,'data');view.setUint32(40,out.byteLength,true);return new Blob([header,out],{type:'audio/wav'});})();
+}
 function duration(url) {
   return new Promise((resolve, reject) => {
     const probe = new Audio();
@@ -99,8 +103,7 @@ export default function ListeningImage({onContextChange,historyEntry,clickableTe
           resources.current.push({ url, blob, duration: seconds }); setAudioProgress(i + 1);
         } catch (e) { URL.revokeObjectURL(url); throw e; }
       }
-      const bytes=await Promise.all(resources.current.map(async c=>stripId3(new Uint8Array(await c.blob.arrayBuffer()))));
-      const joined=URL.createObjectURL(new Blob(bytes,{type:'audio/mpeg'}));
+      const joined=URL.createObjectURL(await joinAudio(resources.current.map(c=>c.blob)));
       await duration(joined).catch(e=>{URL.revokeObjectURL(joined);throw e;});
       if(token!==version.current){URL.revokeObjectURL(joined);return;}
       URL.revokeObjectURL(fullAudio.current);fullAudio.current=joined;setAudioUrl(joined);
@@ -112,8 +115,8 @@ export default function ListeningImage({onContextChange,historyEntry,clickableTe
   const saveAudio = async () => {
     try {
       const text = lesson.sentences.map(s => `${s.en}\n${s.vi}`).join('\n\n');
-      const bytes = await Promise.all(clips.map(async c => stripId3(new Uint8Array(await c.blob.arrayBuffer()))));
-      download(new Blob([lyricsTag(text), ...bytes], { type: 'audio/mpeg' }), 'listening.mp3');
+      const joined=await joinAudio(clips.map(c=>c.blob));
+      download(joined.type==='audio/mpeg'?new Blob([lyricsTag(text),joined],{type:'audio/mpeg'}):joined,joined.type==='audio/mpeg'?'listening.mp3':'listening.wav');
     } catch (e) { setError(formatErrorMessage(e)); }
   };
   const total = clips.reduce((n, c) => n + c.duration, 0);

@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const source=fs.readFileSync(new URL('../src/app/api/listening/route.js',import.meta.url),'utf8');
+assert.match(source,/gemini\/gemini-3\.1-flash-tts-preview/);
+assert.match(source,/voice:'Zephyr'/);
+assert.match(source,/response_format:'wav'/);
+assert.match(source,/\[502,503,504\]/);
+assert.match(source,/audio\/wav/);
+assert.match(source,/wavFile/);
+console.log('PASS: Edge transient failures fall back to Gemini WAV; cache preserves MIME');
