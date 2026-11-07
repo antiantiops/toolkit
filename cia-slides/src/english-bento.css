@@ -234,3 +234,13 @@
 .grammar-teacher>span:first-child{top:17px;left:-2px;transform:scale(.85);z-index:3}
 
 .grammar-teacher svg .grammar-arm{stroke:#a6bad7;stroke-width:6}.grammar-teacher svg .grammar-hand{fill:#dce7f5;stroke:#92a9c9;stroke-width:1.5}
+/* Light app showcase: large authentic screen, quiet indigo frame. */
+.bento-hero{background:radial-gradient(ellipse at 50% 0,#e0e7ff,transparent 70%),linear-gradient(145deg,#fafaff,#eef2ff);color:#172554;padding:18px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.bento-hero .bento-label{color:#6366a0;font-size:9px;letter-spacing:.12em}
+.bento-hero h2{color:#312e81;font-size:48px;letter-spacing:-2px;margin:0;line-height:1}
+.bento-hero h2 .bento-center-sub{color:#64748b;font-size:15px;font-weight:500;letter-spacing:-.2px;margin-top:7px}
+.bento-hero .bento-real-home{display:block;width:100%;max-width:100%;height:auto;max-height:none;margin:5px 0 0;transform:perspective(1100px) rotateX(3deg) rotateZ(-1deg);border:5px solid white;border-radius:12px;box-sizing:border-box;background:#f3f4f6;box-shadow:0 16px 26px #4338ca20,0 2px 5px #33415514}
+.bento-hero .bento-demo{position:static;color:#64748b;font-size:7px;letter-spacing:.1em;margin-top:3px;flex-shrink:0}
+.bento-hero{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;justify-items:center;align-content:stretch;gap:7px}
+.bento-hero .bento-real-home{height:100%;width:auto;max-width:100%;min-height:0;object-fit:contain;margin:0}
+.bento-hero h2{font-size:42px}
