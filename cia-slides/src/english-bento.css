@@ -244,3 +244,27 @@
 .bento-hero{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;justify-items:center;align-content:stretch;gap:7px}
 .bento-hero .bento-real-home{height:100%;width:auto;max-width:100%;min-height:0;object-fit:contain;margin:0}
 .bento-hero h2{font-size:42px}
+/* Apple Keynote 3D Bento refactor: #F5F5F7 canvas, 28px cards, unified 3D inner chassis. */
+.presentation:has(.english-bento){background:#F5F5F7}
+.english-bento{color:#1D1D1F;gap:20px;padding:12px 4px 16px}
+.bento-heading h1,.bento-tile h2,.bento-writing .coach-scene h2{color:#1D1D1F;letter-spacing:-0.03em;font-weight:750}
+.bento-heading>a,.bento-demo,.companion-demo,.coach-bottom-tags,.bento-words small,.bento-vocabulary .grammar-caption{display:none}
+.bento-grid{gap:16px}
+.bento-tile{background:#FFFFFF;border-radius:28px;overflow:hidden;border:1px solid rgba(0,0,0,0.04);box-shadow:inset 0 1px 0 rgba(255,255,255,0.92),0 20px 40px -15px rgba(0,0,0,0.07);padding:24px}
+.bento-hero{padding:22px 28px 0;background:radial-gradient(ellipse at 50% 0,#e8ecff,transparent 72%),linear-gradient(160deg,#ffffff 0%,#f3f4ff 100%);grid-template-rows:auto auto minmax(0,1fr)}
+.bento-hero h2{color:#1D1D1F;letter-spacing:-0.03em;font-size:44px}
+.bento-hero .bento-real-home{height:90%;width:auto;max-width:85%;align-self:end;transform:perspective(1100px) rotateX(6deg) rotateY(-5deg) rotateZ(-1deg) scale(1.15);transform-origin:top center;border:4px solid #fff;border-radius:14px;box-shadow:inset 0 1px 0 #fff,3px 4px 0 #cbd5e1,6px 8px 0 #94a3b8,0 22px 36px rgba(15,23,42,.16)}
+.bento-listening{padding:24px 20px 0;background:linear-gradient(165deg,#ffffff 0%,#eef1f6 100%)}
+.bento-listening .listening-model{width:88%;height:auto;padding:0;margin-top:14px;background:linear-gradient(165deg,#aaf2e4 0%,#e5f6f3 55%,#ffffff 59%);border:1px solid #d7e7e4;border-radius:18px;overflow:hidden;transform:perspective(1100px) rotateX(6deg) rotateY(10deg) rotateZ(-1.5deg) scale(1.15);transform-origin:top center;box-shadow:inset 0 1px 1px rgba(255,255,255,.95),-4px 4px 0 #cbd5e1,-7px 7px 0 #94a3b8,0 22px 40px rgba(15,23,42,.16)}
+.bento-listening .listening-model-transcript{background:transparent;border:0;border-radius:0;box-shadow:none;transform:none;padding:12px 13px 10px}
+.bento-listening .listening-model-player{margin-top:0;background:rgba(255,255,255,.94);border:0;border-top:1px solid #dfece9;border-radius:0;box-shadow:none;transform:none;padding:12px 12px 14px}
+.bento-writing{padding:18px 14px 0;background:linear-gradient(155deg,#ffffff 0%,#f1ecfc 100%)}
+.bento-writing .coach-scene{width:88%;height:92%;margin:4px auto 0;transform:perspective(1000px) rotateX(5deg) rotateY(-10deg) rotateZ(-1.5deg) scale(1.15);transform-origin:top center;border-radius:18px;box-shadow:inset 0 1px 1px #fff,4px 4px 0 #d5d0e6,7px 7px 0 #b8b1cf,0 20px 34px rgba(45,27,78,.16)}
+.bento-writing .coach-email p{font-size:9.5px;white-space:nowrap}
+.bento-words{padding:22px 18px;background:linear-gradient(145deg,#e3f9ea 0%,#f4fdf7 100%)}
+.bento-chat{padding:18px 18px 0;background:linear-gradient(135deg,#efe3ff 0%,#d8c2fc 68%,#c3abfa 100%)}
+.bento-chat .bento-chat-backdrop{inset:54px 14px 4px}
+.bento-chat .bento-chat-window{width:88%;margin:0 auto;padding:6px 7px;background:rgba(255,255,255,.28);border:1px solid rgba(255,255,255,.55);border-radius:14px;transform:perspective(800px) rotateX(5deg) rotateY(-8deg) rotateZ(-1.2deg) scale(1.15);transform-origin:top center;box-shadow:inset 0 1px 0 rgba(255,255,255,.85),3px 4px 0 #c4aef0,6px 7px 0 #a98ee0,0 16px 28px rgba(48,24,96,.16)}
+.bento-vocabulary{padding:18px 18px 0;background:linear-gradient(145deg,#f8f3ff 0%,#eee4fc 100%)}
+.bento-vocabulary .grammar-lesson{height:104px;align-items:flex-start;margin-top:4px}
+.bento-vocabulary .grammar-board{flex:0 0 74%;transform:perspective(700px) rotateX(5deg) rotateY(-10deg) rotateZ(-1.5deg) scale(1.15);transform-origin:left top;border-radius:12px;box-shadow:inset 0 1px 0 #fff,3px 4px 0 #cfc2e6,6px 7px 0 #b3a1d1,0 16px 28px rgba(74,48,118,.15)}
