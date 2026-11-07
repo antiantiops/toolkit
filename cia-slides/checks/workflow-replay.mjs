@@ -1,0 +1,4 @@
+import {chromium} from '/usr/local/lib/node_modules/playwright/index.mjs';
+import assert from 'node:assert/strict';
+const b=await chromium.launch({args:['--no-sandbox']});
+try { for (const lang of ['en','vi']) { const p=await b.newPage({viewport:{width:1366,height:768}}); await p.addInitScript(l=>localStorage.setItem('deck-language',l),lang); await p.goto(`${process.env.BASE_URL||'http://localhost:8278'}/#8`); await p.locator('.flow-comparison').waitFor(); assert.equal(await p.locator('.flow-focus-controls').count(),0); const before=await p.locator('.flow-columns').evaluate(e=>e); await p.locator('.flow-replay').click(); await p.waitForFunction(prev=>document.querySelector('.flow-columns')!==prev,before); assert.equal(await p.locator('.flow-columns>section').count(),2); await p.screenshot({path:`/tmp/cia-workflow-replay-${lang}.png`}); await p.close(); }} finally {await b.close()} console.log('PASS no obsolete focus buttons; Replay restarts both flow SVGs EN/VI');

@@ -2,3 +2,5 @@
 @media(prefers-reduced-motion:reduce){.flow-comparison .flow-columns{transition:none}}
 /* Keep added presenter controls above diagram without covering deck footer. */
 .flow-comparison .flow-panel>svg{max-height:445px}.flow-comparison .flow-focus-controls{margin:0}.flow-comparison .access-footnote{margin:0}.flow-comparison.focus-goal .flow-user,.flow-comparison.focus-review .flow-user{filter:drop-shadow(0 0 5px #2563eb55)}
+/* One optional control: restart both independent SVG timelines. */
+.flow-replay{align-self:center;border:1px solid #94a3b8;background:#fff;border-radius:999px;padding:5px 11px;color:#334155;font:inherit;font-size:12px;cursor:pointer}.flow-replay:hover{background:#f8fafc}.flow-replay:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
