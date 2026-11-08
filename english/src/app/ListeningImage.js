@@ -128,7 +128,7 @@ export default function ListeningImage({onContextChange,historyEntry,clickableTe
     return ()=>{for(const name of Object.keys(handlers))try{media.setActionHandler(name,null);}catch{}};
   },[audioUrl,total]);
   return <section id="image-listening" className="space-y-4">
-    {!inputLesson&&<>
+    {!inputLesson && historyEntry?.source !== 'text' && <>
     <h2 className="text-xl font-bold text-teal-200">Listening từ ảnh</h2>
     <p className="text-sm text-slate-400">Tạo bài nghe từ trang sách. Khoanh một hoặc nhiều vùng theo thứ tự đọc, ghép thành một bài nghe. Chỉ vùng chọn được gửi AI.</p>
     <input ref={fileInput} type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e => { const files = Array.from(e.target.files || []); e.target.value = ''; chooseFiles(files); }} />
