@@ -112,10 +112,15 @@ export default function PronunciationRecorder({ word, ipa }) {
     {error && <p role="alert" className="mt-2 text-red-300">{error}</p>}
     {result && <div aria-live="polite" className="mt-5 overflow-hidden rounded-2xl border border-violet-500/50 bg-[#15152a] text-slate-100">
       <div className="flex flex-col items-center border-b border-violet-500/25 px-4 pt-4"><ScoreGauge score={result.score}/><p className="-mt-2 pb-3 text-xs font-semibold uppercase tracking-[.18em] text-violet-200">{Number.isInteger(result.score)?'Độ chính xác phát âm':'Góp ý từ AI'}</p></div>
-      <div className="space-y-3 p-4">
-        {Array.isArray(result.segments)&&result.segments.length>0 ? <><div className="flex items-center justify-center gap-1 text-4xl font-bold tracking-wide">{result.segments.map((s,i)=><span key={i} className={s.status==='wrong'?'text-rose-500':s.status==='correct'?'text-emerald-500':'text-slate-300'}>{s.text}</span>)}<MouthGuide ipa={ipa}/></div><p className="text-center font-mono text-lg text-violet-200">{ipa}</p></> : <div className="flex flex-wrap items-center gap-2 text-base"><strong>Nghe được:</strong> <span className={result.heard && result.heard.trim().toLowerCase() !== word.trim().toLowerCase() ? 'rounded bg-rose-500/20 px-2 py-0.5 font-semibold text-rose-200 line-through decoration-rose-300' : 'rounded bg-emerald-500/20 px-2 py-0.5 font-semibold text-emerald-200'}>{result.heard || 'Không rõ'}</span>{result.heard && result.heard.trim().toLowerCase() !== word.trim().toLowerCase() && <><span className="text-slate-500">→</span><span className="rounded bg-emerald-500/20 px-2 py-0.5 font-semibold text-emerald-200">{word}</span></>}</div>}
-        <p className="leading-relaxed">{result.summary}</p>
-        {result.tips.length > 0 && <ul className="space-y-2 border-t border-violet-500/25 pt-3">{result.tips.map((tip, i) => <li key={i} className="rounded-lg bg-amber-500/10 px-3 py-2 text-amber-100">{tip}</li>)}</ul>}
+      <div className="flex flex-col items-center gap-3 p-4">
+        {Array.isArray(result.segments)&&result.segments.length>0 ? <>
+          <div className="flex items-center justify-center gap-2 text-4xl font-bold tracking-wide">
+            {result.segments.map((s,i)=><span key={i} className={s.status==='wrong'?'text-rose-500':s.status==='correct'?'text-emerald-500':'text-slate-300'}>{s.text}</span>)}
+          </div>
+          {ipa && <div className="rounded-lg border border-slate-700 bg-slate-900/90 px-3 py-1 font-mono text-sm tracking-wider text-violet-200">{ipa}</div>}
+        </> : <div className="flex flex-wrap items-center gap-2 text-base"><strong>Nghe được:</strong> <span className={result.heard && result.heard.trim().toLowerCase() !== word.trim().toLowerCase() ? 'rounded bg-rose-500/20 px-2 py-0.5 font-semibold text-rose-200 line-through decoration-rose-300' : 'rounded bg-emerald-500/20 px-2 py-0.5 font-semibold text-emerald-200'}>{result.heard || 'Không rõ'}</span>{result.heard && result.heard.trim().toLowerCase() !== word.trim().toLowerCase() && <><span className="text-slate-500">→</span><span className="rounded bg-emerald-500/20 px-2 py-0.5 font-semibold text-emerald-200">{word}</span></>}</div>}
+        <p className="w-full text-center text-sm leading-relaxed text-slate-200">{result.summary}</p>
+        {result.tips.length > 0 && <ul className="w-full space-y-2 border-t border-violet-500/25 pt-3">{result.tips.map((tip, i) => <li key={i} className="rounded-lg bg-amber-500/10 px-3 py-2 text-left text-sm text-amber-100">{tip}</li>)}</ul>}
       </div>
     </div>}
   </section>;
