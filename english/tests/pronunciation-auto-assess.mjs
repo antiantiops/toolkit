@@ -6,5 +6,8 @@ assert.ok(src.includes("recordedClip || clip?.blob"),'auto-submit must use decod
 assert.ok(src.includes("Dừng là tự gửi Gemini góp ý."));
 assert.ok(src.includes("Dừng ghi âm và gửi AI đánh giá"));
 assert.ok(src.includes("result.heard.trim().toLowerCase() !== word.trim().toLowerCase()"),'heard mismatch needs visible comparison');
+assert.ok(src.includes('function ScoreGauge({ score })'),'result needs pronunciation gauge');
+assert.ok(src.includes("result.segments.map"),'result needs per-segment error colors');
+assert.ok(src.includes("form.set('ipa',ipa||'')"),'assessment needs displayed IPA context');
 assert.ok(src.includes("error && <button"),'manual retry remains only for an error');
 console.log('PASS pronunciation auto assess contract');
