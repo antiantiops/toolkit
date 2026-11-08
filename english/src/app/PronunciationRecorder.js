@@ -2,9 +2,8 @@
 import { useEffect, useRef, useState } from 'react';
 import MouthGuide from './MouthGuide';
 
-async function ScoreGauge({ score }) {
+function ScoreGauge({ score }) {
   if (!Number.isInteger(score)) return null;
-  const r=42, c=2*Math.PI*r, dash=c*.72, filled=dash*score/100;
   return <div className="relative h-24 w-40" aria-label={`Điểm phát âm ${score}%`}><svg viewBox="0 0 120 78" className="h-full w-full overflow-visible"><path d="M 18 64 A 44 44 0 0 1 102 64" fill="none" stroke="#312e5b" strokeWidth="9" strokeLinecap="round"/><path d="M 18 64 A 44 44 0 0 1 102 64" fill="none" stroke={score>=80?'#22c55e':score>=55?'#f97316':'#ef4444'} strokeWidth="9" strokeLinecap="round" pathLength="100" strokeDasharray={`${score} 100`}/></svg><strong className="absolute inset-x-0 top-9 text-center text-2xl tracking-tight text-white">{score}%</strong></div>;
 }
 async function wav(blob) {
