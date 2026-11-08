@@ -585,30 +585,32 @@ export default function Home() {
   const [saveError, setSaveError] = useState("");
   const lookupWord = async (word, context = "", save = true) => {
     setSaveError("");
-    if (save) rememberEnglish(word).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại."));
     const requestId = ++lookupRequest.current;
     const key = JSON.stringify([word.toLowerCase(), context]);
     const cached = lookupCache.current.get(key);
-    if (cached) { setLookup({ ...cached, pronunciation: pronunciationCache.current.get(word.toLowerCase()), loading: false, detailLoading: false }); return; }
+    if (cached) { if (save) rememberEnglish(cached.word || word).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại.")); setLookup({ ...cached, pronunciation: pronunciationCache.current.get((cached.word || word).toLowerCase()), loading: false, detailLoading: false }); return; }
     const meaning = meanings[word.toLowerCase()];
     const body = JSON.stringify({ word, context });
     const pronunciationKey = word.toLowerCase();
     const knownPronunciation = pronunciationCache.current.get(pronunciationKey);
-    setLookup({ word, meaning, pronunciation: knownPronunciation, loading: !meaning, detailLoading: true });
-    if (!knownPronunciation && /^[A-Za-z][A-Za-z'-]{0,63}$/.test(word)) {
-      fetch('/api/pronunciation?word=' + encodeURIComponent(word))
-        .then(parseApiResponse).then(data => {
-          if (!data.pronunciation) return;
-          if (pronunciationCache.current.size >= 500) pronunciationCache.current.delete(pronunciationCache.current.keys().next().value);
-          pronunciationCache.current.set(pronunciationKey, data.pronunciation);
-          if (requestId === lookupRequest.current) setLookup(current => current ? { ...current, pronunciation: data.pronunciation } : current);
-        }).catch(() => {});
-    }
-    if (/^[A-Za-z][A-Za-z'-]{0,63}$/.test(word)) {
-      fetch('/api/word-class?word=' + encodeURIComponent(word)).then(parseApiResponse).then(data => {
+    const loadMeta = target => {
+      const k = target.toLowerCase();
+      if (!/^[A-Za-z][A-Za-z'-]{0,63}$/.test(target)) return;
+      if (!pronunciationCache.current.has(k)) {
+        fetch('/api/pronunciation?word=' + encodeURIComponent(target))
+          .then(parseApiResponse).then(data => {
+            if (!data.pronunciation) return;
+            if (pronunciationCache.current.size >= 500) pronunciationCache.current.delete(pronunciationCache.current.keys().next().value);
+            pronunciationCache.current.set(k, data.pronunciation);
+            if (requestId === lookupRequest.current) setLookup(current => current ? { ...current, pronunciation: data.pronunciation } : current);
+          }).catch(() => {});
+      }
+      fetch('/api/word-class?word=' + encodeURIComponent(target)).then(parseApiResponse).then(data => {
         if (requestId === lookupRequest.current && data.partsOfSpeech?.length) setLookup(current => current ? { ...current, dictionaryParts: data.partsOfSpeech } : current);
       }).catch(() => {});
-    }
+    };
+    setLookup({ word, meaning, pronunciation: knownPronunciation, loading: !meaning, detailLoading: true });
+    loadMeta(word);
     const quick = meaning ? Promise.resolve() : fetch("/api/quick-word", { method: "POST", headers: { "Content-Type": "application/json" }, body })
       .then(parseApiResponse)
       .then(data => setLookup(current => requestId === lookupRequest.current && current?.word === word && current.detailLoading ? { ...current, meaning: data.meaning, ipa: data.ipa || current.ipa, loading: false, quick: true } : current))
@@ -616,10 +618,17 @@ export default function Home() {
     try {
       const res = await fetchWithRetry("/api/word", { method: "POST", headers: { "Content-Type": "application/json" }, body, timeout: 60000 }, 0);
       const data = await parseApiResponse(res);
+      const canonical = data.word.word || word;
+      if (save) rememberEnglish(canonical).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại."));
       if (lookupCache.current.size >= 100) lookupCache.current.delete(lookupCache.current.keys().next().value);
       lookupCache.current.set(key, data.word);
-      if (requestId === lookupRequest.current) setLookup(current => current ? { ...data.word, pronunciation: current.pronunciation, dictionaryParts: current.dictionaryParts, loading: false, detailLoading: false } : null);
+      if (requestId === lookupRequest.current) {
+        const canonicalPron = pronunciationCache.current.get(canonical.toLowerCase());
+        setLookup(current => current ? { ...data.word, pronunciation: canonical.toLowerCase() === pronunciationKey ? current.pronunciation : canonicalPron, dictionaryParts: canonical.toLowerCase() === pronunciationKey ? current.dictionaryParts : undefined, loading: false, detailLoading: false } : null);
+        if (canonical.toLowerCase() !== pronunciationKey) loadMeta(canonical);
+      }
     } catch (e) {
+      if (save) rememberEnglish(word).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại."));
       await quick;
       if (requestId === lookupRequest.current) setLookup(current => !current ? null : current.meaning ? { ...current, loading: false, detailLoading: false } : { word, error: formatErrorMessage(e), loading: false, detailLoading: false });
     }
@@ -1621,6 +1630,7 @@ export default function Home() {
             <div className="flex items-start justify-between gap-3">
               <div data-testid="lookup-word-header" className="flex min-w-0 flex-wrap items-center gap-2">
                 <div className="break-words text-xl font-bold text-sky-300">{lookup.word}</div>
+                <CopyBtn text={lookup.word} />
                 <SpeakBtn text={lookup.word} title="Nghe từ" aria-label="Nghe từ" className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-base text-white hover:bg-emerald-500" />
               </div>
               <div className="flex shrink-0 items-center gap-1">
@@ -1631,6 +1641,13 @@ export default function Home() {
               <button onClick={() => setLookup(null)} className="rounded-lg px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-white" aria-label="Đóng">✕</button>
               </div>
             </div>
+            {lookup.typoOf && lookup.typoOf.toLowerCase() !== lookup.word.toLowerCase() && (
+              <div data-testid="lookup-spelling-correction" className="mt-2 rounded-lg border border-amber-800/40 bg-amber-950/40 px-3 py-2 text-xs leading-relaxed text-amber-200">
+                <span className="font-semibold text-amber-400">Sửa chính tả: </span>
+                <span className="mr-1.5 text-slate-400 line-through">{lookup.typoOf}</span>
+                → <span className="ml-1.5 font-semibold text-emerald-300">{lookup.word}</span>
+              </div>
+            )}
             {(lookup.partOfSpeech || lookup.dictionaryParts?.length > 0) && <div data-testid="lookup-word-class" className="mt-2 text-sm font-semibold text-amber-200">{lookup.partOfSpeech || lookup.dictionaryParts.join(' · ')}{!lookup.partOfSpeech && <small className="ml-2 font-normal text-slate-400">Từ loại trong từ điển</small>}</div>}
             {lookup.pronunciation && <div data-testid="lookup-pronunciation" className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-violet-300"><span>🇬🇧 UK: {lookup.pronunciation.uk || "Chưa có"}</span><span>🇺🇸 US: {lookup.pronunciation.us || "Chưa có"}</span><small className="w-full text-xs text-slate-400">Nguồn: {lookup.pronunciation.source} · Phiên âm từ điển; có thể khác theo từ loại/ngữ cảnh.</small></div>}
             {lookup.practice && <div id="word-pronunciation-practice"><PronunciationRecorder key={lookup.word} word={lookup.word} ipa={lookup.pronunciation?.us || lookup.pronunciation?.uk || lookup.ipa || ""} /></div>}

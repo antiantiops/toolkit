@@ -14,7 +14,7 @@ function database() {
   return db;
 }
 export function lookupKey(word, context) {
-  return JSON.stringify(['word-v1', word.trim().toLowerCase(), context]);
+  return JSON.stringify(['word-v2', word.trim().toLowerCase(), context]);
 }
 export function cachedLookup(owner, key, now = Date.now()) {
   if (!owner) return null;
@@ -33,7 +33,7 @@ export function cachedGameWords(owner, words, now = Date.now()) {
   if (!owner || !words.length) return [];
   const result = [];
   const query = database().prepare(`SELECT value FROM lookup_cache
-    WHERE owner=? AND expires>? AND json_extract(key,'$[0]')='word-v1'
+    WHERE owner=? AND expires>? AND json_extract(key,'$[0]') IN ('word-v2','word-v1')
     AND json_extract(key,'$[1]')=? ORDER BY expires DESC`);
   for (const row of words) {
     for (const entry of query.all(owner, now, row.english.trim().toLowerCase())) {
