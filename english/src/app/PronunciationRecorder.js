@@ -4,6 +4,37 @@ import MouthGuide from './MouthGuide';
 
 function CoachScoreCircle({ score }) {
   const hasScore = Number.isInteger(score);
+  const [displayScore, setDisplayScore] = useState(0);
+
+  useEffect(() => {
+    if (!Number.isInteger(score)) {
+      setDisplayScore(0);
+      return;
+    }
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setDisplayScore(score);
+      return;
+    }
+    let frameId;
+    const startTime = performance.now();
+    const duration = 900; // ms
+
+    function animate(currentTime) {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // easeOutCubic
+      const ease = 1 - Math.pow(1 - progress, 3);
+      setDisplayScore(Math.round(score * ease));
+
+      if (progress < 1) {
+        frameId = requestAnimationFrame(animate);
+      }
+    }
+
+    frameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frameId);
+  }, [score]);
+
   return (
     <div className="flex flex-col items-center justify-center" aria-label={hasScore ? `Điểm phát âm ${score}` : 'Chưa có điểm'}>
       <div className="relative flex h-32 w-32 items-center justify-center">
@@ -19,14 +50,15 @@ function CoachScoreCircle({ score }) {
               strokeWidth="6"
               strokeLinecap="round"
               strokeDasharray={2 * Math.PI * 50}
-              strokeDashoffset={2 * Math.PI * 50 * (1 - score / 100)}
+              strokeDashoffset={2 * Math.PI * 50 * (1 - displayScore / 100)}
+              style={{ transition: 'stroke 0.3s ease' }}
             />
           )}
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
           {hasScore ? (
             <span className={`text-4xl font-extrabold tracking-tight ${score >= 80 ? 'text-emerald-400' : score >= 50 ? 'text-amber-400' : 'text-rose-400'}`}>
-              {score}
+              {displayScore}
             </span>
           ) : (
             <div className="flex gap-1.5 text-2xl font-bold text-slate-500">
@@ -36,7 +68,7 @@ function CoachScoreCircle({ score }) {
           )}
         </div>
       </div>
-      <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+      <p className="mt-1 text-xs font-medium text-slate-400">
         {hasScore ? 'Độ chính xác' : 'Hãy nói từ / cụm sau'}
       </p>
     </div>
@@ -56,6 +88,14 @@ async function wav(blob) {
     samples.forEach((s, i) => view.setInt16(44 + i * 2, Math.round(Math.max(-1, Math.min(1, s)) * (s < 0 ? 32768 : 32767)), true));
     return new Blob([buffer], { type: 'audio/wav' });
   } finally { await context.close(); }
+}
+
+
+function normalizeDisplayWord(text) {
+  if (!text || typeof text !== 'string') return text;
+  const trimmed = text.trim();
+  if (trimmed.includes(' ') || (/^[A-Z0-9]+$/.test(trimmed) && trimmed.length > 1)) return trimmed;
+  return trimmed.toLowerCase();
 }
 
 export default function PronunciationRecorder({ word, ipa }) {
@@ -141,7 +181,7 @@ export default function PronunciationRecorder({ word, ipa }) {
       <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
         <div className="flex items-center gap-2">
           <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Luyện phát âm · The Coach</h3>
+          <h3 className="text-sm font-semibold text-slate-300">Luyện phát âm</h3>
         </div>
         <MouthGuide ipa={ipa} />
       </div>
@@ -154,19 +194,23 @@ export default function PronunciationRecorder({ word, ipa }) {
       {/* 2. Từ cần đọc & Phiên âm ở trên nút ghi âm */}
       <div className="mt-6 flex flex-col items-center text-center">
         {Array.isArray(result?.segments) && result.segments.length > 0 ? (
-          <div className="flex flex-wrap items-center justify-center gap-1 text-3xl font-bold tracking-tight text-white">
-            {result.segments.map((s, i) => (
-              <span
-                key={i}
-                className={s.status === 'wrong' ? 'text-rose-500 font-extrabold underline decoration-rose-500 decoration-2' : s.status === 'correct' ? 'text-emerald-400 font-extrabold' : 'text-slate-300'}
-              >
-                {s.text}
-              </span>
-            ))}
+          <div className="inline-flex flex-wrap items-center justify-center text-3xl font-bold tracking-tight text-white">
+            {result.segments.map((s, i) => {
+              const isSingleWord = !word.includes(' ') && !/^[A-Z0-9]+$/.test(word.trim());
+              const text = isSingleWord ? s.text.toLowerCase() : s.text;
+              return (
+                <span
+                  key={i}
+                  className={s.status === 'wrong' ? 'text-rose-500 font-extrabold underline decoration-rose-500 decoration-2' : s.status === 'correct' ? 'text-emerald-400 font-extrabold' : 'text-slate-300'}
+                >
+                  {text}
+                </span>
+              );
+            })}
           </div>
         ) : (
           <div className="text-3xl font-extrabold tracking-tight text-white">
-            {word}
+            {normalizeDisplayWord(word)}
           </div>
         )}
 
@@ -177,10 +221,10 @@ export default function PronunciationRecorder({ word, ipa }) {
         )}
       </div>
 
-      {result?.heard?.trim() && (
-        <div data-testid="pronunciation-heard" className="mt-4 rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3 text-center text-sm break-words">
-          <p className="text-slate-400">Bạn đọc nghe như: <strong className="text-amber-200">{result.heard}</strong></p>
-          <p className="mt-1 text-slate-400">Từ cần đọc: <strong className="text-emerald-300">{word}</strong></p>
+      {result?.heard?.trim() && result.heard.trim().toLowerCase() !== word.trim().toLowerCase() && (
+        <div data-testid="pronunciation-heard" className="mt-4 rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-center text-sm break-words">
+          <p className="text-slate-400">Bạn đọc nghe như: <strong className="text-amber-300">{normalizeDisplayWord(result.heard)}</strong></p>
+          <p className="mt-0.5 text-slate-400">Từ cần đọc: <strong className="text-emerald-400">{normalizeDisplayWord(word)}</strong></p>
         </div>
       )}
 
@@ -197,51 +241,42 @@ export default function PronunciationRecorder({ word, ipa }) {
         </div>
       )}
 
-      {/* 4. Nút ghi âm kiểu The Coach */}
+      {/* 4. Nút ghi âm */}
       <div className="mt-6 flex flex-col items-center">
         {state === 'recording' ? (
           <div className="flex flex-col items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-amber-400 animate-pulse">
+            <span className="text-xs font-medium text-amber-300">
               Nhấn để dừng
             </span>
             <button
               type="button"
               onClick={() => recorder.current?.stop()}
               aria-label="Dừng ghi âm và gửi AI đánh giá"
-              className="flex h-14 w-32 items-center justify-center rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-orange-500/30 active:scale-95 transition-transform"
+              className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-xl shadow-orange-500/25 ring-4 ring-orange-400/30 active:scale-95 transition-all"
             >
-              <div className="flex items-center gap-1.5">
-                <span className="h-4 w-1 rounded-full bg-white animate-[bounce_1s_infinite_100ms]" />
-                <span className="h-6 w-1 rounded-full bg-white animate-[bounce_1s_infinite_300ms]" />
-                <span className="h-5 w-1 rounded-full bg-white animate-[bounce_1s_infinite_200ms]" />
-                <span className="h-3 w-1 rounded-full bg-white animate-[bounce_1s_infinite_400ms]" />
+              <div className="flex items-center justify-center gap-1.5 h-8">
+                <span className="w-1 rounded-full bg-white wave-bar wave-1" />
+                <span className="w-1 rounded-full bg-white wave-bar wave-2" />
+                <span className="w-1 rounded-full bg-white wave-bar wave-3" />
+                <span className="w-1 rounded-full bg-white wave-bar wave-2" />
+                <span className="w-1 rounded-full bg-white wave-bar wave-1" />
               </div>
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col items-center gap-2">
             <button
               type="button"
               disabled={busy}
               onClick={start}
               aria-label="Bắt đầu ghi âm"
-              className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 transition-transform active:scale-95 disabled:opacity-50"
+              className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 text-white shadow-xl shadow-emerald-500/30 ring-4 ring-emerald-500/20 transition-all active:scale-95 disabled:opacity-50"
             >
-              <svg aria-hidden="true" viewBox="0 0 24 24" className="h-7 w-7 fill-current">
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="h-8 w-8 fill-current">
                 <rect x="9" y="3" width="6" height="11" rx="3" />
                 <path d="M6 11a6 6 0 0 0 12 0h-2a4 4 0 0 1-8 0H6zm5 8v3h2v-3h-2z" />
               </svg>
             </button>
-            {result && (
-              <button
-                type="button"
-                onClick={start}
-                disabled={busy}
-                className="h-12 rounded-full bg-sky-600 px-5 text-xs font-bold uppercase tracking-wider text-white shadow-md shadow-sky-600/30 active:scale-95 disabled:opacity-50"
-              >
-                Tiếp tục / Đọc lại
-              </button>
-            )}
           </div>
         )}
 
@@ -252,7 +287,7 @@ export default function PronunciationRecorder({ word, ipa }) {
             ? 'Đang phân tích phát âm…'
             : !result
             ? 'Bấm mic để bắt đầu nói'
-            : ''}
+            : 'Bấm mic để nói lại'}
         </p>
 
         {(clip || jobId) && error && (
@@ -286,6 +321,23 @@ export default function PronunciationRecorder({ word, ipa }) {
           </ul>
         </div>
       )}
+
+      <style jsx>{`
+        .wave-bar {
+          transform-origin: center;
+          animation: natural-wave 1.2s ease-in-out infinite alternate;
+        }
+        .wave-1 { height: 12px; animation-delay: 0s; }
+        .wave-2 { height: 22px; animation-delay: 0.2s; }
+        .wave-3 { height: 30px; animation-delay: 0.4s; }
+        @keyframes natural-wave {
+          0% { transform: scaleY(0.35); opacity: 0.7; }
+          100% { transform: scaleY(1); opacity: 1; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .wave-bar { animation: none; }
+        }
+      `}</style>
     </section>
   );
 }
