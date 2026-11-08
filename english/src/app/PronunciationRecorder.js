@@ -2,9 +2,45 @@
 import { useEffect, useRef, useState } from 'react';
 import MouthGuide from './MouthGuide';
 
-function ScoreGauge({ score }) {
-  if (!Number.isInteger(score)) return null;
-  return <div className="relative h-24 w-40" aria-label={`Điểm phát âm ${score}%`}><svg viewBox="0 0 120 78" className="h-full w-full overflow-visible"><path d="M 18 64 A 44 44 0 0 1 102 64" fill="none" stroke="#312e5b" strokeWidth="9" strokeLinecap="round"/><path d="M 18 64 A 44 44 0 0 1 102 64" fill="none" stroke={score>=80?'#22c55e':score>=55?'#f97316':'#ef4444'} strokeWidth="9" strokeLinecap="round" pathLength="100" strokeDasharray={`${score} 100`}/></svg><strong className="absolute inset-x-0 top-9 text-center text-2xl tracking-tight text-white">{score}%</strong></div>;
+function CoachScoreCircle({ score }) {
+  const hasScore = Number.isInteger(score);
+  return (
+    <div className="flex flex-col items-center justify-center" aria-label={hasScore ? `Điểm phát âm ${score}` : 'Chưa có điểm'}>
+      <div className="relative flex h-32 w-32 items-center justify-center">
+        <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#2b2d42" strokeWidth="6" strokeLinecap="round" />
+          {hasScore && (
+            <circle
+              cx="60"
+              cy="60"
+              r="50"
+              fill="none"
+              stroke={score >= 80 ? '#22c55e' : score >= 50 ? '#f59e0b' : '#ef4444'}
+              strokeWidth="6"
+              strokeLinecap="round"
+              strokeDasharray={2 * Math.PI * 50}
+              strokeDashoffset={2 * Math.PI * 50 * (1 - score / 100)}
+            />
+          )}
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          {hasScore ? (
+            <span className={`text-4xl font-extrabold tracking-tight ${score >= 80 ? 'text-emerald-400' : score >= 50 ? 'text-amber-400' : 'text-rose-400'}`}>
+              {score}
+            </span>
+          ) : (
+            <div className="flex gap-1.5 text-2xl font-bold text-slate-500">
+              <span>-</span>
+              <span>-</span>
+            </div>
+          )}
+        </div>
+      </div>
+      <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        {hasScore ? 'Độ chính xác' : 'Hãy nói từ / cụm sau'}
+      </p>
+    </div>
+  );
 }
 async function wav(blob) {
   const context = new AudioContext();
@@ -97,31 +133,149 @@ export default function PronunciationRecorder({ word, ipa }) {
     } catch(e) {if(live.current){setError(e.http?e.message:'Chưa nhận xác nhận từ server. Bản ghi còn đây; gửi lại sẽ tự nhận diện, không tạo đánh giá trùng.');setNotice('');setState('ready');}}
   }
   const busy = ['permission', 'encoding', 'sending'].includes(state);
-  return <section data-testid="pronunciation-recorder" aria-label="Luyện phát âm" className="mt-4 rounded-xl border border-violet-700/60 bg-violet-950/20 p-3 text-sm">
-    <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold text-violet-200">Luyện phát âm</h3><MouthGuide ipa={ipa} /></div>
-    <p className="mt-1 text-slate-300">Đọc “{word}”. Tối đa 30 giây. Bấm micro để bắt đầu; bấm lần nữa để dừng. Dừng là tự gửi Gemini góp ý.</p>
-    <div className="mt-5 flex flex-col items-center">
-      <button type="button" disabled={busy} onClick={state === 'recording' ? () => recorder.current?.stop() : start} aria-label={state === 'recording' ? 'Dừng ghi âm và gửi AI đánh giá' : 'Bắt đầu ghi âm'} className={`flex h-[76px] w-[76px] items-center justify-center rounded-full border-[3px] text-white shadow-[0_8px_24px_rgba(249,115,22,.35)] transition-transform active:scale-95 disabled:opacity-50 ${state === 'recording' ? 'border-rose-200 bg-rose-500 animate-pulse' : 'border-orange-100 bg-gradient-to-br from-rose-500 to-amber-400'}`}><svg aria-hidden="true" viewBox="0 0 24 24" className="h-9 w-9 fill-current">{state==='recording'?<rect x="7" y="7" width="10" height="10" rx="1"/>:<><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0h-2a4 4 0 0 1-8 0H6zm5 8v3h2v-3h-2z"/></>}</svg></button>
-      <p className="mt-2 text-xs font-medium text-violet-200">{state === 'recording' ? 'Đang ghi · Bấm để dừng và chấm' : busy ? 'Đang chuẩn bị và gửi AI…' : 'Bấm để ghi âm'}</p>
-      {(clip || jobId) && error && <button type="button" disabled={busy || state === 'recording'} onClick={() => assess(!!error && !!jobId)} className="mt-3 min-h-11 rounded-lg bg-sky-700 px-3 py-2 text-white disabled:opacity-50">{jobId ? 'Thử đánh giá lại' : 'Gửi lại đánh giá'}</button>}
-    </div>
-    <p role="status" className="mt-2 text-slate-300">{state === 'recording' ? 'Đang ghi âm… tự dừng sau 30 giây.' : state === 'permission' ? 'Chờ quyền microphone…' : state === 'encoding' ? 'Đang chuẩn bị bản ghi…' : ''}</p>
-    {clip && <audio aria-label="Nghe lại bản ghi" controls src={clip.url} className="mt-2 w-full min-w-0" />}
-    {notice && <p role="status" className="mt-2 text-amber-200">{notice}</p>}
-    {jobId && <p className="mt-1 break-all text-[10px] text-slate-400">Mã bản ghi: {jobId.slice(0,12)} · lưu 24 giờ</p>}
-    {error && <p role="alert" className="mt-2 text-red-300">{error}</p>}
-    {result && <div aria-live="polite" className="mt-5 overflow-hidden rounded-2xl border border-violet-500/50 bg-[#15152a] text-slate-100">
-      <div className="flex flex-col items-center border-b border-violet-500/25 px-4 pt-4"><ScoreGauge score={result.score}/><p className="-mt-2 pb-3 text-xs font-semibold uppercase tracking-[.18em] text-violet-200">{Number.isInteger(result.score)?'Độ chính xác phát âm':'Góp ý từ AI'}</p></div>
-      <div className="flex flex-col items-center gap-3 p-4">
-        {Array.isArray(result.segments)&&result.segments.length>0 ? <>
-          <div className="flex items-center justify-center gap-2 text-4xl font-bold tracking-wide">
-            {result.segments.map((s,i)=><span key={i} className={s.status==='wrong'?'text-rose-500':s.status==='correct'?'text-emerald-500':'text-slate-300'}>{s.text}</span>)}
-          </div>
-          {ipa && <div className="rounded-lg border border-slate-700 bg-slate-900/90 px-3 py-1 font-mono text-sm tracking-wider text-violet-200">{ipa}</div>}
-        </> : <div className="flex flex-wrap items-center gap-2 text-base"><strong>Nghe được:</strong> <span className={result.heard && result.heard.trim().toLowerCase() !== word.trim().toLowerCase() ? 'rounded bg-rose-500/20 px-2 py-0.5 font-semibold text-rose-200 line-through decoration-rose-300' : 'rounded bg-emerald-500/20 px-2 py-0.5 font-semibold text-emerald-200'}>{result.heard || 'Không rõ'}</span>{result.heard && result.heard.trim().toLowerCase() !== word.trim().toLowerCase() && <><span className="text-slate-500">→</span><span className="rounded bg-emerald-500/20 px-2 py-0.5 font-semibold text-emerald-200">{word}</span></>}</div>}
-        <p className="w-full text-center text-sm leading-relaxed text-slate-200">{result.summary}</p>
-        {result.tips.length > 0 && <ul className="w-full space-y-2 border-t border-violet-500/25 pt-3">{result.tips.map((tip, i) => <li key={i} className="rounded-lg bg-amber-500/10 px-3 py-2 text-left text-sm text-amber-100">{tip}</li>)}</ul>}
+  return (
+    <section data-testid="pronunciation-recorder" aria-label="Luyện phát âm" className="mt-4 rounded-2xl border border-slate-700/60 bg-[#121421] p-5 text-sm shadow-xl">
+      <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+        <div className="flex items-center gap-2">
+          <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Luyện phát âm · The Coach</h3>
+        </div>
+        <MouthGuide ipa={ipa} />
       </div>
-    </div>}
-  </section>;
+
+      {/* 1. Header: Vòng tròn điểm số / trạng thái */}
+      <div className="mt-5 flex justify-center">
+        <CoachScoreCircle score={result?.score} />
+      </div>
+
+      {/* 2. Từ cần đọc & Phiên âm ở trên nút ghi âm */}
+      <div className="mt-6 flex flex-col items-center text-center">
+        {Array.isArray(result?.segments) && result.segments.length > 0 ? (
+          <div className="flex flex-wrap items-center justify-center gap-1 text-3xl font-bold tracking-tight text-white">
+            {result.segments.map((s, i) => (
+              <span
+                key={i}
+                className={s.status === 'wrong' ? 'text-rose-500 font-extrabold underline decoration-rose-500 decoration-2' : s.status === 'correct' ? 'text-emerald-400 font-extrabold' : 'text-slate-300'}
+              >
+                {s.text}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div className="text-3xl font-extrabold tracking-tight text-white">
+            {word}
+          </div>
+        )}
+
+        {ipa && (
+          <div className="mt-2 font-mono text-sm tracking-wide text-slate-400">
+            {ipa}
+          </div>
+        )}
+      </div>
+
+      {/* 3. Nhận xét đánh giá dạng Coach bubble nếu có */}
+      {result && (
+        <div className="mt-6 flex flex-col items-center">
+          <div className="relative rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-center text-sm font-medium text-amber-200 shadow-sm max-w-sm">
+            {result.summary || (result.score >= 80 ? 'Xuất sắc!' : 'Cần chú ý nguyên âm / phụ âm')}
+            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-amber-500/30" />
+          </div>
+          <div className="mt-2 flex h-9 w-9 items-center justify-center rounded-full bg-slate-800 border border-slate-700 text-base shadow">
+            🧑‍🏫
+          </div>
+        </div>
+      )}
+
+      {/* 4. Nút ghi âm kiểu The Coach */}
+      <div className="mt-6 flex flex-col items-center">
+        {state === 'recording' ? (
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-amber-400 animate-pulse">
+              Nhấn để dừng
+            </span>
+            <button
+              type="button"
+              onClick={() => recorder.current?.stop()}
+              aria-label="Dừng ghi âm và gửi AI đánh giá"
+              className="flex h-14 w-32 items-center justify-center rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-orange-500/30 active:scale-95 transition-transform"
+            >
+              <div className="flex items-center gap-1.5">
+                <span className="h-4 w-1 rounded-full bg-white animate-[bounce_1s_infinite_100ms]" />
+                <span className="h-6 w-1 rounded-full bg-white animate-[bounce_1s_infinite_300ms]" />
+                <span className="h-5 w-1 rounded-full bg-white animate-[bounce_1s_infinite_200ms]" />
+                <span className="h-3 w-1 rounded-full bg-white animate-[bounce_1s_infinite_400ms]" />
+              </div>
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={start}
+              aria-label="Bắt đầu ghi âm"
+              className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 transition-transform active:scale-95 disabled:opacity-50"
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="h-7 w-7 fill-current">
+                <rect x="9" y="3" width="6" height="11" rx="3" />
+                <path d="M6 11a6 6 0 0 0 12 0h-2a4 4 0 0 1-8 0H6zm5 8v3h2v-3h-2z" />
+              </svg>
+            </button>
+            {result && (
+              <button
+                type="button"
+                onClick={start}
+                disabled={busy}
+                className="h-12 rounded-full bg-sky-600 px-5 text-xs font-bold uppercase tracking-wider text-white shadow-md shadow-sky-600/30 active:scale-95 disabled:opacity-50"
+              >
+                Tiếp tục / Đọc lại
+              </button>
+            )}
+          </div>
+        )}
+
+        <p className="mt-2 text-center text-xs text-slate-400">
+          {state === 'recording'
+            ? 'Đang lắng nghe bạn nói…'
+            : busy
+            ? 'Đang phân tích phát âm…'
+            : !result
+            ? 'Bấm mic để bắt đầu nói'
+            : ''}
+        </p>
+
+        {(clip || jobId) && error && (
+          <button
+            type="button"
+            disabled={busy || state === 'recording'}
+            onClick={() => assess(!!error && !!jobId)}
+            className="mt-3 min-h-11 rounded-lg bg-sky-700 px-3 py-2 text-white disabled:opacity-50"
+          >
+            {jobId ? 'Thử đánh giá lại' : 'Gửi lại đánh giá'}
+          </button>
+        )}
+      </div>
+
+      {/* 5. Audio & Chi tiết tips (thu gọn) */}
+      {clip && (
+        <div className="mt-4 pt-3 border-t border-slate-800">
+          <audio aria-label="Nghe lại bản ghi" controls src={clip.url} className="w-full h-9 min-w-0" />
+        </div>
+      )}
+      {notice && <p role="status" className="mt-2 text-center text-xs text-amber-200">{notice}</p>}
+      {error && <p role="alert" className="mt-2 text-center text-xs text-red-300">{error}</p>}
+
+      {result?.tips && result.tips.length > 0 && (
+        <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900/40 p-3 text-xs text-slate-300">
+          <p className="font-semibold text-slate-400 mb-1">Mẹo cải thiện:</p>
+          <ul className="list-disc pl-4 space-y-1">
+            {result.tips.map((tip, i) => (
+              <li key={i}>{tip}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
 }
