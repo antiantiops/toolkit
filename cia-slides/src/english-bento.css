@@ -295,3 +295,18 @@ html.deck-bento-morph::view-transition-old(bento-heading),html.deck-bento-morph:
 html.deck-bento-morph::view-transition-new(bento-heading),html.deck-bento-morph::view-transition-new(bento-product),html.deck-bento-morph::view-transition-new(bento-coach){animation:bento-replace 850ms ease both}
 @keyframes bento-depart{to{opacity:0}}
 @keyframes bento-replace{0%{opacity:0}55%,100%{opacity:1}}
+
+/* Listening card: transcript scrolls up with audio, then settles to paused. */
+.bento-listening .listening-model-lines{height:118px;overflow:hidden;margin:8px 0 6px;-webkit-mask-image:linear-gradient(transparent,#000 14%,#000 86%,transparent);mask-image:linear-gradient(transparent,#000 14%,#000 86%,transparent)}
+.bento-listening .listening-model-track{transform:translateY(calc(var(--lm-offset) * -59px));transition:transform .65s cubic-bezier(.22,.7,.25,1)}
+.bento-listening .listening-model-line{height:59px;box-sizing:border-box;opacity:.42;transition:opacity .5s}
+.bento-listening .listening-model-line.is-current{opacity:1}
+.bento-listening .listening-model-line small{display:block;font-size:8px;margin-bottom:3px;font-weight:700}
+.bento-listening .listening-model-line strong{display:block;font-size:14px;line-height:1.25;color:#087b73;letter-spacing:-.2px;filter:none}
+.bento-listening .listening-model-line p{margin:3px 0 0;font-size:10px;line-height:1.3;color:#214b46}
+.bento-listening .listening-model-play{transition:background .4s,box-shadow .4s,transform .4s}
+.bento-listening .listening-model-play.is-playing{box-shadow:0 5px 0 #065c55,0 0 0 6px rgba(8,127,118,.22),0 0 22px rgba(20,184,166,.7);animation:lm-glow 1.2s ease-in-out infinite}
+.bento-listening .listening-model-play.is-paused{background:#64748b;box-shadow:0 5px 0 #475569}
+.bento-listening .listening-model-progress i{transition:width .65s ease}
+@keyframes lm-glow{50%{box-shadow:0 5px 0 #065c55,0 0 0 9px rgba(8,127,118,.1),0 0 30px rgba(20,184,166,.9)}}
+@media(prefers-reduced-motion:reduce){.bento-listening .listening-model-track,.bento-listening .listening-model-line,.bento-listening .listening-model-progress i{transition:none}.bento-listening .listening-model-play.is-playing{animation:none}}
