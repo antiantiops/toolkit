@@ -133,6 +133,13 @@ export default function PronunciationRecorder({ word, ipa }) {
       setClip(null); rec.start(); setState('recording'); timer.current = setTimeout(() => { if (rec.state === 'recording') rec.stop(); }, 30000);
     } catch (e) { stream.current?.getTracks().forEach(t => t.stop()); if (live.current) { setError(e.name === 'NotAllowedError' ? 'Microphone bị từ chối. Cho phép microphone trong cài đặt trình duyệt rồi thử lại.' : e.message); setState('idle'); } }
   }
+  function restartRecording() {
+    clearTimeout(timer.current);
+    const rec = recorder.current;
+    if (rec && rec.state === 'recording') { rec.onstop = null; rec.stop(); }
+    stream.current?.getTracks().forEach(t => t.stop());
+    start();
+  }
   function remember(id) { currentJobId.current = id; setJobId(id);try{sessionStorage.setItem('pronunciation-job:'+word,id);}catch{} }
   async function request(options, endpoint='/api/pronunciation-assess') {
     const abort=new AbortController();controller.current=abort;
@@ -248,6 +255,7 @@ export default function PronunciationRecorder({ word, ipa }) {
             <span className="text-xs font-medium text-amber-300">
               Nhấn để dừng
             </span>
+            <div className="relative">
             <button
               type="button"
               onClick={() => recorder.current?.stop()}
@@ -262,6 +270,8 @@ export default function PronunciationRecorder({ word, ipa }) {
                 <span className="w-1 rounded-full bg-white wave-bar wave-1" />
               </div>
             </button>
+            <button type="button" onClick={restartRecording} aria-label="Ghi âm lại" title="Ghi âm lại" className="absolute left-full top-1/2 ml-5 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-slate-700 text-xl text-white transition-transform active:scale-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300">↻</button>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
