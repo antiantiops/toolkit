@@ -60,16 +60,16 @@ async function wav(blob) {
 
 export default function PronunciationRecorder({ word, ipa }) {
   const [state, setState] = useState('idle'), [clip, setClip] = useState(null), [result, setResult] = useState(null), [error, setError] = useState(''), [notice,setNotice] = useState(''), [jobId,setJobId] = useState(null);
-  const live = useRef(false), recorder = useRef(null), stream = useRef(null), timer = useRef(null), controller = useRef(null), url = useRef(null);
+  const live = useRef(false), recorder = useRef(null), stream = useRef(null), timer = useRef(null), controller = useRef(null), url = useRef(null), currentJobId = useRef(null);
   useEffect(() => {
     live.current = true;
     let saved;try { saved=sessionStorage.getItem('pronunciation-job:'+word); }catch{}
-    if(saved) {setJobId(saved);setState('sending');poll(saved);}
+    if(saved) {currentJobId.current=saved;setJobId(saved);setState('sending');poll(saved);}
 
     return () => { live.current = false; clearTimeout(timer.current); if (recorder.current?.state === 'recording') recorder.current.stop(); stream.current?.getTracks().forEach(t => t.stop()); controller.current?.abort(); if (url.current) URL.revokeObjectURL(url.current); };
   }, []);
   async function start() {
-    setError(''); setResult(null); setNotice(''); setJobId(null); try{sessionStorage.removeItem('pronunciation-job:'+word);}catch{} setState('permission');
+    setError(''); setResult(null); setNotice(''); setClip(null); currentJobId.current = null; setJobId(null); try{sessionStorage.removeItem('pronunciation-job:'+word);}catch{} setState('permission');
     try {
       if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') throw Error('Ghi âm cần HTTPS và trình duyệt hỗ trợ microphone.');
       const media = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -92,7 +92,7 @@ export default function PronunciationRecorder({ word, ipa }) {
       setClip(null); rec.start(); setState('recording'); timer.current = setTimeout(() => { if (rec.state === 'recording') rec.stop(); }, 30000);
     } catch (e) { stream.current?.getTracks().forEach(t => t.stop()); if (live.current) { setError(e.name === 'NotAllowedError' ? 'Microphone bị từ chối. Cho phép microphone trong cài đặt trình duyệt rồi thử lại.' : e.message); setState('idle'); } }
   }
-  function remember(id) { setJobId(id);try{sessionStorage.setItem('pronunciation-job:'+word,id);}catch{} }
+  function remember(id) { currentJobId.current = id; setJobId(id);try{sessionStorage.setItem('pronunciation-job:'+word,id);}catch{} }
   async function request(options, endpoint='/api/pronunciation-assess') {
     const abort=new AbortController();controller.current=abort;
     const timeout=setTimeout(()=>abort.abort(),20000);
@@ -110,7 +110,7 @@ export default function PronunciationRecorder({ word, ipa }) {
         setNotice(data.status==='retrying'||data.attempt>1?'Gemini phản hồi chậm. Server đang thử lại, không cần gửi thêm.':'Server đã lưu bản ghi. Đang chờ Gemini đánh giá…');
       } catch(e) {
         if(!live.current)return;
-        if(e.http&&e.http!==429&&e.http<500) {setError(e.message);setNotice('');setState('ready');if(e.http===404){setJobId(null);try{sessionStorage.removeItem('pronunciation-job:'+word);}catch{}}return;}
+        if(e.http&&e.http!==429&&e.http<500) {setError(e.message);setNotice('');setState('ready');if(e.http===404){currentJobId.current=null;setJobId(null);try{sessionStorage.removeItem('pronunciation-job:'+word);}catch{}}return;}
         setNotice('Kết nối gián đoạn. Đang nối lại để nhận kết quả; không gửi lại audio.');
       }
       await new Promise(r=>setTimeout(r,3000));
@@ -119,11 +119,13 @@ export default function PronunciationRecorder({ word, ipa }) {
   }
   async function assess(retry=false, recordedClip=null) {
     if(state==='sending')return;
-    setState('sending');setError('');setResult(null);setNotice(jobId?'Đang nối lại bản ghi đã lưu…':'Đang gửi bản ghi lên server…');
+    if(recordedClip) { currentJobId.current=null; setJobId(null); try{sessionStorage.removeItem('pronunciation-job:'+word);}catch{} }
+    const activeJobId = recordedClip ? null : currentJobId.current;
+    setState('sending');setError('');setResult(null);setNotice(activeJobId?'Đang nối lại bản ghi đã lưu…':'Đang gửi bản ghi lên server…');
     try {
-      if(jobId&&!retry){await poll(jobId);return;}
+      if(activeJobId&&!retry){await poll(activeJobId);return;}
       let options;
-      if(jobId) options={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jobId,retry:true})};
+      if(activeJobId) options={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jobId:activeJobId,retry:true})};
       else {const audio=recordedClip || clip?.blob;if(!audio)throw Error('Chưa có bản ghi để đánh giá.');const form=new FormData();form.set('word',word);form.set('ipa',ipa||'');form.set('file',audio,'pronunciation.wav');options={method:'POST',body:form};}
       const data=await request(options);
       if(!live.current)return;
