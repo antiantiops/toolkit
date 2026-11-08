@@ -310,3 +310,29 @@ html.deck-bento-morph::view-transition-new(bento-heading),html.deck-bento-morph:
 .bento-listening .listening-model-progress i{transition:width .65s ease}
 @keyframes lm-glow{50%{box-shadow:0 5px 0 #065c55,0 0 0 9px rgba(8,127,118,.1),0 0 30px rgba(20,184,166,.9)}}
 @media(prefers-reduced-motion:reduce){.bento-listening .listening-model-track,.bento-listening .listening-model-line,.bento-listening .listening-model-progress i{transition:none}.bento-listening .listening-model-play.is-playing{animation:none}}
+
+/* Listening card v2: three readable transcript blocks (previous / current / next), slim player. */
+.bento-listening .listening-model-transcript{padding:12px 12px 6px}
+.bento-listening .listening-model-lines{height:246px;margin:8px 0 0}
+.bento-listening .listening-model-track{transform:translateY(calc(var(--lm-offset) * -82px))}
+.bento-listening .listening-model-line{height:76px;margin-bottom:6px;padding:9px 11px;background:rgba(255,255,255,.62);border-radius:11px;opacity:.5}
+.bento-listening .listening-model-line.is-current{background:#fff;box-shadow:0 0 0 2px #14b8a6,0 6px 12px rgba(8,127,118,.18)}
+.bento-listening .listening-model-line small{font-size:10px;margin-bottom:3px}
+.bento-listening .listening-model-line strong{font-size:16px;line-height:1.22}
+.bento-listening .listening-model-line p{font-size:12px;line-height:1.28;margin-top:3px}
+.bento-listening .listening-model-caption{font-size:11px}
+.bento-listening .listening-model-caption small{font-size:9px}
+.bento-listening .listening-model-player{padding:12px 12px 10px}
+.bento-listening .listening-model-controls{display:flex;align-items:center;gap:12px;margin:10px 0 6px;transform:none}
+.bento-listening .listening-model-play{width:38px;height:38px;flex:none}
+.bento-listening .listening-model-time{display:flex;flex:1;justify-content:space-between;margin:0;font-size:11px;font-weight:700}
+.bento-listening .listening-model-hint{font-size:10px}
+/* v2 fit: keep three blocks inside the 484px tile after the 1.15 perspective scale. */
+.bento-listening .listening-model-lines{height:195px}
+.bento-listening .listening-model-track{transform:translateY(calc(var(--lm-offset) * -65px))}
+.bento-listening .listening-model-line{height:60px;margin-bottom:5px;padding:7px 10px}
+.bento-listening .listening-model-line small{font-size:9px;margin-bottom:1px}
+.bento-listening .listening-model-line strong{font-size:15px;line-height:1.18}
+.bento-listening .listening-model-line p{font-size:11px;line-height:1.2;margin-top:2px}
+.bento-listening .listening-model-player{padding:10px 12px 8px}
+.bento-listening .listening-model-controls{margin:8px 0 4px}
