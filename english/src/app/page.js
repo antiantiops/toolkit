@@ -624,13 +624,13 @@ export default function Home() {
       lookupCache.current.set(key, data.word);
       if (requestId === lookupRequest.current) {
         const canonicalPron = pronunciationCache.current.get(canonical.toLowerCase());
-        setLookup(current => current ? { ...data.word, pronunciation: canonical.toLowerCase() === pronunciationKey ? current.pronunciation : canonicalPron, dictionaryParts: canonical.toLowerCase() === pronunciationKey ? current.dictionaryParts : undefined, loading: false, detailLoading: false } : null);
+        setLookup(current => current ? { ...data.word, practice: current.practice, pronunciation: canonical.toLowerCase() === pronunciationKey ? current.pronunciation : canonicalPron, dictionaryParts: canonical.toLowerCase() === pronunciationKey ? current.dictionaryParts : undefined, loading: false, detailLoading: false } : null);
         if (canonical.toLowerCase() !== pronunciationKey) loadMeta(canonical);
       }
     } catch (e) {
       if (save) rememberEnglish(word).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại."));
       await quick;
-      if (requestId === lookupRequest.current) setLookup(current => !current ? null : current.meaning ? { ...current, loading: false, detailLoading: false } : { word, error: formatErrorMessage(e), loading: false, detailLoading: false });
+      if (requestId === lookupRequest.current) setLookup(current => !current ? null : current.meaning ? { ...current, loading: false, detailLoading: false } : { ...current, word, error: formatErrorMessage(e), loading: false, detailLoading: false });
     }
   };
 
@@ -1650,7 +1650,7 @@ export default function Home() {
             )}
             {(lookup.partOfSpeech || lookup.dictionaryParts?.length > 0) && <div data-testid="lookup-word-class" className="mt-2 text-sm font-semibold text-amber-200">{lookup.partOfSpeech || lookup.dictionaryParts.join(' · ')}{!lookup.partOfSpeech && <small className="ml-2 font-normal text-slate-400">Từ loại trong từ điển</small>}</div>}
             {lookup.pronunciation && <div data-testid="lookup-pronunciation" className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-violet-300"><span>🇬🇧 UK: {lookup.pronunciation.uk || "Chưa có"}</span><span>🇺🇸 US: {lookup.pronunciation.us || "Chưa có"}</span><small className="w-full text-xs text-slate-400">Nguồn: {lookup.pronunciation.source} · Phiên âm từ điển; có thể khác theo từ loại/ngữ cảnh.</small></div>}
-            {lookup.practice && <div id="word-pronunciation-practice"><PronunciationRecorder key={lookup.word} word={lookup.word} ipa={lookup.pronunciation?.us || lookup.pronunciation?.uk || lookup.ipa || ""} /></div>}
+            {lookup.practice && <div id="word-pronunciation-practice"><PronunciationRecorder word={lookup.word} ipa={lookup.pronunciation?.us || lookup.pronunciation?.uk || lookup.ipa || ""} /></div>}
             {lookup.loading && !lookup.meaning ? <div className="mt-5 text-slate-400">Đang tra nghĩa tiếng Việt...</div> : lookup.error ? <div className="mt-4 text-red-300">{lookup.error}</div> : <>
               {!lookup.pronunciation && <div className="mt-1 text-violet-300 italic">{lookup.ipa}</div>}
               {lookup.easyReading && <div className="mt-4 rounded-xl border border-sky-900 bg-sky-950/50 p-3 text-sm leading-relaxed text-sky-100"><span className="font-semibold text-sky-300">Dễ đọc: </span>{lookup.easyReading}</div>}
