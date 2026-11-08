@@ -268,3 +268,15 @@
 .bento-vocabulary{padding:18px 18px 0;background:linear-gradient(145deg,#f8f3ff 0%,#eee4fc 100%)}
 .bento-vocabulary .grammar-lesson{height:104px;align-items:flex-start;margin-top:4px}
 .bento-vocabulary .grammar-board{flex:0 0 74%;transform:perspective(700px) rotateX(5deg) rotateY(-10deg) rotateZ(-1.5deg) scale(1.15);transform-origin:left top;border-radius:12px;box-shadow:inset 0 1px 0 #fff,3px 4px 0 #cfc2e6,6px 7px 0 #b3a1d1,0 16px 28px rgba(74,48,118,.15)}
+/* Auditorium contrast; scoped to Bento so neighboring slides retain their palette. */
+.presentation:has(.english-bento){background:#0F172A}
+.presentation:has(.english-bento) :is(.slide-header>a:first-child,.demo-link,.slide-footer,.slide-footer>span,.page-indicator,.page-indicator span){color:#E2E8F0}
+.presentation:has(.english-bento) .slide-nav button{background:#1e293b;border-color:#cbd5e1;color:#fff}
+.bento-heading h1{color:#FFFFFF}
+.bento-heading h1 em{color:#C084FC}
+.bento-heading>div>span{color:#E2E8F0}
+.bento-tile{border:2px solid rgba(255,255,255,.8);box-shadow:inset 0 1px 0 #fff,0 4px 0 #CBD5E1,0 20px 40px -15px rgba(0,0,0,.4)}
+.bento-hero .bento-real-home,.bento-listening .listening-model,.bento-writing .coach-scene,.bento-chat .bento-chat-window,.bento-vocabulary .grammar-board,.bento-words .words-image-frame{border:1.5px solid #E2E8F0;box-shadow:0 12px 24px rgba(0,0,0,.25)}
+.english-bento :is(.listening-model-focus>strong,.coach-email p,.coach-suggestion p,.grammar-formula strong){filter:none;text-shadow:none;font-weight:750}
+.english-bento :is(.bento-tile>p,.bento-words p,.coach-subtitle,.grammar-labels,.listening-model-previous,.listening-model-focus>p){color:#334155;font-weight:600}
+.english-bento .demo-chat-message p{font-weight:650;text-shadow:none}
