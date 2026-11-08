@@ -69,6 +69,7 @@ export default function PronunciationRecorder({ word, ipa }) {
     return () => { live.current = false; clearTimeout(timer.current); if (recorder.current?.state === 'recording') recorder.current.stop(); stream.current?.getTracks().forEach(t => t.stop()); controller.current?.abort(); if (url.current) URL.revokeObjectURL(url.current); };
   }, []);
   async function start() {
+    controller.current?.abort();
     setError(''); setResult(null); setNotice(''); setClip(null); currentJobId.current = null; setJobId(null); try{sessionStorage.removeItem('pronunciation-job:'+word);}catch{} setState('permission');
     try {
       if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') throw Error('Ghi âm cần HTTPS và trình duyệt hỗ trợ microphone.');
@@ -101,24 +102,24 @@ export default function PronunciationRecorder({ word, ipa }) {
   }
   async function poll(id) {
     const deadline=Date.now()+6*60*1000;
-    while(live.current&&Date.now()<deadline) {
+    while(live.current&&currentJobId.current===id&&Date.now()<deadline) {
       try {
         const data=await request({},'/api/pronunciation-assess?jobId='+id);
-        if(!live.current)return;
+        if(!live.current||currentJobId.current!==id)return;
         if(data.status==='completed') {setResult(data.result);setNotice('');setState('ready');return;}
         if(data.status==='failed') {setError(data.error);setNotice('');setState('ready');return;}
         setNotice(data.status==='retrying'||data.attempt>1?'Gemini phản hồi chậm. Server đang thử lại, không cần gửi thêm.':'Server đã lưu bản ghi. Đang chờ Gemini đánh giá…');
       } catch(e) {
-        if(!live.current)return;
+        if(!live.current||currentJobId.current!==id)return;
         if(e.http&&e.http!==429&&e.http<500) {setError(e.message);setNotice('');setState('ready');if(e.http===404){currentJobId.current=null;setJobId(null);try{sessionStorage.removeItem('pronunciation-job:'+word);}catch{}}return;}
         setNotice('Kết nối gián đoạn. Đang nối lại để nhận kết quả; không gửi lại audio.');
       }
       await new Promise(r=>setTimeout(r,3000));
     }
-    if(live.current){setNotice('Bản ghi đã lưu. Bấm Kiểm tra kết quả để nối lại.');setState('ready');}
+    if(live.current&&currentJobId.current===id){setNotice('Bản ghi đã lưu. Bấm Kiểm tra kết quả để nối lại.');setState('ready');}
   }
   async function assess(retry=false, recordedClip=null) {
-    if(state==='sending')return;
+    if(!recordedClip&&state==='sending')return;
     if(recordedClip) { currentJobId.current=null; setJobId(null); try{sessionStorage.removeItem('pronunciation-job:'+word);}catch{} }
     const activeJobId = recordedClip ? null : currentJobId.current;
     setState('sending');setError('');setResult(null);setNotice(activeJobId?'Đang nối lại bản ghi đã lưu…':'Đang gửi bản ghi lên server…');
@@ -175,6 +176,13 @@ export default function PronunciationRecorder({ word, ipa }) {
           </div>
         )}
       </div>
+
+      {result?.heard?.trim() && (
+        <div data-testid="pronunciation-heard" className="mt-4 rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3 text-center text-sm break-words">
+          <p className="text-slate-400">Bạn đọc nghe như: <strong className="text-amber-200">{result.heard}</strong></p>
+          <p className="mt-1 text-slate-400">Từ cần đọc: <strong className="text-emerald-300">{word}</strong></p>
+        </div>
+      )}
 
       {/* 3. Nhận xét đánh giá dạng Coach bubble nếu có */}
       {result && (
