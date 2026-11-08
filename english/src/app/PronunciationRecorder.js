@@ -46,7 +46,7 @@ export default function PronunciationRecorder({ word, ipa }) {
           const audio = await wav(new Blob(chunks, { type: rec.mimeType }));
           if (!live.current) return;
           if (url.current) URL.revokeObjectURL(url.current);
-          url.current = URL.createObjectURL(audio); setClip({ blob: audio, url: url.current }); setState('ready');
+          url.current = URL.createObjectURL(audio); setClip({ blob: audio, url: url.current }); setState('ready'); assess(false, audio);
         } catch (e) { if (live.current) { setError(e.message); setState('idle'); } }
       };
       setClip(null); rec.start(); setState('recording'); timer.current = setTimeout(() => { if (rec.state === 'recording') rec.stop(); }, 30000);
@@ -77,14 +77,14 @@ export default function PronunciationRecorder({ word, ipa }) {
     }
     if(live.current){setNotice('Bản ghi đã lưu. Bấm Kiểm tra kết quả để nối lại.');setState('ready');}
   }
-  async function assess(retry=false) {
+  async function assess(retry=false, recordedClip=null) {
     if(state==='sending')return;
     setState('sending');setError('');setResult(null);setNotice(jobId?'Đang nối lại bản ghi đã lưu…':'Đang gửi bản ghi lên server…');
     try {
       if(jobId&&!retry){await poll(jobId);return;}
       let options;
       if(jobId) options={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jobId,retry:true})};
-      else {const form=new FormData();form.set('word',word);form.set('file',clip.blob,'pronunciation.wav');options={method:'POST',body:form};}
+      else {const audio=recordedClip || clip?.blob;if(!audio)throw Error('Chưa có bản ghi để đánh giá.');const form=new FormData();form.set('word',word);form.set('file',audio,'pronunciation.wav');options={method:'POST',body:form};}
       const data=await request(options);
       if(!live.current)return;
       if(data.result){if(data.jobId)remember(data.jobId);setResult(data.result);setNotice('');setState('ready');return;}
@@ -95,21 +95,22 @@ export default function PronunciationRecorder({ word, ipa }) {
   const busy = ['permission', 'encoding', 'sending'].includes(state);
   return <section data-testid="pronunciation-recorder" aria-label="Luyện phát âm" className="mt-4 rounded-xl border border-violet-700/60 bg-violet-950/20 p-3 text-sm">
     <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold text-violet-200">Luyện phát âm</h3><MouthGuide ipa={ipa} /></div>
-    <p className="mt-1 text-slate-300">Đọc “{word}”. Tối đa 30 giây. Bấm Gửi để chuyển bản ghi cho Gemini 3.8 Flash High; AI góp ý, không phải điểm chuẩn.</p>
-    <div className="mt-3 flex flex-wrap gap-2">
-      <button type="button" disabled={busy} onClick={state === 'recording' ? () => recorder.current?.stop() : start} className="min-h-11 rounded-lg bg-violet-600 px-3 py-2 text-white disabled:opacity-50">{state === 'recording' ? 'Dừng ghi âm' : clip ? 'Thu lại' : 'Ghi âm'}</button>
-      {(clip || jobId) && <button type="button" disabled={busy || state === 'recording'} onClick={() => assess(!!error && !!jobId)} className="min-h-11 rounded-lg bg-sky-700 px-3 py-2 text-white disabled:opacity-50">{state === 'sending' ? 'Đang xử lý…' : jobId ? error ? 'Thử đánh giá lại' : 'Kiểm tra kết quả' : 'Gửi đánh giá'}</button>}
+    <p className="mt-1 text-slate-300">Đọc “{word}”. Tối đa 30 giây. Bấm micro để bắt đầu; bấm lần nữa để dừng. Dừng là tự gửi Gemini góp ý.</p>
+    <div className="mt-4 flex flex-col items-center">
+      <button type="button" disabled={busy} onClick={state === 'recording' ? () => recorder.current?.stop() : start} aria-label={state === 'recording' ? 'Dừng ghi âm và gửi AI đánh giá' : 'Bắt đầu ghi âm'} className={`flex h-20 w-20 items-center justify-center rounded-full border-4 text-3xl text-white shadow-lg transition-transform active:scale-95 disabled:opacity-50 ${state === 'recording' ? 'border-rose-200 bg-rose-500 shadow-rose-900/60 animate-pulse' : 'border-orange-200 bg-gradient-to-br from-rose-500 via-orange-500 to-amber-400 shadow-orange-950/70'}`}><span aria-hidden="true">{state === 'recording' ? '■' : '🎙️'}</span></button>
+      <p className="mt-2 text-xs font-medium text-violet-200">{state === 'recording' ? 'Đang ghi · Bấm để dừng và chấm' : busy ? 'Đang chuẩn bị và gửi AI…' : 'Bấm để ghi âm'}</p>
+      {(clip || jobId) && error && <button type="button" disabled={busy || state === 'recording'} onClick={() => assess(!!error && !!jobId)} className="mt-3 min-h-11 rounded-lg bg-sky-700 px-3 py-2 text-white disabled:opacity-50">{jobId ? 'Thử đánh giá lại' : 'Gửi lại đánh giá'}</button>}
     </div>
     <p role="status" className="mt-2 text-slate-300">{state === 'recording' ? 'Đang ghi âm… tự dừng sau 30 giây.' : state === 'permission' ? 'Chờ quyền microphone…' : state === 'encoding' ? 'Đang chuẩn bị bản ghi…' : ''}</p>
     {clip && <audio aria-label="Nghe lại bản ghi" controls src={clip.url} className="mt-2 w-full min-w-0" />}
     {notice && <p role="status" className="mt-2 text-amber-200">{notice}</p>}
     {jobId && <p className="mt-1 break-all text-[10px] text-slate-400">Mã bản ghi: {jobId.slice(0,12)} · lưu 24 giờ</p>}
     {error && <p role="alert" className="mt-2 text-red-300">{error}</p>}
-    {result && <div aria-live="polite" className="mt-3 space-y-2 text-slate-200">
+    {result && <div aria-live="polite" className="mt-4 space-y-3 rounded-xl border border-slate-700 bg-slate-950/40 p-3 text-slate-200">
       <p className="font-semibold text-violet-200">{result.status === 'retry' ? 'Cần thu lại' : 'Góp ý từ AI'}</p>
-      <p><strong>Nghe được:</strong> {result.heard || 'Không rõ'}</p>
-      <p>{result.summary}</p>
-      {result.tips.length > 0 && <ul className="list-disc space-y-1 pl-5">{result.tips.map((tip, i) => <li key={i}>{tip}</li>)}</ul>}
+      <div className="flex flex-wrap items-center gap-2 text-base"><strong>Nghe được:</strong> <span className={result.heard && result.heard.trim().toLowerCase() !== word.trim().toLowerCase() ? 'rounded bg-rose-500/20 px-2 py-0.5 font-semibold text-rose-200 line-through decoration-rose-300' : 'rounded bg-emerald-500/20 px-2 py-0.5 font-semibold text-emerald-200'}>{result.heard || 'Không rõ'}</span>{result.heard && result.heard.trim().toLowerCase() !== word.trim().toLowerCase() && <><span className="text-slate-500">→</span><span className="rounded bg-emerald-500/20 px-2 py-0.5 font-semibold text-emerald-200">{word}</span></>}</div>
+      <p className="leading-relaxed">{result.summary}</p>
+      {result.tips.length > 0 && <ul className="space-y-2 border-t border-slate-700 pt-3">{result.tips.map((tip, i) => <li key={i} className="rounded-lg bg-amber-500/10 px-3 py-2 text-amber-100">{tip}</li>)}</ul>}
     </div>}
   </section>;
 }

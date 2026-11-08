@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const src=fs.readFileSync(new URL('../src/app/PronunciationRecorder.js',import.meta.url),'utf8');
+assert.ok(src.includes("assess(false, audio)"),'stop must auto-submit decoded recording');
+assert.ok(src.includes("recordedClip || clip?.blob"),'auto-submit must use decoded blob, not stale React state');
+assert.ok(src.includes("Dừng là tự gửi Gemini góp ý."));
+assert.ok(src.includes("Dừng ghi âm và gửi AI đánh giá"));
+assert.ok(src.includes("result.heard.trim().toLowerCase() !== word.trim().toLowerCase()"),'heard mismatch needs visible comparison');
+assert.ok(src.includes("error && <button"),'manual retry remains only for an error');
+console.log('PASS pronunciation auto assess contract');
