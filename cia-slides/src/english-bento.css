@@ -280,3 +280,18 @@
 .english-bento :is(.listening-model-focus>strong,.coach-email p,.coach-suggestion p,.grammar-formula strong){filter:none;text-shadow:none;font-weight:750}
 .english-bento :is(.bento-tile>p,.bento-words p,.coach-subtitle,.grammar-labels,.listening-model-previous,.listening-model-focus>p){color:#334155;font-weight:600}
 .english-bento .demo-chat-message p{font-weight:650;text-shadow:none}
+
+/* Match semantic objects, not the entire page: idea demo becomes its product. */
+.deck-bento-morph .vibe-heading,.deck-bento-morph .bento-heading{view-transition-name:bento-heading}
+.deck-bento-morph .vibe-cinema,.deck-bento-morph .bento-hero{view-transition-name:bento-product}
+.deck-bento-morph .vibe-explanation,.deck-bento-morph .bento-writing{view-transition-name:bento-coach}
+html.deck-bento-morph::view-transition{background:#0F172A}
+html.deck-bento-morph::view-transition-group(*){animation-duration:850ms;animation-timing-function:cubic-bezier(.22,.7,.25,1)}
+html.deck-bento-morph::view-transition-image-pair(*){isolation:isolate}
+html.deck-bento-morph::view-transition-old(*),html.deck-bento-morph::view-transition-new(*){mix-blend-mode:normal}
+html.deck-bento-morph::view-transition-new(root){animation: bento-arrive 850ms ease both}
+@keyframes bento-arrive{0%,25%{opacity:0}100%{opacity:1}}
+html.deck-bento-morph::view-transition-old(bento-heading),html.deck-bento-morph::view-transition-old(bento-product),html.deck-bento-morph::view-transition-old(bento-coach){animation:bento-depart 180ms ease-out both}
+html.deck-bento-morph::view-transition-new(bento-heading),html.deck-bento-morph::view-transition-new(bento-product),html.deck-bento-morph::view-transition-new(bento-coach){animation:bento-replace 850ms ease both}
+@keyframes bento-depart{to{opacity:0}}
+@keyframes bento-replace{0%,20%{opacity:0}65%,100%{opacity:1}}
