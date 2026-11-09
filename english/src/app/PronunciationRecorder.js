@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
 import MouthGuide from './MouthGuide';
+import ErrorBoundary from './ErrorBoundary';
+import { validateAssessment } from '../lib/assessment-result';
 import PronunciationCelebration from './PronunciationCelebration';
 
 function CoachScoreCircle({ score }) {
@@ -99,7 +101,11 @@ function normalizeDisplayWord(text) {
   return trimmed.toLowerCase();
 }
 
-export default function PronunciationRecorder({ word, ipa }) {
+export default function PronunciationRecorder(props) {
+  return <ErrorBoundary key={props.word}><PronunciationRecorderPanel {...props} /></ErrorBoundary>;
+}
+
+function PronunciationRecorderPanel({ word, ipa }) {
   const [state, setState] = useState('idle'), [clip, setClip] = useState(null), [result, setResult] = useState(null), [error, setError] = useState(''), [notice,setNotice] = useState(''), [jobId,setJobId] = useState(null);
   const live = useRef(false), recorder = useRef(null), stream = useRef(null), timer = useRef(null), controller = useRef(null), url = useRef(null), currentJobId = useRef(null);
   useEffect(() => {
@@ -154,11 +160,12 @@ export default function PronunciationRecorder({ word, ipa }) {
       try {
         const data=await request({},'/api/pronunciation-assess?jobId='+id);
         if(!live.current||currentJobId.current!==id)return;
-        if(data.status==='completed') {setResult(data.result);setNotice('');setState('ready');return;}
+        if(data.status==='completed') {setResult(validateAssessment(data.result));setNotice('');setState('ready');return;}
         if(data.status==='failed') {setError(data.error);setNotice('');setState('ready');return;}
         setNotice(data.status==='retrying'||data.attempt>1?'Gemini phản hồi chậm. Server đang thử lại, không cần gửi thêm.':'Server đã lưu bản ghi. Đang chờ Gemini đánh giá…');
       } catch(e) {
         if(!live.current||currentJobId.current!==id)return;
+        if(!e.http && e.message.startsWith('Kết quả phát âm')) {setError(e.message);setNotice('');setState('ready');return;}
         if(e.http&&e.http!==429&&e.http<500) {setError(e.message);setNotice('');setState('ready');if(e.http===404){currentJobId.current=null;setJobId(null);try{sessionStorage.removeItem('pronunciation-job:'+word);}catch{}}return;}
         setNotice('Kết nối gián đoạn. Đang nối lại để nhận kết quả; không gửi lại audio.');
       }
@@ -178,10 +185,10 @@ export default function PronunciationRecorder({ word, ipa }) {
       else {const audio=recordedClip || clip?.blob;if(!audio)throw Error('Chưa có bản ghi để đánh giá.');const form=new FormData();form.set('word',word);form.set('ipa',ipa||'');form.set('file',audio,'pronunciation.wav');options={method:'POST',body:form};}
       const data=await request(options);
       if(!live.current)return;
-      if(data.result){if(data.jobId)remember(data.jobId);setResult(data.result);setNotice('');setState('ready');return;}
+      if(data.result){if(data.jobId)remember(data.jobId);setResult(validateAssessment(data.result));setNotice('');setState('ready');return;}
       if(!data.jobId)throw Error('Server chưa xác nhận lưu bản ghi. Thử gửi lại.');
       remember(data.jobId);await poll(data.jobId);
-    } catch(e) {if(live.current){setError(e.http?e.message:'Chưa nhận xác nhận từ server. Bản ghi còn đây; gửi lại sẽ tự nhận diện, không tạo đánh giá trùng.');setNotice('');setState('ready');}}
+    } catch(e) {if(live.current){setError(e.http || e.message.startsWith('Kết quả phát âm')?e.message:'Chưa nhận xác nhận từ server. Bản ghi còn đây; gửi lại sẽ tự nhận diện, không tạo đánh giá trùng.');setNotice('');setState('ready');}}
   }
   const busy = ['permission', 'encoding', 'sending'].includes(state);
   return (
