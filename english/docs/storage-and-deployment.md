@@ -12,10 +12,12 @@ Verified mounts are bind mounts, not Docker named volumes:
 | `/home/docker/vocab-learner/public` | `/app/public` | RW |
 | `/home/docker/vocab-learner/data` | `/data` | RW |
 
-`WORDS_DB_PATH` is currently unset. The active words DB therefore lives at
-`/app/data/words.sqlite`, inside the replaceable build mount. Migration below
-is REQUIRED before replacing the standalone tree. This document describes a
-proposed configuration, not a completed production migration.
+Production migration completed: `WORDS_DB_PATH=/data/words.sqlite`.
+The upload staging bind is `/home/docker/vocab-learner/data/uploads` to
+`/tmp/vocab_uploads` RW. All five explicit storage variables below are set.
+All 8 database tables were compared by full-content hashes across cutover.
+Old stopped container: `vocab-learner-before-storage-20261109`.
+Migration snapshot: `/home/docker/vocab-backups/storage-migration-20261109T225610Z`.
 
 ## Storage inventory and retention
 
@@ -118,14 +120,21 @@ DB; blindly switching back would lose those writes.
 - Verify active build ID, referenced client assets, authenticated UI and save/list.
   Report any untested browser step explicitly.
 
-## Backup policy to provision separately
+## Backup policy
 
 Before every deploy: consistent DB snapshots plus quiesced full `/data` backup.
 Proposed scheduled policy: daily backup, 14 daily and 8 weekly generations,
 plus encrypted off-host copy. Retention deletion requires a separate reviewed
 policy; do not prune incident recovery artifacts automatically. Test restore
 into an isolated directory and compare data, never restore over production as
-an exercise. No scheduler or off-host backup is installed by this document.
+an exercise. Installed host service `vocab-backup.service` and timer `vocab-backup.timer`: daily
+04:15 UTC, persistent timer. Script `/usr/local/sbin/vocab-backup.py` uses flock,
+stops app and Spotify worker (up to 60 seconds each to drain), snapshots both DBs
+and the complete data tree, then restarts only previously-running services in
+finally. Expect a short maintenance window each backup. Source: `checks/backup-data.py`.
+Retention deletion is not enabled; all generations are kept pending restore and
+off-host verification. Off-host encrypted backup remains pending; no unverified
+cloud destination or encryption recovery key is assumed.
 
 ## Recovery rules
 
@@ -135,3 +144,28 @@ not directory name. Check all accounts and current weeks. Merge on natural keys
 post-backup writes. Counters/review flags/game debt need explicit conflict rules;
 row counts alone cannot establish complete recovery. Obtain approval before
 production merge. State the backup cutoff and any unrecoverable interval.
+
+## Verified cutover acceptance
+
+- Full-content hashes of all 8 tables matched before/after migration.
+- 700 words, 726 week links, 151 game records; affected account retains 37
+  words for week `2026-11-09`.
+- DB and upload scoped writes survived restart; test fixtures removed.
+- Old DB content stayed unchanged after cutover and restart.
+- Authenticated My Words and game-memory reads returned 200 through the
+  inspected container listener; unauthenticated My Words returned 401.
+  Real browser OAuth/UI interaction remains untested.
+- First scheduled-service test exited 0, produced DB snapshots, full archive
+  and SHA256SUMS. Isolated restore of migration archive passed integrity and
+  word-count checks. Backup pause measured about 77 seconds, dominated by
+  worker drain; reserve a maintenance window.
+- Protected current Docker config: `/home/docker/vocab-learner/deployment/container.json`.
+  Contains secrets: root-only; never commit or print. Previous config stored
+  alongside it and in migration snapshot. Container was originally unmanaged
+  (no Compose labels); recreation used original Config/HostConfig and immutable
+  image ID via local Docker API, changing only storage environment/bind.
+- Build is unchanged; no feature release was bundled with migration.
+- Off-host transport is not installed on host. An existing `gdrive` config was
+  discovered, but destination ownership and encryption recovery-key custody
+  are not verified. Obtain destination and key-custody decision before upload;
+  do not copy user data to an assumed cloud folder.
