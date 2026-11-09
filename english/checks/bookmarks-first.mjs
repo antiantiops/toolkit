@@ -16,14 +16,14 @@ try{
   await page.goto(base);await page.getByRole('button',{name:/My Words/}).click();
   const toggle=page.locator('[data-bookmarks-first]'),ids=()=>page.locator('[data-word-id]').evaluateAll(els=>els.map(e=>+e.dataset.wordId));
   await toggle.scrollIntoViewIfNeeded();await page.waitForTimeout(200);
-  assert.equal(await toggle.locator('svg').getAttribute('data-book-icon'),'closed');
+  assert.equal(await toggle.locator('[data-book-icon]').getAttribute('data-book-icon'),'closed');
   const heading=await page.getByRole('heading',{name:'Từ trong tuần',exact:true}).boundingBox(),button=await toggle.boundingBox();
   assert(button.width<190);assert(Math.abs(heading.y+heading.height/2-button.y-button.height/2)<3);
   await page.screenshot({path:`/root/.openclaw/workspace-nim/media/bookmarks-${width}-off.png`});
   const y=await page.evaluate(()=>scrollY);
   if(!reduced){fail=true;await toggle.click();await page.locator('p[role="alert"]').waitFor();assert.equal(await toggle.getAttribute('aria-pressed'),'false');assert.deepEqual(await ids(),[1,2,3,4]);fail=false;}
   await toggle.click();await page.waitForFunction(()=>document.querySelector('[data-bookmarks-first]')?.getAttribute('aria-pressed')==='true');
-  assert.deepEqual(await ids(),[2,4,6,1,3,5]);assert.equal(await toggle.locator('svg').getAttribute('data-book-icon'),'open');
+  assert.deepEqual(await ids(),[2,4,6,1,3,5]);assert.equal(await toggle.locator('[data-book-icon]').getAttribute('data-book-icon'),'open');
   const active=await page.locator('[data-word-id="2"]').evaluate(e=>e.getAnimations().length);
   assert.equal(active>0,!reduced);
   if(!reduced){
