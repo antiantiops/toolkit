@@ -15,3 +15,8 @@ Before deployment, container recreation, storage changes or recovery, read
 uploads and account preferences outside build artifacts. Back up with SQLite
 backup API and compare per-account/week data before and after. HTTP 200 is not
 proof of data preservation.
+
+Production recreation must preserve the root-only host launcher
+`/home/docker/vocab-learner/deployment/compose.json`; build-only deployments
+restart the existing container so all five mounts and storage env survive.
+Do not substitute a partial docker run command.

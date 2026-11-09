@@ -169,3 +169,25 @@ production merge. State the backup cutoff and any unrecoverable interval.
   discovered, but destination ownership and encryption recovery-key custody
   are not verified. Obtain destination and key-custody decision before upload;
   do not copy user data to an assumed cloud folder.
+
+## Mandatory launcher for subsequent deployments
+
+Host source of truth: `/home/docker/vocab-learner/deployment/compose.json`
+(root-only, contains environment credentials; never commit or print).
+Validated with `docker compose ... config --quiet`; rendered environment,
+immutable image and all five mounts match the current live container exactly.
+`bind.create_host_path=false` prevents silently creating empty paths on typos.
+The current container is still created by Docker API, not adopted by Compose.
+
+For build-only deployments keep the existing container: update ONLY standalone
+and static artifacts, then `sudo docker restart vocab-learner`. Restart preserves
+all environment and mounts. Never recreate with an ad-hoc partial docker run.
+
+If recreation is required, use the saved Compose file after stopping and retaining
+the existing container under a rollback name; run the storage-contract gate on
+rendered/created configuration before accepting traffic. Compose adoption itself
+requires a maintenance window and post-recreation data verification; it has not
+been performed merely by saving this file. Review any image/config changes first.
+Never run `docker compose down -v`, delete `/data`, replace `data/`, or include it
+in build archives. Verify all five mounts and explicit storage environment after
+every recreation. Data hashes and per-account/week counts must not drop.
