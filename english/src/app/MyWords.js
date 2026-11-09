@@ -5,11 +5,12 @@ import { parseApiResponse, formatErrorMessage } from './fetch-helper';
 export default function MyWords({onLookup}) {
   const [rows,setRows]=useState([]), [next,setNext]=useState(null), [busy,setBusy]=useState(false), [error,setError]=useState('');
   const [week,setWeek]=useState(weekStart()), [weeks,setWeeks]=useState([]), [review,setReview]=useState(false), [card,setCard]=useState(0);
-  const [tagging,setTagging]=useState(null);
+  const [tagging,setTagging]=useState(null),[bookmarksFirst,setBookmarksFirst]=useState(false);
+  const displayedRows=bookmarksFirst?[...rows.filter(r=>r.needsReview),...rows.filter(r=>!r.needsReview)]:rows;
   const tagWord=async row=>{
     if(tagging!==null)return;
     const version=requestVersion.current;setTagging(row.id);setError('');
-    try{await parseApiResponse(await fetch('/api/my-words',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:row.id,needsReview:!row.needsReview})}));if(version===requestVersion.current)setRows(current=>current.map(r=>r.id===row.id?{...r,needsReview:!row.needsReview}:r));}
+    try{await parseApiResponse(await fetch('/api/my-words',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:row.id,needsReview:!row.needsReview})}));if(version===requestVersion.current){capturePositions();setRows(current=>current.map(r=>r.id===row.id?{...r,needsReview:!row.needsReview}:r));}}
     catch(e){if(version===requestVersion.current)setError(formatErrorMessage(e));}finally{setTagging(null);}
   };
   const [pronunciations,setPronunciations] = useState({});
@@ -47,9 +48,10 @@ export default function MyWords({onLookup}) {
   const [ordering,setOrdering]=useState(false),[dragging,setDragging]=useState(null);
   const reorderDrag=useRef(null), listRef=useRef(null), positions=useRef(new Map()), flyingWord=useRef(null);
   const [floating,setFloating]=useState(null),[dropTarget,setDropTarget]=useState(null);
-  const capturePositions=()=>{positions.current=new Map([...listRef.current.querySelectorAll('[data-word-id]')].map(el=>[+el.dataset.wordId,el.getBoundingClientRect().top]));};
+  const capturePositions=()=>{positions.current=new Map([...(listRef.current?.querySelectorAll('[data-word-id]')||[])].map(el=>[+el.dataset.wordId,el.getBoundingClientRect().top]));};
   useLayoutEffect(()=>{
     const flight=flyingWord.current;flyingWord.current=null;
+    listRef.current?.querySelectorAll('[data-word-id]').forEach(el=>el.getAnimations().forEach(a=>a.cancel()));
     if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches)listRef.current?.querySelectorAll('[data-word-id]').forEach(el=>{
       const old=positions.current.get(+el.dataset.wordId),dy=old-el.getBoundingClientRect().top;
       if(!Number.isFinite(dy)||!dy)return;
@@ -62,9 +64,9 @@ export default function MyWords({onLookup}) {
       ]:[{transform:`translateY(${dy}px)`},{transform:'translateY(0)'}],{duration:lifted?1200:620,easing:'cubic-bezier(.22,.75,.25,1)'});
     });
     positions.current.clear();
-  },[rows]);
+  },[rows,bookmarksFirst]);
   const reorder = async (id,beforeId) => {
-    if(ordering||id===beforeId)return;
+    if(bookmarksFirst||ordering||id===beforeId)return;
     const original=rows,updated=[...rows],index=updated.findIndex(r=>r.id===id);
     if(index<0||!updated.some(r=>r.id===beforeId))return;
     capturePositions();const [row]=updated.splice(index,1);updated.splice(updated.findIndex(r=>r.id===beforeId),0,row);setRows(updated);
@@ -73,7 +75,7 @@ export default function MyWords({onLookup}) {
     catch(e){setRows(original);setError(formatErrorMessage(e));}finally{setOrdering(false);}
   };
   const moveToEdge=async(id,edge)=>{
-    if(ordering||busy)return;
+    if(bookmarksFirst||ordering||busy)return;
     setOrdering(true);setError('');
     try{
       await parseApiResponse(await fetch('/api/my-words',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({week,id,edge})}));
@@ -81,7 +83,7 @@ export default function MyWords({onLookup}) {
     }catch(e){setError(formatErrorMessage(e));}finally{setOrdering(false);}
   };
   const startOrder=e=>{
-    if(e.button!==0||ordering||busy)return;
+    if(e.button!==0||bookmarksFirst||ordering||busy)return;
     e.preventDefault();const el=e.currentTarget.closest('[data-word-id]'),rect=el.getBoundingClientRect(),id=+el.dataset.wordId;
     reorderDrag.current={id,offset:e.clientY-rect.top};setDragging(id);setDropTarget(null);
     setFloating({left:rect.left,top:rect.top,width:rect.width,height:rect.height,english:rows.find(r=>r.id===id).english});e.currentTarget.setPointerCapture(e.pointerId);
@@ -127,7 +129,24 @@ export default function MyWords({onLookup}) {
     try { const data=await parseApiResponse(await fetch('/api/my-words?week='+week+(cursor?'&before='+cursor:''),{cache:'no-store'})); if (version !== requestVersion.current) return; if(animateOrder){capturePositions();flyingWord.current=animateOrder;} setRows(current=>cursor?[...current,...data.words]:data.words); setNext(data.next); setWeeks(data.weeks); }
     catch(e){if(version === requestVersion.current)setError(formatErrorMessage(e));} finally{if(version === requestVersion.current&&!animateOrder)setBusy(false);} 
   };
-  useEffect(() => { setRows([]); setNext(null); setReview(false); setCard(0); load(); return () => { requestVersion.current++; }; }, [week]);
+  useEffect(() => { setRows([]); setNext(null); setBookmarksFirst(false); setReview(false); setCard(0); load(); return () => { requestVersion.current++; }; }, [week]);
+  const toggleBookmarks=async()=>{
+    if(busy||ordering||dragging!==null)return;
+    if(bookmarksFirst){capturePositions();setBookmarksFirst(false);return;}
+    const version=requestVersion.current;setOrdering(true);setError('');
+    try{
+      let cursor=next,all=rows;
+      while(cursor){
+        const data=await parseApiResponse(await fetch('/api/my-words?week='+week+'&before='+cursor,{cache:'no-store'}));
+        if(version!==requestVersion.current)return;
+        if(data.next===cursor)throw Error('Không tải được trang từ tiếp theo.');
+        all=[...all,...data.words];cursor=data.next;
+      }
+      if(version!==requestVersion.current)return;
+      capturePositions();setRows(all);setNext(null);setBookmarksFirst(true);
+    }catch(e){if(version===requestVersion.current)setError(formatErrorMessage(e));}
+    finally{setOrdering(false);}
+  };
   const weekLabel = value => {
     const start = new Date(value+'T00:00:00Z'), end = new Date(start); end.setUTCDate(end.getUTCDate()+6);
     const format = d => d.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',timeZone:'UTC'});
@@ -167,13 +186,14 @@ export default function MyWords({onLookup}) {
     {error && <p role="alert" className="rounded-xl bg-red-950/30 p-3 text-sm text-red-300">{error}</p>}
     {!busy&&!error&&!rows.length&&<div className="rounded-xl border border-dashed border-slate-700 px-4 py-8 text-center"><p className="font-medium text-slate-300">Chưa có từ đã tra</p><p className="mt-2 text-sm text-slate-500">Tra Anh–Việt hoặc Việt–Anh để thêm vào bộ từ của bạn.</p></div>}
     {!review && !!rows.length && <div className="flex items-center justify-between border-t border-slate-800 pt-4"><h3 className="text-sm font-semibold text-slate-300">Từ trong tuần</h3><span className="text-xs text-slate-500">↻ Số lần xem lại tổng cộng</span></div>}
-    {!review && !!rows.length && <p role="status" className="min-h-10 text-xs text-slate-400">{ordering?"Đang lưu thứ tự…":dragging!==null?"Thả tay trên từ muốn đặt phía sau.":"Kéo tay nắm ⠿ để đặt từ lên trước. Hoặc bấm nút đưa lên đầu / xuống cuối. Thứ tự ôn lưu theo tuần."}</p>}
-    {!review && <ul ref={listRef} style={{overflowAnchor:'none'}} className="space-y-2">{rows.map((row,index)=><li data-word-id={row.id} key={row.id} className={`relative flex items-center gap-2 rounded-xl border p-3 ${dropTarget===row.id?'border-indigo-400 bg-indigo-950/60':'border-transparent bg-slate-950/40'} ${dragging===row.id?'opacity-30':''}`}>
+    {!review && !!rows.length && <button type="button" data-bookmarks-first aria-pressed={bookmarksFirst} disabled={busy||ordering||dragging!==null||tagging!==null} onClick={toggleBookmarks} className={`min-h-11 w-full rounded-xl border px-4 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 disabled:opacity-50 ${bookmarksFirst?'border-indigo-400 bg-indigo-500/20 text-indigo-100':'border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700'}`}>{bookmarksFirst?'Trả về thứ tự ban đầu':'Ưu tiên từ gắn sách lên đầu'}</button>}
+    {!review && !!rows.length && <p role="status" className="min-h-10 text-xs text-slate-400">{ordering?"Đang xử lý thứ tự…":bookmarksFirst?"Từ gắn sách đang ở đầu. Tắt ưu tiên để trở về thứ tự cũ hoặc kéo sắp xếp.":dragging!==null?"Thả tay trên từ muốn đặt phía sau.":"Kéo tay nắm ⠿ để đặt từ lên trước. Hoặc bấm nút đưa lên đầu / xuống cuối. Thứ tự ôn lưu theo tuần."}</p>}
+    {!review && <ul ref={listRef} style={{overflowAnchor:'none'}} className="space-y-2">{displayedRows.map((row,index)=><li data-word-id={row.id} key={row.id} className={`relative flex items-center gap-2 rounded-xl border p-3 ${dropTarget===row.id?'border-indigo-400 bg-indigo-950/60':'border-transparent bg-slate-950/40'} ${dragging===row.id?'opacity-30':''}`}>
       {dropTarget===row.id&&<span aria-hidden="true" className="absolute -top-1 inset-x-2 h-1 rounded-full bg-indigo-400"/>}
       <div className="flex w-9 shrink-0 flex-col items-center">
-        <button disabled={busy||ordering||index===0} aria-label={`Đưa ${row.english} lên đầu`} title="Đưa lên đầu danh sách tuần" onClick={()=>moveToEdge(row.id,'top')} className="h-6 w-9 rounded text-sm text-slate-400 hover:bg-indigo-500/10 disabled:opacity-25"><svg aria-hidden="true" viewBox="0 0 24 24" className="mx-auto h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 4h16M12 20V8m-5 5 5-5 5 5"/></svg></button>
-        <button disabled={busy||ordering} aria-label={`Kéo ${row.english} đổi vị trí`} onPointerDown={startOrder} onPointerMove={moveOrder} onPointerUp={dropOrder} onPointerCancel={cancelOrder} style={{touchAction:'none'}} className="flex h-8 w-9 items-center justify-center rounded-lg text-lg text-slate-400 active:bg-indigo-500/20">⠿</button>
-        <button disabled={busy||ordering||(!next&&index===rows.length-1)} aria-label={`Đưa ${row.english} xuống cuối`} title="Đưa xuống cuối danh sách tuần" onClick={()=>moveToEdge(row.id,'bottom')} className="h-6 w-9 rounded text-sm text-slate-400 hover:bg-indigo-500/10 disabled:opacity-25"><svg aria-hidden="true" viewBox="0 0 24 24" className="mx-auto h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 20h16M12 4v12m-5-5 5 5 5-5"/></svg></button>
+        <button disabled={bookmarksFirst||busy||ordering||index===0} aria-label={`Đưa ${row.english} lên đầu`} title="Đưa lên đầu danh sách tuần" onClick={()=>moveToEdge(row.id,'top')} className="h-6 w-9 rounded text-sm text-slate-400 hover:bg-indigo-500/10 disabled:opacity-25"><svg aria-hidden="true" viewBox="0 0 24 24" className="mx-auto h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 4h16M12 20V8m-5 5 5-5 5 5"/></svg></button>
+        <button disabled={bookmarksFirst||busy||ordering} aria-label={`Kéo ${row.english} đổi vị trí`} onPointerDown={startOrder} onPointerMove={moveOrder} onPointerUp={dropOrder} onPointerCancel={cancelOrder} style={{touchAction:'none'}} className="flex h-8 w-9 items-center justify-center rounded-lg text-lg text-slate-400 active:bg-indigo-500/20">⠿</button>
+        <button disabled={bookmarksFirst||busy||ordering||(!next&&index===rows.length-1)} aria-label={`Đưa ${row.english} xuống cuối`} title="Đưa xuống cuối danh sách tuần" onClick={()=>moveToEdge(row.id,'bottom')} className="h-6 w-9 rounded text-sm text-slate-400 hover:bg-indigo-500/10 disabled:opacity-25"><svg aria-hidden="true" viewBox="0 0 24 24" className="mx-auto h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 20h16M12 4v12m-5-5 5 5 5-5"/></svg></button>
       </div>
       <div className="min-w-0 flex-1"><p className="break-words text-sm font-medium leading-6 text-slate-200">{row.english}</p>{row.chat&&<div className="mt-1 text-xs leading-5 text-teal-200"><span className="text-teal-400">Chat · </span>{row.chat.meaning}{row.chat.example&&<p className="mt-1 text-slate-400">{row.chat.example}</p>}</div>}<div className="mt-2 flex flex-wrap items-center gap-2">{row.searches>1&&<span className="rounded-full bg-amber-500/10 px-2 py-1 text-xs text-amber-200">↻ {row.searches-1}</span>}<button type="button" disabled={tagging!==null} aria-pressed={!!row.needsReview} aria-label={`${row.needsReview?'Bỏ nhãn chưa nhớ':'Đánh dấu chưa nhớ'}: ${row.english}`} title={row.needsReview?'Bỏ nhãn chưa nhớ':'Đánh dấu từ chưa nhớ'} onClick={()=>tagWord(row)} className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 disabled:opacity-50 ${row.needsReview?'text-indigo-200':'opacity-30 hover:opacity-70 focus-visible:opacity-100'}`}><span aria-hidden="true">📖</span></button></div></div>
       <button onClick={()=>viewMeaning(row.english)} className="min-h-11 shrink-0 rounded-lg bg-indigo-500/10 px-3 text-xs font-semibold text-indigo-200">Xem nghĩa</button>
