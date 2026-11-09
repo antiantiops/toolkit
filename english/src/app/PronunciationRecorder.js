@@ -185,7 +185,7 @@ export default function PronunciationRecorder({ word, ipa }) {
   }
   const busy = ['permission', 'encoding', 'sending'].includes(state);
   return (
-    <section data-testid="pronunciation-recorder" aria-label="Luyện phát âm" className="mt-4 rounded-2xl border border-slate-700/60 bg-[#121421] p-5 text-sm shadow-xl">
+    <section data-testid="pronunciation-recorder" aria-label="Luyện phát âm" className="relative mt-4 rounded-2xl border border-slate-700/60 bg-[#121421] p-5 text-sm shadow-xl">
       <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
         <div className="flex items-center gap-2">
           <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />

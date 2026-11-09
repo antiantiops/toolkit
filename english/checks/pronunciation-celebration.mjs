@@ -14,13 +14,20 @@ try{for(const [width,reduced] of [[390,false],[1280,false],[390,true]]){
  const open=()=>page.getByRole('button',{name:'Luyện nói',exact:true}).click();
  await open();const party=page.locator('[data-pronunciation-celebration]');await party.waitFor();
  await party.scrollIntoViewIfNeeded();assert.equal(await party.locator('canvas').count(),1);
- assert.equal(await party.locator('.fireworks i').count(),reduced?0:36);
+ assert.equal(await party.locator('.fireworks i').count(),reduced?0:100);
+ assert.equal(await party.locator('button').count(),0);
+ assert.equal(await party.evaluate(el=>getComputedStyle(el).position),'absolute');
+ assert.equal(await party.evaluate(el=>getComputedStyle(el).pointerEvents),'none');
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
- for(const phase of ['start','mid','end']){await page.waitForTimeout(phase==='start'?20:phase==='mid'?350:800);await page.screenshot({path:`/root/.openclaw/workspace-nim/media/celebration-${width}-${reduced?'reduced':phase}.png`});}
- await page.getByRole('button',{name:'Đóng lời chúc mừng'}).click();assert.equal(await party.count(),0);
+
+ for(const phase of ['start','mid','end']){
+  await page.waitForTimeout(phase==='start'?20:phase==='mid'?500:1000);
+  await page.screenshot({path:`/root/.openclaw/workspace-nim/media/celebration-${width}-${reduced?'reduced':phase}.png`});
+ }
+
  const close=()=>page.getByRole('button',{name:'Thu gọn luyện nói'}).click();
  for(const [next,kind,expected] of [[90,'feedback',false],[91,'feedback',true],[100,'feedback',true],[null,'retry',false],[95,'retry',false]]){
   await close();score=next;status=kind;await open();await page.getByText('Phát âm tốt.',{exact:true}).waitFor();await page.waitForTimeout(100);assert.equal(await party.count()>0,expected,`${next}/${kind}`);
  }
- await page.close();console.log('PASS celebration',width,reduced,'threshold, retry, robot, fireworks, dismissal, layout');
+ await page.close();console.log('PASS celebration',width,reduced,'no popup frame, floating robot, big fireworks, thresholds, reduced motion');
 }}finally{await browser.close();}
