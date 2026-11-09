@@ -43,3 +43,8 @@ Writing extracts source images once, then generates four smaller schema partitio
 `GET /api/writing?jobId=...` includes extracted `source`, partition `parts`, dynamic `progress`, and merged `writing` as it becomes available. The client shows a dedicated partial-safe progress/source panel; the full Writing component mounts only when completed. Failed partitions retain extracted source and successful results for explicit retry. Owner-scoped deduplication and polling/reload recovery are unchanged. Completed results persist through the normal merged session cache; pending work is process-local and does not survive restart. No new queue, model switch or lazy omission of lesson features.
 
 Checks: `node tests/writing-progress.mjs`, `node checks/writing-progress-browser.mjs` (`TEST_URL` supported), existing vocabulary pipeline, AI fallback and reconnect checks. Live synthetic single-task probe: acknowledgement 177ms; source observed at 18.3s; first partition 30.3s; full 4/4 at 66.4s. This fixture is not the earlier production lesson and does not establish a comparative speedup. Real sample/dual-page inference and authenticated Kong/mobile interaction need separate validation.
+
+## Storage and safe deployment
+
+See [storage inventory, mount design, migration, backup and recovery](docs/storage-and-deployment.md).
+Run `python3 checks/storage-contract.py <docker-inspect.json>` before deployment.
