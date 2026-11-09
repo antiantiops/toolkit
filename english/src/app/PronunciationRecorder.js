@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
 import MouthGuide from './MouthGuide';
+import PronunciationCelebration from './PronunciationCelebration';
 
 function CoachScoreCircle({ score }) {
   const hasScore = Number.isInteger(score);
@@ -197,6 +198,8 @@ export default function PronunciationRecorder({ word, ipa }) {
       <div className="mt-5 flex justify-center">
         <CoachScoreCircle score={result?.score} />
       </div>
+
+      <PronunciationCelebration result={result} />
 
       {/* 2. Từ cần đọc & Phiên âm ở trên nút ghi âm */}
       <div className="mt-6 flex flex-col items-center text-center">
