@@ -11,4 +11,5 @@ assert.equal('```text\nA\n```\n```prompt\nB\n```'.split(regex).filter(x => x.sta
 assert(source.includes('navigator.clipboard.writeText(text)'));
 assert(source.includes('setManual(true)'));
 assert(source.includes('readOnly value={text}'));
+assert(source.includes('Không tạo bài tập dịch câu Việt -> Anh'));
 console.log('chat prompt checks passed');
