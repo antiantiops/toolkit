@@ -23,7 +23,7 @@ assert.ok(
   "Speaking button must have at least 44px min touch target"
 );
 
-// 3. Headphone icon SVG present, no visible text label
+// 3. Ear icon SVG present, no visible text label
 const buttonStartIndex = code.indexOf('aria-label={`Luyện nói ${w.word}`}');
 assert.ok(buttonStartIndex > 0, "Button tag found");
 const buttonEndIndex = code.indexOf('</button>', buttonStartIndex);
@@ -32,6 +32,13 @@ const buttonSnippet = code.slice(buttonStartIndex, buttonEndIndex);
 assert.ok(
   buttonSnippet.includes('<svg') && buttonSnippet.includes('</svg>'),
   "Button must contain SVG icon"
+);
+
+assert.ok(
+  buttonSnippet.includes('d="M6 9a6 6 0 0 1 12 0c0 3-1.5 4.3-3.3 5.7-1.2.9-1.4 2-1.8 3.2A3 3 0 0 1 7 17"') &&
+    buttonSnippet.includes('d="M9 9a3 3 0 0 1 6 0c0 1.6-1 2.3-2 3l-1 1"') &&
+    buttonSnippet.includes('d="M9 9v3"'),
+  "Button must contain ear icon SVG paths"
 );
 
 // Check no visible text: strip SVG tag and check remainder has no text nodes

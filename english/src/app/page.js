@@ -1182,7 +1182,9 @@ export default function Home() {
                     className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-violet-700/60 bg-violet-950/40 text-violet-200 transition-colors hover:bg-violet-900/50 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400"
                   >
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
-                      <path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3" />
+                      <path d="M6 9a6 6 0 0 1 12 0c0 3-1.5 4.3-3.3 5.7-1.2.9-1.4 2-1.8 3.2A3 3 0 0 1 7 17" />
+                      <path d="M9 9a3 3 0 0 1 6 0c0 1.6-1 2.3-2 3l-1 1" />
+                      <path d="M9 9v3" />
                     </svg>
                   </button>
                 </div>
