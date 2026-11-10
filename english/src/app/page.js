@@ -1172,7 +1172,20 @@ export default function Home() {
                   <div className="flex items-center gap-1 text-lg sm:text-xl font-bold text-blue-400 break-words"><span>{w.word}</span><CopyBtn text={w.word} /></div>
                   <div className="mt-1 flex items-center gap-2"><span className="text-purple-400 italic text-sm">{w.ipa}</span>{w.partOfSpeech && <span className="rounded-full border border-blue-800 bg-blue-950 px-2 py-0.5 text-xs font-semibold text-blue-200">{w.partOfSpeech}</span>}</div>
                 </div>
-                <SpeakBtn text={w.word} className="shrink-0 w-10 h-10 rounded-full bg-emerald-600 hover:bg-emerald-500 flex items-center justify-center text-lg transition-colors" title="Nghe phát âm">🔊</SpeakBtn>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <SpeakBtn text={w.word} className="w-10 h-10 rounded-full bg-emerald-600 hover:bg-emerald-500 flex items-center justify-center text-lg transition-colors" title="Nghe phát âm">🔊</SpeakBtn>
+                  <button
+                    type="button"
+                    onClick={() => setLookup({ ...w, practice: true })}
+                    title={`Luyện nói ${w.word}`}
+                    aria-label={`Luyện nói ${w.word}`}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-violet-700/60 bg-violet-950/40 text-violet-200 transition-colors hover:bg-violet-900/50 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400"
+                  >
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                      <path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3" />
+                    </svg>
+                  </button>
+                </div>
               </div>
               <div className="mt-3 text-slate-100 font-medium">{w.meaning}</div>{gameMemory[String(w.word).toLowerCase().trim()]?.debt>0 && <span className="mt-2 inline-block rounded-full bg-amber-950 px-2 py-1 text-xs text-amber-200">Ưu tiên ôn · Hay quên</span>}
               {w.definition && (
