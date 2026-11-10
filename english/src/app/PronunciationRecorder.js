@@ -275,7 +275,7 @@ function PronunciationRecorderPanel({ word, ipa, lookup }) {
           </div>
         )}
         {Array.isArray(result?.segments) && result.segments.length > 0 ? (
-          <div className="inline-flex flex-wrap items-center justify-center text-3xl font-bold tracking-tight text-white">
+          <div className="text-3xl font-bold tracking-tight text-white">
             {result.segments.map((s, i) => {
               const isSingleWord = !activeTargetText.includes(' ') && !/^[A-Z0-9]+$/.test(activeTargetText.trim());
               const text = isSingleWord ? s.text.toLowerCase() : s.text;
