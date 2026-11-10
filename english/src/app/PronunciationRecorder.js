@@ -105,9 +105,61 @@ export default function PronunciationRecorder(props) {
   return <ErrorBoundary key={props.word}><PronunciationRecorderPanel {...props} /></ErrorBoundary>;
 }
 
-function PronunciationRecorderPanel({ word, ipa }) {
+function PronunciationRecorderPanel({ word, ipa, lookup }) {
+  const [targetType, setTargetType] = useState('word'); // 'word' | 'collocation' | 'sentence'
+  const [practiceData, setPracticeData] = useState(null);
+  const [practiceLoading, setPracticeLoading] = useState(false);
   const [state, setState] = useState('idle'), [clip, setClip] = useState(null), [result, setResult] = useState(null), [error, setError] = useState(''), [notice,setNotice] = useState(''), [jobId,setJobId] = useState(null);
   const live = useRef(false), recorder = useRef(null), stream = useRef(null), timer = useRef(null), controller = useRef(null), url = useRef(null), currentJobId = useRef(null);
+
+  // Derive initial or lookup-based practice items
+  useEffect(() => {
+    let coll = null;
+    if (lookup?.collocations?.[0]?.phrase) {
+      coll = {
+        phrase: lookup.collocations[0].phrase,
+        meaning: lookup.collocations[0].meaning || lookup.collocations[0].note || '',
+      };
+    }
+    let sent = null;
+    const ex = lookup?.contrastExamples?.[0] || (lookup?.example ? { english: lookup.example, vietnamese: lookup.exampleVietnamese || '' } : null);
+    if (ex?.english) {
+      sent = {
+        text: ex.english,
+        meaning: ex.vietnamese || '',
+      };
+    }
+    if (coll && sent) {
+      setPracticeData({ word, collocation: coll, sentence: sent });
+    }
+  }, [lookup, word]);
+
+  // When result score > 90, if practiceData missing collocation or sentence, fetch from api
+  useEffect(() => {
+    if (result?.score > 90 && !practiceData && !practiceLoading) {
+      setPracticeLoading(true);
+      fetch(`/api/pronunciation-practice?word=${encodeURIComponent(word)}`)
+        .then(r => (r.ok ? r.json() : null))
+        .then(data => {
+          if (live.current && data?.collocation && data?.sentence) {
+            setPracticeData(data);
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (live.current) setPracticeLoading(false);
+        });
+    }
+  }, [result?.score, practiceData, practiceLoading, word]);
+
+  const activeTargetText = targetType === 'sentence'
+    ? practiceData?.sentence?.text || word
+    : targetType === 'collocation'
+    ? practiceData?.collocation?.phrase || word
+    : word;
+
+  const activeTargetIpa = targetType === 'word' ? ipa : '';
+
   useEffect(() => {
     live.current = true;
     let saved;try { saved=sessionStorage.getItem('pronunciation-job:'+word); }catch{}
@@ -182,7 +234,7 @@ function PronunciationRecorderPanel({ word, ipa }) {
       if(activeJobId&&!retry){await poll(activeJobId);return;}
       let options;
       if(activeJobId) options={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jobId:activeJobId,retry:true})};
-      else {const audio=recordedClip || clip?.blob;if(!audio)throw Error('Chưa có bản ghi để đánh giá.');const form=new FormData();form.set('word',word);form.set('ipa',ipa||'');form.set('file',audio,'pronunciation.wav');options={method:'POST',body:form};}
+      else {const audio=recordedClip || clip?.blob;if(!audio)throw Error('Chưa có bản ghi để đánh giá.');const form=new FormData();form.set('word',activeTargetText);form.set('ipa',activeTargetIpa||'');form.set('file',audio,'pronunciation.wav');options={method:'POST',body:form};}
       const data=await request(options);
       if(!live.current)return;
       if(data.result){if(data.jobId)remember(data.jobId);setResult(validateAssessment(data.result));setNotice('');setState('ready');return;}
@@ -210,10 +262,22 @@ function PronunciationRecorderPanel({ word, ipa }) {
 
       {/* 2. Từ cần đọc & Phiên âm ở trên nút ghi âm */}
       <div className="mt-6 flex flex-col items-center text-center">
+        {targetType !== 'word' && (
+          <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-sky-600/40 bg-sky-950/60 px-3 py-1 text-xs font-semibold text-sky-200">
+            <span>{targetType === 'collocation' ? '🔗 Đang luyện Collocation' : '📝 Đang luyện Câu'}</span>
+            <button
+              type="button"
+              onClick={() => { setTargetType('word'); setResult(null); setError(''); }}
+              className="ml-1 text-sky-300 hover:text-white underline text-[11px]"
+            >
+              Luyện lại từ gốc: {word}
+            </button>
+          </div>
+        )}
         {Array.isArray(result?.segments) && result.segments.length > 0 ? (
           <div className="inline-flex flex-wrap items-center justify-center text-3xl font-bold tracking-tight text-white">
             {result.segments.map((s, i) => {
-              const isSingleWord = !word.includes(' ') && !/^[A-Z0-9]+$/.test(word.trim());
+              const isSingleWord = !activeTargetText.includes(' ') && !/^[A-Z0-9]+$/.test(activeTargetText.trim());
               const text = isSingleWord ? s.text.toLowerCase() : s.text;
               return (
                 <span
@@ -227,21 +291,89 @@ function PronunciationRecorderPanel({ word, ipa }) {
           </div>
         ) : (
           <div className="text-3xl font-extrabold tracking-tight text-white">
-            {normalizeDisplayWord(word)}
+            {normalizeDisplayWord(activeTargetText)}
           </div>
         )}
 
-        {ipa && (
+        {activeTargetIpa && (
           <div className="mt-2 font-mono text-sm tracking-wide text-slate-400">
-            {ipa}
+            {activeTargetIpa}
           </div>
         )}
       </div>
 
-      {result?.heard?.trim() && result.heard.trim().toLowerCase() !== word.trim().toLowerCase() && (
+      {result?.heard?.trim() && result.heard.trim().toLowerCase() !== activeTargetText.trim().toLowerCase() && (
         <div data-testid="pronunciation-heard" className="mt-4 rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-center text-sm break-words">
           <p className="text-slate-400">Bạn đọc nghe như: <strong className="text-amber-300">{normalizeDisplayWord(result.heard)}</strong></p>
-          <p className="mt-0.5 text-slate-400">Từ cần đọc: <strong className="text-emerald-400">{normalizeDisplayWord(word)}</strong></p>
+          <p className="mt-0.5 text-slate-400">Nội dung cần đọc: <strong className="text-emerald-400">{normalizeDisplayWord(activeTargetText)}</strong></p>
+        </div>
+      )}
+
+      {/* Advanced Practice Section (>90 score) */}
+      {result?.score > 90 && (
+        <div data-testid="advanced-pronunciation-practice" className="mt-6 rounded-2xl border border-emerald-500/40 bg-gradient-to-b from-emerald-950/40 to-slate-900/60 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🎯</span>
+              <h4 className="font-semibold text-emerald-300">Luyện nâng cao sau điểm &gt; 90</h4>
+            </div>
+            {targetType !== 'word' && (
+              <button
+                type="button"
+                onClick={() => { setTargetType('word'); setResult(null); setError(''); }}
+                className="text-xs text-slate-400 hover:text-white"
+              >
+                Luyện lại từ gốc: {word}
+              </button>
+            )}
+          </div>
+
+          {practiceLoading && !practiceData ? (
+            <div className="mt-3 text-xs text-slate-400 flex items-center gap-2">
+              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-slate-600 border-t-emerald-300" />
+              Đang chuẩn bị collocation và câu ví dụ…
+            </div>
+          ) : practiceData ? (
+            <div className="mt-3 space-y-3">
+              {practiceData.collocation?.phrase && (
+                <div className="rounded-xl border border-teal-800/60 bg-teal-950/30 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wider text-teal-400">1. Collocation</div>
+                      <div className="mt-1 text-base font-bold text-teal-100">{practiceData.collocation.phrase}</div>
+                      <div className="text-xs text-teal-200/80">{practiceData.collocation.meaning}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setTargetType('collocation'); setResult(null); setError(''); }}
+                      className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${targetType === 'collocation' ? 'bg-teal-600 text-white' : 'bg-teal-900/60 text-teal-200 hover:bg-teal-800'}`}
+                    >
+                      Luyện collocation
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {practiceData.sentence?.text && (
+                <div className="rounded-xl border border-sky-800/60 bg-sky-950/30 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wider text-sky-400">2. Câu chứa từ và collocation</div>
+                      <div className="mt-1 text-sm font-medium text-sky-100 leading-relaxed">{practiceData.sentence.text}</div>
+                      <div className="text-xs text-sky-200/80 mt-0.5">{practiceData.sentence.meaning}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setTargetType('sentence'); setResult(null); setError(''); }}
+                      className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${targetType === 'sentence' ? 'bg-sky-600 text-white' : 'bg-sky-900/60 text-sky-200 hover:bg-sky-800'}`}
+                    >
+                      Luyện câu
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
       )}
 
@@ -317,7 +449,7 @@ function PronunciationRecorderPanel({ word, ipa }) {
             onClick={() => assess(!!error && !!jobId)}
             className="mt-3 min-h-11 rounded-lg bg-sky-700 px-3 py-2 text-white disabled:opacity-50"
           >
-            {jobId ? 'Thử đánh giá lại' : 'Gửi lại đánh giá'}
+            {jobId ? 'Thử đánh giá lại' : 'Gửi đánh giá'}
           </button>
         )}
       </div>
