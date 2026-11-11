@@ -1,6 +1,7 @@
 import { cacheOwner } from './owner';
 import { NextResponse } from "next/server";
 import { loadSession, deleteSession } from "./storage";
+import { pronunciation } from '../../../lib/lookup/pronunciation';
 
 export async function GET(request) {
  if (!cacheOwner(request)) return NextResponse.json({error:"Cần đăng nhập qua Kong"},{status:401});
@@ -13,12 +14,18 @@ export async function GET(request) {
   const headers = { 'Cache-Control': 'private, no-store' };
   if (type === 'manifest') return NextResponse.json({ available: { vocab: !!data?.words?.length, grammar: !!data?.grammar, writing: !!data?.writing, listening: !!data?.listening } }, { headers });
   if (type && !fields[type]) return NextResponse.json({ error: 'Invalid session type' }, { status: 400, headers });
+  const enrichWords = words => (words || []).map(w => {
+    if (w.pronunciation) return w;
+    const p = typeof w.word === 'string' ? pronunciation(w.word) : null;
+    return p ? { ...w, pronunciation: p } : w;
+  });
   if (type === 'vocab') {
     const offset = Number(query.get('offset') || 0);
     if (!Number.isSafeInteger(offset) || offset < 0) return NextResponse.json({ error: 'Invalid offset' }, { status: 400, headers });
-    const words = data?.words || [];
+    const words = enrichWords(data?.words);
     return NextResponse.json({ session: { words: words.slice(offset, offset + 10) }, next: offset + 10 < words.length ? offset + 10 : null, total: words.length }, { headers });
   }
+  if (data?.words) data.words = enrichWords(data.words);
   const session = !data ? null : type ? Object.fromEntries(fields[type].filter(k => k in data).map(k => [k, data[k]])) : data;
   return NextResponse.json({ session }, { headers });
 }
