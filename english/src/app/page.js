@@ -1,5 +1,6 @@
 "use client";
 import ContrastTip from "./ContrastTip";
+import OxfordPronunciation from "./OxfordPronunciation";
 import PronunciationRecorder from "./PronunciationRecorder";
 import { prioritizeWords } from "../lib/vocab-game.mjs";
 import { normalizeGrammarAnswer } from "../lib/grammar/answers";
@@ -1171,19 +1172,11 @@ export default function Home() {
                 <div>
                   <div className="flex items-center gap-1 text-lg sm:text-xl font-bold text-blue-400 break-words"><span>{w.word}</span><CopyBtn text={w.word} /></div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm italic text-purple-400">
-                    {w.pronunciation?.uk || w.pronunciation?.us ? (
-                      <>
-                        {w.pronunciation.uk && <span>🇬🇧 UK: {w.pronunciation.uk}</span>}
-                        {w.pronunciation.us && <span>🇺🇸 US: {w.pronunciation.us}</span>}
-                      </>
-                    ) : (
-                      <span>{w.ipa}</span>
-                    )}
+                    <OxfordPronunciation word={w.word} pronunciation={w.pronunciation} />
                     {w.partOfSpeech && <span className="rounded-full border border-blue-800 bg-blue-950 px-2 py-0.5 text-xs font-semibold not-italic text-blue-200">{w.partOfSpeech}</span>}
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
-                  <SpeakBtn text={w.word} className="w-10 h-10 rounded-full bg-emerald-600 hover:bg-emerald-500 flex items-center justify-center text-lg transition-colors" title="Nghe phát âm">🔊</SpeakBtn>
                   <button
                     type="button"
                     onClick={() => setLookup({ ...w, practice: true })}
@@ -1656,7 +1649,6 @@ export default function Home() {
               <div data-testid="lookup-word-header" className="flex min-w-0 flex-wrap items-center gap-2">
                 <div className="break-words text-xl font-bold text-sky-300">{lookup.word}</div>
                 <CopyBtn text={lookup.word} />
-                <SpeakBtn text={lookup.word} title="Nghe từ" aria-label="Nghe từ" className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-base text-white hover:bg-emerald-500" />
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 <button type="button" title="Ghi âm để luyện phát âm" aria-label={lookup.practice ? "Thu gọn luyện nói" : "Luyện nói"} aria-expanded={!!lookup.practice} aria-controls="word-pronunciation-practice" onClick={() => setLookup(current => ({ ...current, practice: !current.practice }))} className="inline-flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-violet-700/60 bg-violet-950/40 px-2.5 text-xs font-medium text-violet-200 hover:bg-violet-900/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400">
@@ -1674,10 +1666,9 @@ export default function Home() {
               </div>
             )}
             {(lookup.partOfSpeech || lookup.dictionaryParts?.length > 0) && <div data-testid="lookup-word-class" className="mt-2 text-sm font-semibold text-amber-200">{lookup.partOfSpeech || lookup.dictionaryParts.join(' · ')}{!lookup.partOfSpeech && <small className="ml-2 font-normal text-slate-400">Từ loại trong từ điển</small>}</div>}
-            {lookup.pronunciation && <div data-testid="lookup-pronunciation" className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-violet-300"><span>🇬🇧 UK: {lookup.pronunciation.uk || "Chưa có"}</span><span>🇺🇸 US: {lookup.pronunciation.us || "Chưa có"}</span><small className="w-full text-xs text-slate-400">Nguồn: {lookup.pronunciation.source} · Phiên âm từ điển; có thể khác theo từ loại/ngữ cảnh.</small></div>}
+            <OxfordPronunciation key={lookup.word} word={lookup.word} pronunciation={lookup.pronunciation} />
             {lookup.practice && <div id="word-pronunciation-practice"><PronunciationRecorder key={lookup.word} word={lookup.word} ipa={lookup.pronunciation?.us || lookup.pronunciation?.uk || lookup.ipa || ""} lookup={lookup} /></div>}
             {lookup.loading && !lookup.meaning ? <div className="mt-5 text-slate-400">Đang tra nghĩa tiếng Việt...</div> : lookup.error ? <div className="mt-4 text-red-300">{lookup.error}</div> : <>
-              {!lookup.pronunciation && <div className="mt-1 text-violet-300 italic">{lookup.ipa}</div>}
               {lookup.easyReading && <div className="mt-4 rounded-xl border border-sky-900 bg-sky-950/50 p-3 text-sm leading-relaxed text-sky-100"><span className="font-semibold text-sky-300">Dễ đọc: </span>{lookup.easyReading}</div>}
               <div data-testid="lookup-meaning" className="mt-4 text-lg font-medium text-white">{lookup.meaning}</div>
               {lookup.detailLoading && <div data-testid="lookup-detail-loading" className="mt-2 flex items-center gap-2 text-xs text-slate-400"><span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-slate-600 border-t-sky-300" />Đang bổ sung giải thích, ví dụ…</div>}
