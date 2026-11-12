@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {joinSpeech,hasSpeech} from '../lib/join-speech.mjs';
 import {validSegments} from '../lib/speech-segments.mjs';
 const tts = { audio: null, cache: new Map(), segments: new Map(), joined: new Map(), run: 0, cancel: null };
@@ -64,8 +64,28 @@ async function speak(text,lang,ready){
   audio.play().then(ready).catch(()=>finish(Error('Trình duyệt chặn phát âm thanh. Bấm loa để thử lại.')));
  });
 }
-export default function SpeakBtn({ text, lang = "en-US", className = "", children = "🔊", ...rest }) {
- const [loading,setLoading]=useState(false),[error,setError]=useState('');
- const click=async()=>{if(loading)return;setLoading(true);setError('');try{await speak(text,lang,()=>setLoading(false));}catch(e){setError(e.message);}finally{setLoading(false);}};
- return <><button type="button" onClick={click} disabled={loading} aria-busy={loading} className={`${className} disabled:cursor-wait disabled:opacity-70`} {...rest}>{loading?<span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-white align-middle"/>:children}</button>{error && <span role="alert" className="ml-2 text-xs text-amber-300">{error}</span>}</>;
+export default function SpeakBtn({ text, lang = "en-US", className = "", children = "🔊", lockWhilePlaying = false, ...rest }) {
+ const [loading,setLoading]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const busyRef=useRef(false);
+ const click=async()=>{
+  if(busyRef.current)return;
+  busyRef.current=true;
+  setLoading(true);
+  if(lockWhilePlaying)setBusy(true);
+  setError('');
+  try{
+   await speak(text,lang,()=>{
+    setLoading(false);
+    if(!lockWhilePlaying)busyRef.current=false;
+   });
+  }catch(e){
+   setError(e.message);
+  }finally{
+   setLoading(false);
+   if(lockWhilePlaying)setBusy(false);
+   busyRef.current=false;
+  }
+ };
+ const isDisabled=loading||busy;
+ return <><button type="button" onClick={click} disabled={isDisabled} aria-busy={loading} className={`${className} disabled:cursor-wait disabled:opacity-70`} {...rest}>{loading?<span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-white align-middle"/>:children}</button>{error && <span role="alert" className="ml-2 text-xs text-amber-300">{error}</span>}</>;
 }

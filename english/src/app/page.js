@@ -1172,7 +1172,7 @@ export default function Home() {
                 <div>
                   <div className="flex flex-wrap items-center gap-1 text-lg sm:text-xl font-bold text-blue-400 break-words"><span>{w.word}</span><CopyBtn text={w.word} />{w.partOfSpeech && <span className="rounded-full border border-blue-800 bg-blue-950 px-2 py-0.5 text-xs font-semibold not-italic text-blue-200">{w.partOfSpeech}</span>}</div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm italic text-purple-400">
-                    <OxfordPronunciation word={w.word} pronunciation={w.pronunciation} />
+                    <OxfordPronunciation word={w.word} pronunciation={w.pronunciation} ipa={w.ipa} />
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
@@ -1665,7 +1665,7 @@ export default function Home() {
               </div>
             )}
             {(lookup.partOfSpeech || lookup.dictionaryParts?.length > 0) && <div data-testid="lookup-word-class" className="mt-2 text-sm font-semibold text-amber-200">{lookup.partOfSpeech || lookup.dictionaryParts.join(' · ')}{!lookup.partOfSpeech && <small className="ml-2 font-normal text-slate-400">Từ loại trong từ điển</small>}</div>}
-            <OxfordPronunciation key={lookup.word} word={lookup.word} pronunciation={lookup.pronunciation} />
+            <OxfordPronunciation key={lookup.word} word={lookup.word} pronunciation={lookup.pronunciation} ipa={lookup.ipa} />
             {lookup.practice && <div id="word-pronunciation-practice"><PronunciationRecorder key={lookup.word} word={lookup.word} ipa={lookup.pronunciation?.us || lookup.pronunciation?.uk || lookup.ipa || ""} lookup={lookup} /></div>}
             {lookup.loading && !lookup.meaning ? <div className="mt-5 text-slate-400">Đang tra nghĩa tiếng Việt...</div> : lookup.error ? <div className="mt-4 text-red-300">{lookup.error}</div> : <>
               {lookup.easyReading && <div className="mt-4 rounded-xl border border-sky-900 bg-sky-950/50 p-3 text-sm leading-relaxed text-sky-100"><span className="font-semibold text-sky-300">Dễ đọc: </span>{lookup.easyReading}</div>}
