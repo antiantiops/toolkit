@@ -1170,10 +1170,9 @@ export default function Home() {
             <div key={i} className="bg-slate-900 border border-slate-700 rounded-xl p-4 sm:p-5 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/10 transition-all">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <div className="flex items-center gap-1 text-lg sm:text-xl font-bold text-blue-400 break-words"><span>{w.word}</span><CopyBtn text={w.word} /></div>
+                  <div className="flex flex-wrap items-center gap-1 text-lg sm:text-xl font-bold text-blue-400 break-words"><span>{w.word}</span><CopyBtn text={w.word} />{w.partOfSpeech && <span className="rounded-full border border-blue-800 bg-blue-950 px-2 py-0.5 text-xs font-semibold not-italic text-blue-200">{w.partOfSpeech}</span>}</div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm italic text-purple-400">
                     <OxfordPronunciation word={w.word} pronunciation={w.pronunciation} />
-                    {w.partOfSpeech && <span className="rounded-full border border-blue-800 bg-blue-950 px-2 py-0.5 text-xs font-semibold not-italic text-blue-200">{w.partOfSpeech}</span>}
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
