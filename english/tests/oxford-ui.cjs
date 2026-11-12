@@ -29,7 +29,31 @@ const assert = require('node:assert/strict');
    const media=await panel.locator('audio').evaluate(a=>({src:a.currentSrc,duration:a.duration,error:a.error?.message}));
    assert(media.src.includes(region==='UK'?'__gb_1.mp3':'__us_1.mp3'));
    assert(media.duration>0 && !media.error);
+   assert(await panel.getByRole('button',{name:'Nghe Oxford UK: vulnerable'}).isDisabled());
+   assert(await panel.getByRole('button',{name:'Nghe Oxford US: vulnerable'}).isDisabled());
+   await page.waitForFunction(()=>document.querySelector('[data-testid="oxford-pronunciation"] audio').ended);
+   assert(!(await panel.getByRole('button',{name:`Nghe Oxford ${region}: vulnerable`}).isDisabled()));
+   const box=await panel.getByRole('button',{name:`Nghe Oxford ${region}: vulnerable`}).boundingBox();
+   assert(box.width<=32 && box.height<=32);
    console.log(viewport.width,region,media);
+  }
+  if(viewport.width===390){
+   let release; const gate=new Promise(resolve=>release=resolve);
+   await page.route('**/media/**/*.mp3',async route=>{await gate;await route.continue();});
+   await panel.getByRole('button',{name:'Nghe Oxford UK: vulnerable'}).click();
+   await page.waitForFunction(()=>document.querySelector('[data-testid="oxford-pronunciation"] button[aria-busy="true"]'));
+   assert(await panel.getByRole('button',{name:'Nghe Oxford US: vulnerable'}).isDisabled());
+   await panel.screenshot({path:'/tmp/oxford-loading.png'});
+   release();
+   await page.waitForFunction(()=>document.querySelector('[data-testid="oxford-pronunciation"] audio').ended);
+   await page.unroute('**/media/**/*.mp3');
+   await page.route('**/media/**/*.mp3',route=>route.abort());
+   await panel.getByRole('button',{name:'Nghe Oxford US: vulnerable'}).click();
+   await panel.getByRole('alert').waitFor();
+   assert(!(await panel.getByRole('button',{name:'Nghe Oxford UK: vulnerable'}).isDisabled()));
+   await page.unroute('**/media/**/*.mp3');
+   await panel.getByRole('button',{name:'Nghe Oxford US: vulnerable'}).click();
+   await page.waitForFunction(()=>document.querySelector('[data-testid="oxford-pronunciation"] audio').ended);
   }
   await page.screenshot({path:`/tmp/oxford-${viewport.width}.png`,fullPage:true});
   await panel.screenshot({path:`/tmp/oxford-detail-${viewport.width}.png`});
