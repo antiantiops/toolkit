@@ -74,50 +74,104 @@ export function parseOxfordHtml(html, sourceUrl) {
   };
 }
 
+export function validateDefinitionUrl(urlStr, base = null) {
+  if (!urlStr || typeof urlStr !== 'string') return null;
+  try {
+    const parsed = base ? new URL(urlStr, base) : new URL(urlStr);
+    if (parsed.protocol !== 'https:') return null;
+    if (parsed.hostname !== OXFORD_HOST || parsed.port || parsed.username || parsed.password) return null;
+    if (!parsed.pathname.startsWith('/us/definition/english/') && !parsed.pathname.startsWith('/definition/english/')) {
+      return null;
+    }
+    return parsed.href;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchOxfordHtml(word) {
   const canonicalWord = word.toLowerCase();
-  const targetUrl = `https://${OXFORD_HOST}/us/definition/english/${encodeURIComponent(canonicalWord)}`;
+  let currentUrl = `https://${OXFORD_HOST}/us/definition/english/${encodeURIComponent(canonicalWord)}`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const seen = new Set();
+  const MAX_REDIRECTS = 3;
 
   try {
-    const res = await fetch(targetUrl, {
-      signal: controller.signal,
-      redirect: 'manual',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml',
-      },
-    });
-
-    if (res.status !== 200) {
-      return { html: null, url: targetUrl };
-    }
-
-    const reader = res.body?.getReader();
-    if (!reader) {
-      const text = await res.text();
-      return { html: text.slice(0, MAX_BYTES), url: targetUrl };
-    }
-
-    const decoder = new TextDecoder();
-    let text = '';
-    let totalBytes = 0;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      totalBytes += value.byteLength;
-      if (totalBytes > MAX_BYTES) {
-        await reader.cancel();
-        break;
+    for (let hops = 0; hops <= MAX_REDIRECTS; hops++) {
+      if (seen.has(currentUrl)) {
+        throw new Error(`Redirect loop detected: ${currentUrl}`);
       }
-      text += decoder.decode(value, { stream: true });
-    }
-    text += decoder.decode();
+      seen.add(currentUrl);
 
-    return { html: text, url: targetUrl };
+      const res = await fetch(currentUrl, {
+        signal: controller.signal,
+        redirect: 'manual',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml',
+        },
+      });
+
+      if (res.status === 404) {
+        if (res.body) {
+          try { await res.body.cancel(); } catch {}
+        }
+        return { html: null, url: currentUrl, status: 404 };
+      }
+
+      if ([301, 302, 303, 307, 308].includes(res.status)) {
+        if (res.body) {
+          try { await res.body.cancel(); } catch {}
+        }
+        if (hops === MAX_REDIRECTS) {
+          throw new Error(`Exceeded max redirects (${MAX_REDIRECTS})`);
+        }
+        const loc = res.headers.get('location');
+        if (!loc) {
+          throw new Error(`Redirect ${res.status} missing Location header`);
+        }
+        const nextUrl = validateDefinitionUrl(loc, currentUrl);
+        if (!nextUrl) {
+          throw new Error(`Unsafe or invalid redirect location: ${loc}`);
+        }
+        currentUrl = nextUrl;
+        continue;
+      }
+
+      if (res.status !== 200) {
+        if (res.body) {
+          try { await res.body.cancel(); } catch {}
+        }
+        throw new Error(`Oxford upstream error: ${res.status}`);
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) {
+        const text = await res.text();
+        return { html: text.slice(0, MAX_BYTES), url: currentUrl, status: 200 };
+      }
+
+      const decoder = new TextDecoder();
+      let text = '';
+      let totalBytes = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        totalBytes += value.byteLength;
+        if (totalBytes > MAX_BYTES) {
+          await reader.cancel();
+          break;
+        }
+        text += decoder.decode(value, { stream: true });
+      }
+      text += decoder.decode();
+
+      return { html: text, url: currentUrl, status: 200 };
+    }
+    throw new Error(`Exceeded max redirects (${MAX_REDIRECTS})`);
   } finally {
     clearTimeout(timeoutId);
   }
@@ -146,21 +200,28 @@ export async function lookupOxford(word) {
 
   const promise = (async () => {
     try {
-      const { html, url } = await fetchOxfordHtml(word);
-      const parsed = html ? parseOxfordHtml(html, url) : null;
+      const { html, url, status } = await fetchOxfordHtml(word);
+      if (status === 404) {
+        cleanCache();
+        cache.set(key, {
+          data: null,
+          expiresAt: now + NEGATIVE_TTL,
+        });
+        return null;
+      }
+      if (!html) {
+        throw new Error(`Empty Oxford response for: ${word}`);
+      }
+      const parsed = parseOxfordHtml(html, url);
+      if (!parsed) {
+        throw new Error(`Oxford entry parsed with missing phonetics: ${word}`);
+      }
       cleanCache();
       cache.set(key, {
         data: parsed,
-        expiresAt: now + (parsed ? POSITIVE_TTL : NEGATIVE_TTL),
+        expiresAt: now + POSITIVE_TTL,
       });
       return parsed;
-    } catch {
-      cleanCache();
-      cache.set(key, {
-        data: null,
-        expiresAt: now + NEGATIVE_TTL,
-      });
-      return null;
     } finally {
       inflight.delete(key);
     }
