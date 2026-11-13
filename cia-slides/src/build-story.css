@@ -14,6 +14,9 @@
 .flow-spotlight-btn:focus-visible{outline:2px solid #f59e0b;outline-offset:2px}
 .flow-spotlight-btn[aria-pressed=true]{background:#fef3c7;border-color:#f59e0b;color:#92400e;box-shadow:0 0 10px rgba(245,158,11,0.25)}
 .flow-panel{display:flex;flex-direction:column}
+.flow-spotlight-group{pointer-events:none;transition:opacity 400ms ease}
+.flow-spotlight-group.spotlight-active{opacity:1}
+.flow-spotlight-group.spotlight-inactive{opacity:0}
 .flow-spotlight-overlay{pointer-events:none;transition:opacity 200ms ease}
 .flow-spotlight-glow{pointer-events:none;transition:all 200ms ease}
-@media(prefers-reduced-motion:reduce){.flow-spotlight-btn,.flow-spotlight-overlay,.flow-spotlight-glow{transition:none}}
+@media(prefers-reduced-motion:reduce){.flow-spotlight-btn,.flow-spotlight-group,.flow-spotlight-overlay,.flow-spotlight-glow{transition:none}}
