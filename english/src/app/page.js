@@ -610,10 +610,19 @@ export default function Home() {
     };
     setLookup({ word, pronunciation: knownPronunciation, loading: true, detailLoading: true });
     loadMeta(word);
+    let quickMeaning = "";
     const quickBody = JSON.stringify({ word, context, definition: words.find(item => item.word?.toLowerCase() === word.toLowerCase())?.definition || "" });
     const quick = fetch("/api/quick-word", { method: "POST", headers: { "Content-Type": "application/json" }, body: quickBody })
       .then(parseApiResponse)
-      .then(data => setLookup(current => requestId === lookupRequest.current && current?.word === word && current.detailLoading ? { ...current, meaning: data.meaning, ipa: data.ipa || current.ipa, loading: false, quick: true } : current))
+      .then(data => {
+        if (!data?.meaning) return;
+        quickMeaning = data.meaning;
+        const cached = lookupCache.current.get(key);
+        if (cached) lookupCache.current.set(key, { ...cached, meaning: data.meaning });
+        if (requestId === lookupRequest.current) {
+          setLookup(current => (current ? { ...current, meaning: data.meaning, ipa: data.ipa || current.ipa, loading: false, quick: true } : current));
+        }
+      })
       .catch(() => {});
     try {
       const body = JSON.stringify({ word, context });
@@ -621,11 +630,12 @@ export default function Home() {
       const data = await parseApiResponse(res);
       const canonical = data.word.word || word;
       if (save) rememberEnglish(canonical).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại."));
+      const mergedWord = { ...data.word, ...(quickMeaning ? { meaning: quickMeaning } : {}) };
       if (lookupCache.current.size >= 100) lookupCache.current.delete(lookupCache.current.keys().next().value);
-      lookupCache.current.set(key, data.word);
+      lookupCache.current.set(key, mergedWord);
       if (requestId === lookupRequest.current) {
         const canonicalPron = pronunciationCache.current.get(canonical.toLowerCase());
-        setLookup(current => current ? { ...data.word, practice: current.practice, pronunciation: canonical.toLowerCase() === pronunciationKey ? current.pronunciation : canonicalPron, dictionaryParts: canonical.toLowerCase() === pronunciationKey ? current.dictionaryParts : undefined, loading: false, detailLoading: false } : null);
+        setLookup(current => current ? { ...mergedWord, practice: current.practice, pronunciation: canonical.toLowerCase() === pronunciationKey ? current.pronunciation : canonicalPron, dictionaryParts: canonical.toLowerCase() === pronunciationKey ? current.dictionaryParts : undefined, loading: false, detailLoading: false } : null);
         if (canonical.toLowerCase() !== pronunciationKey) loadMeta(canonical);
       }
     } catch (e) {
