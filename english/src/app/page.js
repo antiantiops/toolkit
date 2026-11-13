@@ -90,7 +90,6 @@ export default function Home() {
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [suggestIndex, setSuggestIndex] = useState(-1);
   const suggestionCache = useRef(new Map());
-  const lookupCache = useRef(new Map());
   const pronunciationCache = useRef(new Map());
   const translationCache = useRef(new Map());
   const lookupRequest = useRef(0);
@@ -587,11 +586,6 @@ export default function Home() {
   const lookupWord = async (word, context = "", save = true) => {
     setSaveError("");
     const requestId = ++lookupRequest.current;
-    const key = JSON.stringify([word.toLowerCase(), context]);
-    const cached = lookupCache.current.get(key);
-    if (cached) { if (save) rememberEnglish(cached.word || word).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại.")); setLookup({ ...cached, pronunciation: pronunciationCache.current.get((cached.word || word).toLowerCase()), loading: false, detailLoading: false }); return; }
-    const meaning = meanings[word.toLowerCase()];
-    const body = JSON.stringify({ word, context });
     const pronunciationKey = word.toLowerCase();
     const knownPronunciation = pronunciationCache.current.get(pronunciationKey);
     const loadMeta = target => {
@@ -610,28 +604,78 @@ export default function Home() {
         if (requestId === lookupRequest.current && data.partsOfSpeech?.length) setLookup(current => current ? { ...current, dictionaryParts: data.partsOfSpeech } : current);
       }).catch(() => {});
     };
-    setLookup({ word, meaning, pronunciation: knownPronunciation, loading: !meaning, detailLoading: true });
+
+    setLookup({ word, pronunciation: knownPronunciation, loading: true, detailLoading: false });
     loadMeta(word);
-    const quick = meaning ? Promise.resolve() : fetch("/api/quick-word", { method: "POST", headers: { "Content-Type": "application/json" }, body })
-      .then(parseApiResponse)
-      .then(data => setLookup(current => requestId === lookupRequest.current && current?.word === word && current.detailLoading ? { ...current, meaning: data.meaning, ipa: data.ipa || current.ipa, loading: false, quick: true } : current))
-      .catch(() => {});
+
     try {
-      const res = await fetchWithRetry("/api/word", { method: "POST", headers: { "Content-Type": "application/json" }, body, timeout: 60000 }, 0);
-      const data = await parseApiResponse(res);
-      const canonical = data.word.word || word;
-      if (save) rememberEnglish(canonical).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại."));
-      if (lookupCache.current.size >= 100) lookupCache.current.delete(lookupCache.current.keys().next().value);
-      lookupCache.current.set(key, data.word);
-      if (requestId === lookupRequest.current) {
-        const canonicalPron = pronunciationCache.current.get(canonical.toLowerCase());
-        setLookup(current => current ? { ...data.word, practice: current.practice, pronunciation: canonical.toLowerCase() === pronunciationKey ? current.pronunciation : canonicalPron, dictionaryParts: canonical.toLowerCase() === pronunciationKey ? current.dictionaryParts : undefined, loading: false, detailLoading: false } : null);
-        if (canonical.toLowerCase() !== pronunciationKey) loadMeta(canonical);
+      const quickRes = await fetch("/api/quick-word", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ word, context, definition: words.find(item => item.word?.toLowerCase() === word.toLowerCase())?.definition || "" }),
+      });
+      const quickData = await parseApiResponse(quickRes);
+      if (requestId !== lookupRequest.current) return;
+
+      const isDictionary = quickData.source === "lacviet" || quickData.source === "vdict";
+      if (isDictionary) {
+        if (save) rememberEnglish(word).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại."));
+        setLookup(current => current ? {
+          ...current,
+          word,
+          meaning: quickData.meaning,
+          source: quickData.source,
+          loading: false,
+          detailLoading: false,
+        } : null);
+        return;
       }
-    } catch (e) {
+
+      // AI fallback meaning: show quick meaning, then run detailed lookup for explanations/examples
+      setLookup(current => current ? {
+        ...current,
+        word,
+        meaning: quickData.meaning,
+        source: quickData.source || "ai",
+        loading: false,
+        detailLoading: true,
+      } : null);
+
+      try {
+        const res = await fetchWithRetry("/api/word", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ word, context }),
+          timeout: 60000,
+        }, 0);
+        const data = await parseApiResponse(res);
+        const canonical = data.word.word || word;
+        if (save) rememberEnglish(canonical).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại."));
+        if (requestId === lookupRequest.current) {
+          const canonicalPron = pronunciationCache.current.get(canonical.toLowerCase());
+          setLookup(current => current ? {
+            ...data.word,
+            meaning: quickData.meaning || data.word.meaning,
+            source: "ai",
+            practice: current.practice,
+            pronunciation: canonical.toLowerCase() === pronunciationKey ? current.pronunciation : canonicalPron,
+            dictionaryParts: canonical.toLowerCase() === pronunciationKey ? current.dictionaryParts : undefined,
+            loading: false,
+            detailLoading: false,
+          } : null);
+          if (canonical.toLowerCase() !== pronunciationKey) loadMeta(canonical);
+        }
+      } catch (e) {
+        if (save) rememberEnglish(word).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại."));
+        if (requestId === lookupRequest.current) {
+          setLookup(current => !current ? null : current.meaning ? { ...current, loading: false, detailLoading: false } : { ...current, word, error: formatErrorMessage(e), loading: false, detailLoading: false });
+        }
+      }
+    } catch (err) {
       if (save) rememberEnglish(word).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại."));
-      await quick;
-      if (requestId === lookupRequest.current) setLookup(current => !current ? null : current.meaning ? { ...current, loading: false, detailLoading: false } : { ...current, word, error: formatErrorMessage(e), loading: false, detailLoading: false });
+      if (requestId === lookupRequest.current) {
+        setLookup(current => ({ ...current, word, error: formatErrorMessage(err), loading: false, detailLoading: false }));
+      }
     }
   };
 
@@ -1669,7 +1713,8 @@ export default function Home() {
             {lookup.practice && <div id="word-pronunciation-practice"><PronunciationRecorder key={lookup.word} word={lookup.word} ipa={lookup.pronunciation?.us || lookup.pronunciation?.uk || lookup.ipa || ""} lookup={lookup} /></div>}
             {lookup.loading && !lookup.meaning ? <div className="mt-5 text-slate-400">Đang tra nghĩa tiếng Việt...</div> : lookup.error ? <div className="mt-4 text-red-300">{lookup.error}</div> : <>
               {lookup.easyReading && <div className="mt-4 rounded-xl border border-sky-900 bg-sky-950/50 p-3 text-sm leading-relaxed text-sky-100"><span className="font-semibold text-sky-300">Dễ đọc: </span>{lookup.easyReading}</div>}
-              <div data-testid="lookup-meaning" className="mt-4 text-lg font-medium text-white">{lookup.meaning}</div>
+              <div data-testid="lookup-meaning" className="mt-4 whitespace-pre-line text-lg font-medium text-white">{lookup.meaning}</div>
+              {lookup.source && <div data-testid="lookup-source" className="mt-1 text-xs text-slate-400">Nguồn: {({lacviet:"Lạc Việt (local)",vdict:"VDict",ai:"AI"})[lookup.source] || lookup.source}</div>}
               {lookup.detailLoading && <div data-testid="lookup-detail-loading" className="mt-2 flex items-center gap-2 text-xs text-slate-400"><span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-slate-600 border-t-sky-300" />Đang bổ sung giải thích, ví dụ…</div>}
               {lookup.usage && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Cách dùng: </span>{lookup.usage}</div>}
               {lookup.synonyms && !lookup.contrastTip && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Đồng nghĩa: </span><AiTag /> {renderAnnotatedWords(lookup.synonyms)}</div>}
