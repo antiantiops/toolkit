@@ -1,6 +1,6 @@
 import {useId,useEffect,useState,useRef} from 'react';
 import {AppWindow,BrainCircuit,UserRound} from 'lucide-react';
-export function CiaAgentLoop({english}:{english:boolean}) {
+export function CiaAgentLoop({english,spotlight='off'}:{english:boolean;spotlight?:string}) {
  const [stage,setStage]=useState(0);
  const motion=useRef<SVGAnimateMotionElement>(null);
  const [processing,setProcessing]=useState(false);
@@ -100,5 +100,6 @@ export function CiaAgentLoop({english}:{english:boolean}) {
  <rect x="24" y="477" width="472" height="25" rx="8" fill={stage===final?'#dcfce7':'#e0f2fe'}/><text x="260" y="494" textAnchor="middle" style={{fontSize:12,fontWeight:700,fill:'#0f172a'}}>{stage+1}/{steps.length} · {t(steps[stage][1],steps[stage][2])}</text>
 
  <text x="260" y="520" textAnchor="middle" className="flow-title" style={{fontSize:12}}>{t('Model hướng dẫn · Agent thao tác · Bạn duyệt timetable','Model guides · Agent acts · You review timetable')}</text>
+ {spotlight!=='off'&&<><defs><mask id={`${id}-spotlight-mask`}><rect width="520" height="530" fill="white"/>{spotlight==='pc'?<path d="M24 12H288Q300 12 300 24V275H496Q508 275 508 287V454Q508 466 496 466H24Q12 466 12 454V24Q12 12 24 12Z" fill="black"/>:<rect x="336" y="111" width="172" height="153" rx="12" fill="black"/>}</mask><filter id={`${id}-glow`} x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#f59e0b" floodOpacity="0.75"/><feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="#fbbf24" floodOpacity="0.9"/></filter></defs><rect width="520" height="530" fill="#0f172a" fillOpacity="0.55" mask={`url(#${id}-spotlight-mask)`} className="flow-spotlight-overlay"/>{spotlight==='pc'?<path d="M24 12H288Q300 12 300 24V275H496Q508 275 508 287V454Q508 466 496 466H24Q12 466 12 454V24Q12 12 24 12Z" fill="none" stroke="#f59e0b" strokeWidth="3" filter={`url(#${id}-glow)`} className="flow-spotlight-glow"/>:<rect x="336" y="111" width="172" height="153" rx="12" fill="none" stroke="#f59e0b" strokeWidth="3" filter={`url(#${id}-glow)`} className="flow-spotlight-glow"/>}</>}
  </svg>;
 }
