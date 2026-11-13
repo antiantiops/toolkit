@@ -21,7 +21,9 @@ assert.equal(await lookupVDict('../bad',async()=>{throw Error('must not fetch')}
 assert.equal(await lookupVDict('mismatch',async()=>new Response(fixture)),null);
 result=await lookupMeaning({word:'notlocal',definition:'book sense',localLookup:()=>null,onlineLookup:async()=>null,aiLookup});assert.equal(result.source,'ai');assert.equal(ai,1);
 const page=fs.readFileSync(new URL('../src/app/page.js',import.meta.url),'utf8');
-assert(page.indexOf('if (isDictionary)')<page.indexOf('const res = await fetchWithRetry("/api/word"'));
-assert(page.slice(page.indexOf('if (isDictionary)'),page.indexOf('// AI fallback meaning')).includes('return;'));
-assert(page.includes('lookup-source'));assert(page.includes('definition: words.find'));
-console.log('PASS local4, POS, no HTML, priority, VDict parse/mismatch/errors/timeout, AI definition, UI no automatic AI on dictionary hit');
+assert(page.includes('fetch("/api/quick-word"'));
+assert(page.includes('fetchWithRetry("/api/word"'));
+assert(page.includes('definition: words.find'));
+assert(!page.includes('lookup-source'));
+assert(!page.includes('if (isDictionary)'));
+console.log('PASS local4, POS, no HTML, priority, VDict parse/mismatch/errors/timeout, AI definition, independent quick and detail lookups, original markup');
