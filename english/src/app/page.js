@@ -6,6 +6,7 @@ import { prioritizeWords } from "../lib/vocab-game.mjs";
 import { normalizeGrammarAnswer } from "../lib/grammar/answers";
 import { fetchWithRetry, parseApiResponse, formatErrorMessage, pollLesson } from "./fetch-helper";
 import { useState, useRef, useCallback, useEffect } from "react";
+import LookupLanguage from "./LookupLanguage";
 import ImageCrop from "./ImageCrop";
 import WritingProgress from "./WritingProgress";
 import LessonChat from "./LessonChat";
@@ -71,6 +72,17 @@ function ErrorBanner({ message, onDismiss }) {
 
 export default function Home() {
   // --- Mode: "vocab" | "grammar" ---
+  const [targetLang, setTargetLang] = useState("vi");
+  useEffect(() => {
+    try { const code = localStorage.getItem("english.lookupLanguage"); if (["vi", "en", "ja", "ko", "zh-TW"].includes(code)) setTargetLang(code); } catch {}
+  }, []);
+  const changeLookupLanguage = code => {
+    lookupRequest.current++;
+    lookupCache.current.clear();
+    setLookup(null);
+    setTargetLang(code);
+    try { localStorage.setItem("english.lookupLanguage", code); } catch {}
+  };
   const [mode, setMode] = useState("vocab");
   const skipVocabRestore = useRef(false);
   const [listeningSource,setListeningSource]=useState("image");
@@ -587,7 +599,7 @@ export default function Home() {
   const lookupWord = async (word, context = "", save = true) => {
     setSaveError("");
     const requestId = ++lookupRequest.current;
-    const key = JSON.stringify([word.toLowerCase(), context]);
+    const key = JSON.stringify([word.toLowerCase(), context, targetLang]);
     const cached = lookupCache.current.get(key);
     if (cached) { if (save) rememberEnglish(cached.word || word).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại.")); setLookup({ ...cached, pronunciation: pronunciationCache.current.get((cached.word || word).toLowerCase()), loading: false, detailLoading: false }); return; }
     const pronunciationKey = word.toLowerCase();
@@ -611,7 +623,7 @@ export default function Home() {
     setLookup({ word, pronunciation: knownPronunciation, loading: true, detailLoading: true });
     loadMeta(word);
     let quickMeaning = "";
-    const quickBody = JSON.stringify({ word, context, definition: words.find(item => item.word?.toLowerCase() === word.toLowerCase())?.definition || "" });
+    const quickBody = JSON.stringify({ word, context, targetLang, definition: words.find(item => item.word?.toLowerCase() === word.toLowerCase())?.definition || "" });
     const quick = fetch("/api/quick-word", { method: "POST", headers: { "Content-Type": "application/json" }, body: quickBody })
       .then(parseApiResponse)
       .then(data => {
@@ -625,7 +637,7 @@ export default function Home() {
       })
       .catch(() => {});
     try {
-      const body = JSON.stringify({ word, context });
+      const body = JSON.stringify({ word, context, targetLang });
       const res = await fetchWithRetry("/api/word", { method: "POST", headers: { "Content-Type": "application/json" }, body, timeout: 60000 }, 0);
       const data = await parseApiResponse(res);
       const canonical = data.word.word || word;
@@ -821,6 +833,7 @@ export default function Home() {
       )}
 
       <header className="relative mb-2 flex min-h-11 items-center justify-center px-11 sm:mb-4">
+      <LookupLanguage value={targetLang} onChange={changeLookupLanguage} />
       <h1 className="text-lg sm:text-3xl font-bold text-center bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
         📚 English Learner
       </h1>

@@ -83,7 +83,7 @@ assert(!page.includes('if (isDictionary)'));
       'fetchWithRetry',
       'parseApiResponse',
       'formatErrorMessage',
-      `${lookupWordCode}\nreturn lookupWord;`
+      `const targetLang = "vi"; ${lookupWordCode}\nreturn lookupWord;`
     );
 
     const lookupWord = factory(
@@ -132,7 +132,7 @@ assert(!page.includes('if (isDictionary)'));
     assert.equal(h.state.loading, false);
     assert.equal(h.state.detailLoading, false);
     assert.deepEqual(h.state.examples, ['ex1']);
-    assert.equal(h.lookupCache.current.get(JSON.stringify(['test', ''])).meaning, 'nghĩa nhanh');
+    assert.equal(h.lookupCache.current.get(JSON.stringify(['test', '', 'vi'])).meaning, 'nghĩa nhanh');
   }
 
   // Case 2: detail arrives before quick -> late quick updates state and cache
@@ -151,7 +151,7 @@ assert(!page.includes('if (isDictionary)'));
     await p;
     assert.equal(h.state.meaning, 'nghĩa nhanh');
     assert.equal(h.state.loading, false);
-    assert.equal(h.lookupCache.current.get(JSON.stringify(['test', ''])).meaning, 'nghĩa nhanh');
+    assert.equal(h.lookupCache.current.get(JSON.stringify(['test', '', 'vi'])).meaning, 'nghĩa nhanh');
   }
 
   // Case 3: canonical different case (Banned -> banned) & late quick arrival
@@ -172,7 +172,7 @@ assert(!page.includes('if (isDictionary)'));
     // Word was canonicalized to "banned", late quick still applies because current is non-null
     assert.equal(h.state.word, 'banned');
     assert.equal(h.state.meaning, 'nghĩa nhanh banned');
-    assert.equal(h.lookupCache.current.get(JSON.stringify(['banned', ''])).meaning, 'nghĩa nhanh banned');
+    assert.equal(h.lookupCache.current.get(JSON.stringify(['banned', '', 'vi'])).meaning, 'nghĩa nhanh banned');
 
     // Also verify closed popup (null guard preserved)
     h.state = null;
@@ -191,7 +191,7 @@ assert(!page.includes('if (isDictionary)'));
   // Case 4: cache reuse
   {
     const h = createHarness();
-    h.lookupCache.current.set(JSON.stringify(['test', '']), { word: 'test', meaning: 'cached meaning' });
+    h.lookupCache.current.set(JSON.stringify(['test', '', 'vi']), { word: 'test', meaning: 'cached meaning' });
     await h.lookupWord('test');
     assert.equal(h.state.meaning, 'cached meaning');
     assert.equal(h.state.loading, false);
@@ -232,7 +232,7 @@ assert(!page.includes('if (isDictionary)'));
     h.resolveDetail({ word: { word: 'test', meaning: 'nghĩa AI chi tiết' } });
     await p;
     assert.equal(h.state.meaning, 'nghĩa AI chi tiết');
-    assert.equal(h.lookupCache.current.get(JSON.stringify(['test', ''])).meaning, 'nghĩa AI chi tiết');
+    assert.equal(h.lookupCache.current.get(JSON.stringify(['test', '', 'vi'])).meaning, 'nghĩa AI chi tiết');
   }
 }
 

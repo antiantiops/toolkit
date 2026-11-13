@@ -13,8 +13,11 @@ function database() {
     CREATE INDEX IF NOT EXISTS lookup_expiry ON lookup_cache(expires);`);
   return db;
 }
-export function lookupKey(word, context) {
-  return JSON.stringify(['word-v2', word.trim().toLowerCase(), context]);
+export function lookupKey(word, context, targetLang = 'vi') {
+  if (targetLang === 'vi') {
+    return JSON.stringify(['word-v2', word.trim().toLowerCase(), context]);
+  }
+  return JSON.stringify(['word-i18n-v1', targetLang, word.trim().toLowerCase(), context]);
 }
 export function cachedLookup(owner, key, now = Date.now()) {
   if (!owner) return null;
