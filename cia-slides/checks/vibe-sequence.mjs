@@ -40,7 +40,7 @@ try {
  // Assert code lines grow
  await page.waitForFunction(() => {
   const code = document.querySelector('.vibe-terminal code')?.textContent || '';
-  return code.includes('<!doctype html>');
+  return code.includes('export function App()') || code.includes('<!doctype html>');
  });
 
  // Stage 4: result (~20.4s)
