@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   QrCode,
   Globe,
@@ -134,6 +134,123 @@ function GoogleGIcon() {
   );
 }
 
+function DataFlowBridge({ stage }: { stage: number }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+    const prefersReduced =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+    const ribbons = [
+      { count: 28, amp: 16, freq: 0.045, speed: 34, phase: 0, radius: 1.8 },
+      { count: 26, amp: 12, freq: 0.055, speed: 42, phase: 2.1, radius: 1.5 },
+      { count: 24, amp: 8, freq: 0.065, speed: 28, phase: 4.2, radius: 1.3 },
+    ];
+
+    const bokeh = Array.from({ length: 18 }, (_, i) => ({
+      x: (i * 29) % width,
+      y: 10 + ((i * 31) % (height - 20)),
+      r: 1.2 + (i % 4) * 0.55,
+      speed: 8 + (i % 5) * 3.5,
+      bobAmp: 2.5 + (i % 3) * 1.1,
+      phase: i * 0.85,
+      alpha: 0.14 + (i % 4) * 0.07,
+    }));
+
+    const lerpColor = (t: number) => {
+      const r = 0;
+      const g = Math.round(242 + (114 - 242) * t);
+      const b = Math.round(254 + (255 - 254) * t);
+      return `${r}, ${g}, ${b}`;
+    };
+
+    const drawFrame = (sec: number) => {
+      ctx.clearRect(0, 0, width, height);
+
+      for (const p of bokeh) {
+        const x = (p.x + sec * p.speed) % width;
+        const y = p.y + Math.sin(sec * 1.4 + p.phase) * p.bobAmp;
+        const rgb = lerpColor(x / width);
+        ctx.beginPath();
+        ctx.arc(x, y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${rgb}, ${p.alpha})`;
+        ctx.fill();
+      }
+
+      for (const ribbon of ribbons) {
+        for (let i = 0; i < ribbon.count; i++) {
+          const baseX = (i / ribbon.count) * width;
+          const x = (baseX + sec * ribbon.speed) % width;
+          const t = x / width;
+          const y =
+            height / 2 +
+            Math.sin(x * ribbon.freq - sec * 2.2 + ribbon.phase) * ribbon.amp;
+          const edgeFade = Math.sin(t * Math.PI);
+          const alpha = 0.25 + 0.7 * edgeFade;
+          const rgb = lerpColor(t);
+
+          ctx.beginPath();
+          ctx.arc(x, y, ribbon.radius * 2.4, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${rgb}, ${alpha * 0.24})`;
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(x, y, ribbon.radius, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${rgb}, ${alpha})`;
+          ctx.fill();
+        }
+      }
+    };
+
+    if (prefersReduced) {
+      drawFrame(0);
+      return;
+    }
+
+    let rafId = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      drawFrame((now - start) / 1000);
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+    };
+  }, []);
+
+  return (
+    <div className={`join-gap-connector stage-${stage}`} aria-hidden="true">
+      <canvas ref={canvasRef} className="join-particle-canvas" width={220} height={96} />
+      <svg className="join-circuit-overlay" viewBox="0 0 220 96" fill="none">
+        <path d="M 6 28 L 46 28 L 66 48 L 154 48 L 174 68 L 214 68" stroke="rgba(0, 242, 254, 0.35)" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M 6 68 L 38 68 L 58 48 L 162 48 L 182 28 L 214 28" stroke="rgba(0, 114, 255, 0.35)" strokeWidth="1.2" strokeLinecap="round" />
+        <circle cx="6" cy="28" r="2.8" fill="#00f2fe" filter="drop-shadow(0 0 4px #00f2fe)" />
+        <circle cx="66" cy="48" r="2.2" fill="#00c6ff" filter="drop-shadow(0 0 3px #00c6ff)" />
+        <circle cx="154" cy="48" r="2.2" fill="#0072ff" filter="drop-shadow(0 0 3px #0072ff)" />
+        <circle cx="214" cy="68" r="2.8" fill="#00f2fe" filter="drop-shadow(0 0 4px #00f2fe)" />
+        <circle cx="6" cy="68" r="2.4" fill="#0072ff" filter="drop-shadow(0 0 4px #0072ff)" />
+        <circle cx="214" cy="28" r="2.4" fill="#00c6ff" filter="drop-shadow(0 0 4px #00c6ff)" />
+        <g className="join-circuit-chevrons">
+          <path d="M 92 42 L 98 48 L 92 54" stroke="#00f2fe" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M 102 42 L 108 48 L 102 54" stroke="#00f2fe" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M 112 42 L 118 48 L 112 54" stroke="#00f2fe" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M 122 42 L 128 48 L 122 54" stroke="#00f2fe" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </g>
+      </svg>
+    </div>
+  );
+}
+
 export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
   // stages:
   // 0: camera scan (3.2s)
@@ -224,6 +341,10 @@ export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
 
         <div className="join-qr-zone">
           <div className="join-qr-card">
+            <span className="hud-corner hud-tl" aria-hidden="true" />
+            <span className="hud-corner hud-tr" aria-hidden="true" />
+            <span className="hud-corner hud-bl" aria-hidden="true" />
+            <span className="hud-corner hud-br" aria-hidden="true" />
             <img
               src="/qr-cia.svg"
               alt="QR Code to cia.nimtechnology.com"
@@ -261,12 +382,8 @@ export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
         </footer>
       </section>
 
-      {/* Short direct connector across QR-to-Timeline gap */}
-      <div className={`join-gap-connector stage-${stage}`} aria-hidden="true">
-        <span className="join-connector-line" />
-        <span className="join-connector-pulse" />
-        <span className="join-connector-arrow">›</span>
-      </div>
+      {/* Center Data-Flow Bridge across QR-to-Timeline gap */}
+      <DataFlowBridge stage={stage} />
 
       {/* Right Column: Vertical Neon Timeline + Slim 9:19.5 Phone */}
       <section className="join-right" aria-label={t.simBadge}>

@@ -72,6 +72,19 @@ try {
     const expectedTitle = lang === 'vi' ? 'Mở bài thuyết trình' : 'Open Presentation';
     assert.equal(joinTitle, expectedTitle, `Title matches expected for lang ${lang}`);
 
+    // Verify DataFlowBridge canvas, SVG overlay, HUD corners, and slide background
+    const canvasCount = await page.locator('canvas.join-particle-canvas').count();
+    assert.equal(canvasCount, 1, 'canvas.join-particle-canvas exists');
+    const canvasWidth = await page.locator('canvas.join-particle-canvas').evaluate(el => el.width);
+    assert.ok(canvasWidth >= 100, `canvas.join-particle-canvas width (${canvasWidth}) >= 100`);
+
+    assert.equal(await page.locator('svg.join-circuit-overlay').count(), 1, 'svg.join-circuit-overlay exists');
+    assert.equal(await page.locator('.join-circuit-chevrons').count(), 1, '.join-circuit-chevrons exists');
+    assert.equal(await page.locator('.join-qr-card .hud-corner').count(), 4, '.join-qr-card .hud-corner count === 4');
+
+    const slideBg = await joinSlide.evaluate(el => window.getComputedStyle(el).backgroundColor);
+    assert.equal(slideBg, 'rgb(6, 13, 24)', '.join-slide computed backgroundColor is rgb(6, 13, 24)');
+
     // Verify prominent conduit connector checks
     const connMetrics = await page.evaluate(() => {
       const conn = document.querySelector('.join-gap-connector');
@@ -153,6 +166,8 @@ try {
     await page.locator('.stage-camera').waitFor();
     assert.equal(await page.locator('.stage-camera').count(), 1, 'Initial stage is .stage-camera');
     assert.equal(await page.locator('.stage-presentation').count(), 0, 'No presentation in stage 0');
+    assert.equal(await page.locator('.join-step-node.is-active').count(), 1, 'Stage 0 has exactly 1 active step');
+    assert.ok(await page.locator('.join-step-node').nth(0).evaluate(el => el.classList.contains('is-active')), 'Stage 0 active step is Step 1');
     // Ensure no real editable input fields exist
     assert.equal(await page.locator('input').count(), 0, 'No real input tags in DOM');
     if (stageScreenshots) {
@@ -165,6 +180,8 @@ try {
     await page.clock.fastForward(3300);
     await page.locator('.stage-browser.stage-cia-landing').waitFor();
     assert.equal(await page.locator('.stage-browser.stage-cia-landing').count(), 1, 'Stage 1 reached');
+    assert.equal(await page.locator('.join-step-node.is-active').count(), 1, 'Stage 1 has exactly 1 active step');
+    assert.ok(await page.locator('.join-step-node').nth(1).evaluate(el => el.classList.contains('is-active')), 'Stage 1 active step is Step 2');
     const stage1Host = await page.locator('.browser-url-pill').textContent();
     assert.ok(stage1Host.includes('cia.nimtechnology.com'), 'Stage 1 host is cia.nimtechnology.com');
     const stage1Title = await page.locator('.browser-page-title').textContent();
@@ -181,6 +198,8 @@ try {
     await page.clock.fastForward(2900);
     await page.locator('.stage-email').waitFor();
     assert.equal(await page.locator('.stage-email').count(), 1, 'Stage 2 reached (email)');
+    assert.equal(await page.locator('.join-step-node.is-active').count(), 1, 'Stage 2 has exactly 1 active step');
+    assert.ok(await page.locator('.join-step-node').nth(1).evaluate(el => el.classList.contains('is-active')), 'Stage 2 active step is Step 2');
     const stage2Host = await page.locator('.browser-url-pill').textContent();
     assert.ok(stage2Host.includes('accounts.google.com'), 'Stage 2 host is accounts.google.com');
     assert.ok((await page.locator('.stage-email').textContent()).includes('learner@example.com'), 'learner@example.com in email screen');
@@ -195,6 +214,8 @@ try {
     await page.clock.fastForward(4100);
     await page.locator('.stage-password').waitFor();
     assert.equal(await page.locator('.stage-password').count(), 1, 'Stage 3 reached (password)');
+    assert.equal(await page.locator('.join-step-node.is-active').count(), 1, 'Stage 3 has exactly 1 active step');
+    assert.ok(await page.locator('.join-step-node').nth(1).evaluate(el => el.classList.contains('is-active')), 'Stage 3 active step is Step 2');
     const stage3Host = await page.locator('.browser-url-pill').textContent();
     assert.ok(stage3Host.includes('accounts.google.com'), 'Stage 3 host is accounts.google.com');
     assert.ok((await page.locator('.stage-password').textContent()).includes('learner@example.com'), 'learner@example.com in password screen');
@@ -210,6 +231,8 @@ try {
     await page.clock.fastForward(4100);
     await page.locator('.stage-consent').waitFor();
     assert.equal(await page.locator('.stage-consent').count(), 1, 'Stage 4 reached (consent)');
+    assert.equal(await page.locator('.join-step-node.is-active').count(), 1, 'Stage 4 has exactly 1 active step');
+    assert.ok(await page.locator('.join-step-node').nth(1).evaluate(el => el.classList.contains('is-active')), 'Stage 4 active step is Step 2');
     const stage4Host = await page.locator('.browser-url-pill').textContent();
     assert.ok(stage4Host.includes('accounts.google.com'), 'Stage 4 host is accounts.google.com');
     assert.ok((await page.locator('.stage-consent').textContent()).includes('learner@example.com'), 'learner@example.com in consent screen');
@@ -224,6 +247,8 @@ try {
     await page.clock.fastForward(4100);
     await page.locator('.stage-presentation').waitFor();
     assert.equal(await page.locator('.stage-presentation').count(), 1, 'Stage 5 reached (presentation visible only after consent)');
+    assert.equal(await page.locator('.join-step-node.is-active').count(), 1, 'Stage 5 has exactly 1 active step');
+    assert.ok(await page.locator('.join-step-node').nth(2).evaluate(el => el.classList.contains('is-active')), 'Stage 5 active step is Step 3');
     const stage5Host = await page.locator('.browser-url-pill').textContent();
     assert.ok(stage5Host.includes('cia.nimtechnology.com'), 'Stage 5 host is cia.nimtechnology.com');
     const presContent = await page.locator('.stage-presentation').textContent();

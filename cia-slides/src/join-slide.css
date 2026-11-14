@@ -1,4 +1,6 @@
-/* JoinSlide - Dark gaming-tech HUD aesthetic matching deck palette (#020617, #67e8f9, #22d3ee) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap');
+
+/* JoinSlide - Futuristic sci-fi HUD aesthetic (#060d18, #00f2fe, #0072ff) */
 .join-slide {
   position: relative;
   display: flex;
@@ -11,15 +13,15 @@
   max-height: 650px;
   margin: 0 auto;
   padding: 36px 44px;
-  gap: 28px;
+  gap: 20px;
   box-sizing: border-box;
-  background: radial-gradient(circle at 20% 20%, rgba(34, 211, 238, 0.06), transparent 48%),
-    radial-gradient(circle at 82% 78%, rgba(103, 232, 249, 0.06), transparent 45%),
-    #07111F;
-  border: 1px solid rgba(34, 211, 238, 0.22);
+  background: radial-gradient(circle at 43% 50%, rgba(0, 242, 254, 0.16), rgba(0, 114, 255, 0.07) 32%, transparent 66%),
+    radial-gradient(circle at 20% 20%, rgba(0, 242, 254, 0.06), transparent 45%),
+    #060d18;
+  border: 1px solid rgba(0, 242, 254, 0.28);
   border-radius: 24px;
   color: #f8fafc;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   overflow: hidden;
   isolation: isolate;
 }
@@ -29,9 +31,9 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background-image: linear-gradient(rgba(34, 211, 238, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(34, 211, 238, 0.06) 1px, transparent 1px);
-  background-size: 36px 36px;
+  background-image: linear-gradient(rgba(0, 242, 254, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 242, 254, 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
   mask-image: radial-gradient(circle at center, black 45%, transparent 95%);
 }
 
@@ -91,10 +93,45 @@
   position: relative;
   background: #ffffff;
   padding: 10px;
-  border-radius: 16px;
+  border-radius: 10px;
   width: 196px;
-  border: 2px solid #22d3ee;
-  box-shadow: 0 0 22px rgba(34, 211, 238, 0.35), 0 0 44px rgba(103, 232, 249, 0.12);
+  border: 2px solid #00f2fe;
+  box-shadow: 0 0 25px rgba(0, 242, 254, 0.5), 0 0 45px rgba(0, 114, 255, 0.25);
+}
+
+.join-slide .hud-corner {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 0;
+  border-color: #00f2fe;
+  border-style: solid;
+  pointer-events: none;
+  filter: drop-shadow(0 0 6px #00f2fe);
+}
+
+.join-slide .hud-tl {
+  top: -6px;
+  left: -6px;
+  border-width: 2.5px 0 0 2.5px;
+}
+
+.join-slide .hud-tr {
+  top: -6px;
+  right: -6px;
+  border-width: 2.5px 2.5px 0 0;
+}
+
+.join-slide .hud-bl {
+  bottom: -6px;
+  left: -6px;
+  border-width: 0 0 2.5px 2.5px;
+}
+
+.join-slide .hud-br {
+  bottom: -6px;
+  right: -6px;
+  border-width: 0 2.5px 2.5px 0;
 }
 
 .join-slide .join-qr-img {
@@ -195,75 +232,68 @@
   background: rgba(15, 23, 42, 0.6);
 }
 
-/* Short direct connector across QR-to-Timeline gap */
+/* Center Data-Flow Bridge across QR-to-Timeline gap */
 .join-slide .join-gap-connector {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 70px;
-  flex: 0 0 70px;
-  height: 24px;
-  flex-shrink: 0;
+  flex: 1 1 auto;
+  min-width: 140px;
+  width: auto;
+  height: 96px;
   pointer-events: none;
   z-index: 1;
 }
 
-.join-slide .join-connector-line {
+.join-slide .join-particle-canvas,
+.join-slide .join-circuit-overlay {
   position: absolute;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, rgba(34, 211, 238, 0.4), #67e8f9 50%, rgba(34, 211, 238, 0.4));
-  box-shadow: 0 0 12px #22d3ee, 0 0 24px rgba(103, 232, 249, 0.6);
-  border-radius: 2px;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
-.join-slide .join-connector-pulse {
-  position: absolute;
-  left: 0;
-  width: 24px;
-  height: 6px;
-  border-radius: 999px;
-  background: #67e8f9;
-  box-shadow: 0 0 14px #22d3ee, 0 0 24px #67e8f9;
-  animation: join-connector-travel 1.6s ease-in-out infinite;
+.join-slide .join-circuit-chevrons path {
+  opacity: 0.25;
+  animation: join-chevron-pulse 1.4s ease-in-out infinite;
 }
 
-.join-slide .join-gap-connector.stage-0 .join-connector-pulse {
-  animation-duration: 1.2s;
+.join-slide .join-circuit-chevrons path:nth-child(1) {
+  animation-delay: 0s;
 }
 
-.join-slide .join-connector-arrow {
-  position: absolute;
-  right: -2px;
-  font-size: 14px;
-  font-weight: 900;
-  line-height: 1;
-  color: #67e8f9;
-  text-shadow: 0 0 8px #22d3ee;
+.join-slide .join-circuit-chevrons path:nth-child(2) {
+  animation-delay: 0.18s;
 }
 
-@keyframes join-connector-travel {
-  0% {
-    left: 0;
-    opacity: 0.2;
-    transform: scaleX(0.7);
+.join-slide .join-circuit-chevrons path:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+.join-slide .join-circuit-chevrons path:nth-child(4) {
+  animation-delay: 0.54s;
+}
+
+.join-slide .join-gap-connector.stage-0 .join-circuit-chevrons path {
+  animation-duration: 1.05s;
+}
+
+@keyframes join-chevron-pulse {
+  0%, 100% {
+    opacity: 0.22;
+    filter: none;
   }
-  50% {
+  45% {
     opacity: 1;
-    transform: scaleX(1.1);
-  }
-  100% {
-    left: calc(100% - 16px);
-    opacity: 0.2;
-    transform: scaleX(0.7);
+    filter: drop-shadow(0 0 5px #00f2fe);
   }
 }
 
 /* Right Column: Vertical Neon Timeline + Slim Phone (~450px compact group) */
 .join-slide .join-right {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -292,7 +322,14 @@
   top: 22px;
   bottom: 22px;
   width: 2px;
-  background: rgba(148, 163, 184, 0.55);
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(0, 242, 254, 0.65) 0px,
+    rgba(0, 242, 254, 0.65) 5px,
+    transparent 5px,
+    transparent 10px
+  );
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -300,8 +337,14 @@
 .join-slide .join-timeline-fill {
   width: 100%;
   height: 0%;
-  background: linear-gradient(180deg, #22d3ee, #67e8f9);
-  box-shadow: 0 0 12px #22d3ee;
+  background: repeating-linear-gradient(
+    180deg,
+    #00f2fe 0px,
+    #00f2fe 5px,
+    transparent 5px,
+    transparent 10px
+  );
+  box-shadow: 0 0 14px #00f2fe, 0 0 24px #0072ff;
   transition: height 0.5s ease;
 }
 
@@ -344,7 +387,7 @@
   background: #0f172a;
   border: 2px solid rgba(148, 163, 184, 0.55);
   color: #E2E8F0;
-  transition: all 0.3s ease;
+  transition: none;
 }
 
 .join-slide .join-step-node.is-done .join-step-dot {
@@ -355,10 +398,10 @@
 }
 
 .join-slide .join-step-node.is-active .join-step-dot {
-  background: #22d3ee;
-  border-color: #67e8f9;
-  color: #020617;
-  box-shadow: 0 0 18px rgba(103, 232, 249, 0.95), 0 0 36px rgba(34, 211, 238, 0.6);
+  background: #00f2fe;
+  border-color: #ffffff;
+  color: #060d18;
+  box-shadow: 0 0 22px rgba(0, 242, 254, 0.95), 0 0 40px rgba(0, 114, 255, 0.75), inset 0 0 6px #ffffff;
   transform: scale(1.08);
   animation: join-dot-pulse 1.4s ease-in-out infinite;
 }
@@ -388,7 +431,8 @@
 }
 
 .join-slide .join-step-node.is-active .join-step-title {
-  color: #67E8F9;
+  color: #00f2fe;
+  text-shadow: 0 0 12px rgba(0, 242, 254, 0.5);
 }
 
 .join-slide .join-step-desc {
@@ -1355,7 +1399,7 @@
 
 /* Reduced Motion: stop particles, scan beam, pulse; keep layout and glow static */
 @media (prefers-reduced-motion: reduce) {
-  .join-slide .join-connector-pulse,
+  .join-slide .join-circuit-chevrons path,
   .join-slide .viewfinder-scan-beam,
   .join-slide .join-step-node.is-active .join-step-dot,
   .join-slide .google-auth-btn,
@@ -1364,8 +1408,8 @@
     animation: none !important;
   }
 
-  .join-slide .join-connector-pulse {
-    display: none;
+  .join-slide .join-circuit-chevrons path {
+    opacity: 0.75;
   }
 
   .join-slide .sim-tap-cursor,
