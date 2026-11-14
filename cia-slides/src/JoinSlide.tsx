@@ -228,8 +228,8 @@ export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
               src="/qr-cia.svg"
               alt="QR Code to cia.nimtechnology.com"
               className="join-qr-img"
-              width={200}
-              height={200}
+              width={176}
+              height={176}
             />
           </div>
 

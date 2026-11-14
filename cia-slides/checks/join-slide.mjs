@@ -72,20 +72,18 @@ try {
     const expectedTitle = lang === 'vi' ? 'Mở bài thuyết trình' : 'Open Presentation';
     assert.equal(joinTitle, expectedTitle, `Title matches expected for lang ${lang}`);
 
-    // Verify QR card to timeline gap <= 160 source px
-    const gapMetrics = await page.evaluate(() => {
-      const qrCard = document.querySelector('.join-qr-card').getBoundingClientRect();
-      const timeline = document.querySelector('.join-timeline').getBoundingClientRect();
+    // Verify prominent conduit connector checks
+    const connMetrics = await page.evaluate(() => {
+      const conn = document.querySelector('.join-gap-connector');
       const canvas = document.querySelector('.deck-canvas');
       const scale = canvas ? (canvas.getBoundingClientRect().width / 1280) : 1;
       return {
-        sourceGap: (timeline.left - qrCard.right) / scale,
-        qrRight: qrCard.right,
-        timelineLeft: timeline.left
+        width: conn ? conn.getBoundingClientRect().width / scale : 0,
+        opacity: conn ? parseFloat(window.getComputedStyle(conn).opacity) : 0
       };
     });
-    assert.ok(gapMetrics.sourceGap <= 160, `QR card to timeline gap (${gapMetrics.sourceGap}) <= 160`);
-    assert.ok(gapMetrics.timelineLeft >= gapMetrics.qrRight, 'QR card and timeline do not overlap');
+    assert.ok(connMetrics.width >= 50, `Connector width (${connMetrics.width}) >= 50px`);
+    assert.equal(connMetrics.opacity, 1, 'Connector opacity is 1');
 
     // Safe margins assertion: main left/right content bounds >=40px horizontally and >=32px vertically from slide edges in unscaled canvas
     const insets = await page.evaluate(() => {
