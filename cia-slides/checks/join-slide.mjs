@@ -61,6 +61,33 @@ try {
     assert.ok(layout.slideBottom <= layout.footerTop + 1, 'Join bounds stay above footer');
     assert.ok(!layout.overflowX, 'Outer horizontal no overflow');
 
+    // Safe margins assertion: main left/right content bounds >=40px horizontally and >=32px vertically from slide edges in unscaled canvas
+    const insets = await page.evaluate(() => {
+      const slide = document.querySelector('.join-slide');
+      const left = document.querySelector('.join-left');
+      const right = document.querySelector('.join-right');
+      const canvas = document.querySelector('.deck-canvas');
+      const cRect = canvas ? canvas.getBoundingClientRect() : null;
+      const scale = cRect ? (cRect.width / 1280) : 1;
+      const sRect = slide.getBoundingClientRect();
+      const lRect = left.getBoundingClientRect();
+      const rRect = right.getBoundingClientRect();
+      return {
+        leftInsetH: (lRect.left - sRect.left) / scale,
+        leftInsetTop: (lRect.top - sRect.top) / scale,
+        leftInsetBottom: (sRect.bottom - lRect.bottom) / scale,
+        rightInsetH: (sRect.right - rRect.right) / scale,
+        rightInsetTop: (rRect.top - sRect.top) / scale,
+        rightInsetBottom: (sRect.bottom - rRect.bottom) / scale
+      };
+    });
+    assert.ok(insets.leftInsetH >= 40, `leftInsetH (${insets.leftInsetH}) >= 40`);
+    assert.ok(insets.rightInsetH >= 40, `rightInsetH (${insets.rightInsetH}) >= 40`);
+    assert.ok(insets.leftInsetTop >= 32, `leftInsetTop (${insets.leftInsetTop}) >= 32`);
+    assert.ok(insets.leftInsetBottom >= 32, `leftInsetBottom (${insets.leftInsetBottom}) >= 32`);
+    assert.ok(insets.rightInsetTop >= 32, `rightInsetTop (${insets.rightInsetTop}) >= 32`);
+    assert.ok(insets.rightInsetBottom >= 32, `rightInsetBottom (${insets.rightInsetBottom}) >= 32`);
+
     // Check initial stage: stage-camera
     await page.locator('.stage-camera').waitFor();
     assert.equal(await page.locator('.stage-camera').count(), 1, 'Initially .stage-camera');
@@ -87,6 +114,19 @@ try {
     await replayBtn.click();
     await page.locator('.stage-camera').waitFor();
     assert.equal(await page.locator('.stage-camera').count(), 1, 'Replay resets to .stage-camera');
+
+    // For desktop (width === 1366, !reduced), observe continuous loop second cycle:
+    // camera -> browser -> auth -> camera -> browser
+    if (width === 1366 && !reduced && stageScreenshots) {
+      await page.locator('.stage-browser').waitFor({timeout: 6000});
+      await page.locator('.stage-auth').waitFor({timeout: 6000});
+      // After ~4s hold in auth, auto loops back to camera
+      await page.locator('.stage-camera').waitFor({timeout: 7000});
+      assert.equal(await page.locator('.stage-camera').count(), 1, 'Auto-loop cycled back to .stage-camera');
+      // Second loop reaches browser
+      await page.locator('.stage-browser').waitFor({timeout: 6000});
+      assert.equal(await page.locator('.stage-browser').count(), 1, 'Auto-loop cycle 2 reached .stage-browser');
+    }
 
     // Screenshots as required
     if (screenshot) {

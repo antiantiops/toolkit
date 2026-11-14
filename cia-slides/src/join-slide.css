@@ -6,12 +6,12 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  max-width: 1180px;
+  max-width: 1140px;
   height: 100%;
-  max-height: 680px;
+  max-height: 650px;
   margin: 0 auto;
-  padding: 20px 28px;
-  gap: 28px;
+  padding: 48px 56px;
+  gap: 24px;
   box-sizing: border-box;
   background: radial-gradient(circle at 20% 20%, rgba(34, 211, 238, 0.06), transparent 48%),
     radial-gradient(circle at 82% 78%, rgba(103, 232, 249, 0.06), transparent 45%),
@@ -88,16 +88,16 @@
 .join-slide .join-qr-card {
   position: relative;
   background: #ffffff;
-  padding: 14px;
+  padding: 12px;
   border-radius: 18px;
   border: 2px solid #22d3ee;
-  box-shadow: 0 0 28px rgba(34, 211, 238, 0.42), 0 0 60px rgba(103, 232, 249, 0.16);
+  box-shadow: 0 0 22px rgba(34, 211, 238, 0.35), 0 0 44px rgba(103, 232, 249, 0.12);
 }
 
 .join-slide .join-qr-img {
   display: block;
-  width: 196px;
-  height: 196px;
+  width: 184px;
+  height: 184px;
   min-width: 180px;
   min-height: 180px;
   object-fit: contain;
@@ -256,8 +256,8 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 34px;
-  width: 245px;
+  gap: 28px;
+  width: 240px;
 }
 
 .join-slide .join-timeline-track {
@@ -373,10 +373,10 @@
 
 .join-slide .phone-mockup {
   position: relative;
-  width: 194px;
-  max-width: 220px;
-  height: 416px;
-  max-height: 420px;
+  width: 190px;
+  max-width: 210px;
+  height: 404px;
+  max-height: 410px;
   border-radius: 32px;
   padding: 8px;
   box-sizing: border-box;

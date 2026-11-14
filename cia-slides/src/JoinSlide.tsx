@@ -70,17 +70,32 @@ export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
     setStage(0);
     if (!active) return;
 
-    const t1 = setTimeout(() => {
-      setStage(1);
-    }, 3200);
+    let t1: ReturnType<typeof setTimeout> | undefined;
+    let t2: ReturnType<typeof setTimeout> | undefined;
+    let tLoop: ReturnType<typeof setTimeout> | undefined;
 
-    const t2 = setTimeout(() => {
-      setStage(2);
-    }, 6400);
+    const runCycle = () => {
+      setStage(0);
+      t1 = setTimeout(() => {
+        setStage(1);
+      }, 3200);
+
+      t2 = setTimeout(() => {
+        setStage(2);
+      }, 6400);
+
+      // Total cycle: 3.2s + 3.2s + 4.0s = 10.4s
+      tLoop = setTimeout(() => {
+        setReplayKey((k) => k + 1);
+      }, 10400);
+    };
+
+    runCycle();
 
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
+      if (t1) clearTimeout(t1);
+      if (t2) clearTimeout(t2);
+      if (tLoop) clearTimeout(tLoop);
     };
   }, [active, replayKey]);
 
