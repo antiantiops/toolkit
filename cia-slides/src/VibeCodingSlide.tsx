@@ -230,16 +230,16 @@ export function VibeCodingSlide({english=false}:{english?:boolean}){
               </div>
               <button type="button" className="vibe-deploy-btn" onClick={triggerDeployClick} aria-label={t('Mở xem sản phẩm','Open preview')}>
                {t('Xem ngay','Preview')} <span aria-hidden="true">↗</span>
+               {mouseRipple&&<span className="vibe-click-ripple" aria-hidden="true"/>}
+               {showMouse&&(
+                <div className={`vibe-sim-mouse ${mouseClicking?'is-clicking':''}`} aria-hidden="true">
+                 <svg className="vibe-mouse-cursor" viewBox="0 0 32 40" width="24" height="30">
+                  <path d="M3 2V30L11 24L17 37L23 34L17 21H29Z" fill="white" stroke="#0f172a" strokeWidth="2.5" strokeLinejoin="round"/>
+                 </svg>
+                </div>
+               )}
               </button>
              </div>
-             {mouseRipple&&<span className="vibe-click-ripple" aria-hidden="true"/>}
-            </div>
-           )}
-           {showMouse&&(
-            <div className={`vibe-sim-mouse ${mouseClicking?'is-clicking':''}`} aria-hidden="true">
-             <svg className="vibe-mouse-cursor" viewBox="0 0 32 40" width="24" height="30">
-              <path d="M3 2V30L11 24L17 37L23 34L17 21H29Z" fill="white" stroke="#0f172a" strokeWidth="2.5" strokeLinejoin="round"/>
-             </svg>
             </div>
            )}
           </div>
