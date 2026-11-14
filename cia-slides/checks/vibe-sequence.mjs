@@ -7,7 +7,7 @@ const browser = await chromium.launch({headless: true, args: ['--no-sandbox']});
 try {
  const page = await browser.newPage({viewport: {width: 1280, height: 800}});
  await page.addInitScript(() => localStorage.setItem('deck-language', 'vi'));
- await page.goto(`${BASE_URL}/#10`, {waitUntil: 'networkidle'});
+ await page.goto(`${BASE_URL}/#11`, {waitUntil: 'networkidle'});
 
  // Check initial pre-reveal state
  await page.locator('.vibe-hook').waitFor();
@@ -101,7 +101,7 @@ try {
  // Test English language mode
  const enPage = await browser.newPage({viewport: {width: 1280, height: 800}});
  await enPage.addInitScript(() => localStorage.setItem('deck-language', 'en'));
- await enPage.goto(`${BASE_URL}/#10`, {waitUntil: 'networkidle'});
+ await enPage.goto(`${BASE_URL}/#11`, {waitUntil: 'networkidle'});
  await enPage.locator('.vibe-explanation button').click();
  await enPage.waitForSelector('[data-vibe-stage="coding"]', {timeout: 18000});
  const enToast = enPage.locator('.vibe-deploy-toast');
@@ -111,7 +111,7 @@ try {
 
  // Test prefers-reduced-motion: reduce
  const rPage = await browser.newPage({reducedMotion: 'reduce'});
- await rPage.goto(`${BASE_URL}/#10`, {waitUntil: 'networkidle'});
+ await rPage.goto(`${BASE_URL}/#11`, {waitUntil: 'networkidle'});
  await rPage.locator('.vibe-explanation button').click();
  await rPage.waitForSelector('[data-vibe-stage="coding"]', {timeout: 8000});
  const rToast = rPage.locator('.vibe-deploy-toast');

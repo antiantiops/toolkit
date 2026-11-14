@@ -21,7 +21,7 @@ try {
     });
 
     await page.addInitScript(l => localStorage.setItem('deck-language', l), lang);
-    await page.goto(`${baseUrl}/#11`);
+    await page.goto(`${baseUrl}/#12`);
     await page.locator('.english-bento.bento-ready').waitFor();
     await page.waitForTimeout(1000);
 
@@ -107,9 +107,9 @@ try {
     await page.locator('.bento-hero .bento-spotlight-btn').click();
     await page.locator('.bento-spotlight-active').waitFor();
     await page.keyboard.press('ArrowRight');
-    assert.equal(await page.evaluate(() => location.hash), '#11', 'ArrowRight should not navigate away during spotlight');
+    assert.equal(await page.evaluate(() => location.hash), '#12', 'ArrowRight should not navigate away during spotlight');
     await page.keyboard.press('ArrowLeft');
-    assert.equal(await page.evaluate(() => location.hash), '#11', 'ArrowLeft should not navigate away during spotlight');
+    assert.equal(await page.evaluate(() => location.hash), '#12', 'ArrowLeft should not navigate away during spotlight');
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => !document.querySelector('.bento-spotlight-active'));
 
