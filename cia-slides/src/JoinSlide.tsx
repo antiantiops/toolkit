@@ -1,5 +1,18 @@
 import { useState, useEffect } from 'react';
-import { QrCode, Globe, ExternalLink, RotateCcw, Lock, MousePointer, Check } from 'lucide-react';
+import {
+  QrCode,
+  Globe,
+  ExternalLink,
+  RotateCcw,
+  Lock,
+  MousePointer,
+  Check,
+  User,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ShieldCheck,
+} from 'lucide-react';
 import './join-slide.css';
 
 interface JoinSlideProps {
@@ -14,23 +27,43 @@ const copy = {
     subtitle: 'Quét mã QR bằng điện thoại để mở website và đăng nhập bằng Google.',
     scanTitle: 'Quét mã QR',
     scanDesc: 'Mở Máy ảnh trên điện thoại và hướng vào mã QR.',
-    openTitle: 'Mở đường dẫn',
-    openDesc: 'Chạm thông báo để truy cập cia.nimtechnology.com.',
-    loginTitle: 'Tiếp tục với Google',
-    loginDesc: 'Chọn "Continue with Google" để tham gia tương tác.',
+    loginTitle: 'Đăng nhập Google',
+    loginDesc: 'Xác thực tài khoản và cấp quyền đăng nhập nhanh.',
+    viewTitle: 'Xem bài thuyết trình',
+    viewDesc: 'Theo dõi bài giảng và tương tác theo thời gian thực.',
     directLink: 'Truy cập trực tiếp:',
     replay: 'Phát lại',
     simBadge: 'Minh hoạ thao tác',
+    simSessionNote: 'Phiên đã lưu có thể bỏ qua bước đăng nhập',
     simCam: 'Máy ảnh',
     simDetected: 'Tìm thấy cia.nimtechnology.com',
     browserPageTitle: 'Nền tảng CIA',
     browserPageSub: 'Trợ lý AI tương tác thời gian thực',
     browserStatus: 'Sẵn sàng kết nối',
-    simAuthTitle: 'Đăng nhập vào CIA',
-    simAuthSub: 'Xác thực nhanh bằng tài khoản Google',
     googleBtn: 'Continue with Google',
-    simSuccess: 'Đã xác thực thành công',
-    simDisclaimer: 'Minh hoạ luồng tham gia, không yêu cầu mật khẩu.',
+    googleSignIn: 'Đăng nhập',
+    googleSub: 'để tiếp tục với nimtechnology.com',
+    googleEmailLabel: 'Email hoặc số điện thoại',
+    googleForgotEmail: 'Bạn quên địa chỉ email?',
+    googleCreateAccount: 'Tạo tài khoản',
+    googleNext: 'Tiếp theo',
+    googleWelcome: 'Chào mừng',
+    googlePasswordLabel: 'Nhập mật khẩu',
+    googleShowPassword: 'Hiện mật khẩu',
+    googleTryAnother: 'Thử cách khác',
+    googleConsentTitle: 'Đăng nhập vào nimtechnology.com',
+    googleConsentScope:
+      'Google sẽ chia sẻ tên, địa chỉ email và ảnh hồ sơ của bạn với nimtechnology.com.',
+    googleConsentNotice: 'Minh hoạ quyền cơ bản (tên, email, ảnh đại diện).',
+    googleCancel: 'Huỷ',
+    googleContinue: 'Tiếp tục',
+    presHeader: 'AI BODY',
+    presLive: 'TRỰC TIẾP',
+    presKicker: 'BÀI THUYẾT TRÌNH',
+    presTitle: 'Kiến trúc Trợ lý AI',
+    presBlock1: 'Lý luận mô hình',
+    presBlock2: 'Giọng nói thời gian thực',
+    presCounter: '01 / 12',
   },
   en: {
     kicker: 'JOIN',
@@ -38,28 +71,77 @@ const copy = {
     subtitle: 'Scan the QR code with your phone to open the site and sign in with Google.',
     scanTitle: 'Scan QR Code',
     scanDesc: 'Open phone camera and point at the QR code.',
-    openTitle: 'Open Website',
-    openDesc: 'Tap the banner to open cia.nimtechnology.com.',
-    loginTitle: 'Continue with Google',
-    loginDesc: 'Select "Continue with Google" to join interactively.',
+    loginTitle: 'Google Sign-in',
+    loginDesc: 'Authenticate account and confirm quick access.',
+    viewTitle: 'View Presentation',
+    viewDesc: 'Follow lecture slides and interact in real time.',
     directLink: 'Direct access:',
     replay: 'Replay',
     simBadge: 'Phone simulation',
+    simSessionNote: 'Saved sessions may skip login steps',
     simCam: 'Camera',
     simDetected: 'Detected: cia.nimtechnology.com',
     browserPageTitle: 'CIA Platform',
     browserPageSub: 'Real-time interactive AI workspace',
     browserStatus: 'Connected',
-    simAuthTitle: 'Sign in to CIA',
-    simAuthSub: 'Fast authentication with Google',
     googleBtn: 'Continue with Google',
-    simSuccess: 'Signed in successfully',
-    simDisclaimer: 'Flow preview only, no credentials needed here.',
+    googleSignIn: 'Sign in',
+    googleSub: 'to continue to nimtechnology.com',
+    googleEmailLabel: 'Email or phone',
+    googleForgotEmail: 'Forgot email?',
+    googleCreateAccount: 'Create account',
+    googleNext: 'Next',
+    googleWelcome: 'Welcome',
+    googlePasswordLabel: 'Enter your password',
+    googleShowPassword: 'Show password',
+    googleTryAnother: 'Try another way',
+    googleConsentTitle: 'Sign in to nimtechnology.com',
+    googleConsentScope:
+      'Google will share your name, email address and profile picture with nimtechnology.com.',
+    googleConsentNotice: 'Illustrative basic scope (name, email, profile photo).',
+    googleCancel: 'Cancel',
+    googleContinue: 'Continue',
+    presHeader: 'AI BODY',
+    presLive: 'LIVE',
+    presKicker: 'PRESENTATION',
+    presTitle: 'Embodied AI Agent Systems',
+    presBlock1: 'Model Reasoning',
+    presBlock2: 'Real-time Voice Pipeline',
+    presCounter: '01 / 12',
   },
 };
 
+function GoogleGIcon() {
+  return (
+    <svg className="google-g-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.15z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.94H1.26v3.14C3.25 21.35 7.33 24 12 24z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.28 14.26c-.25-.72-.38-1.49-.38-2.26s.13-1.54.38-2.26V6.6H1.26C.46 8.21 0 10.05 0 12s.46 3.79 1.26 5.4l4.02-3.14z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 4.77c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.25 2.65 1.26 6.6l4.02 3.14c.95-2.84 3.6-4.97 6.72-4.97z"
+      />
+    </svg>
+  );
+}
+
 export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
-  // stage: 0 = camera scan, 1 = browser load, 2 = google sign-in sheet
+  // stages:
+  // 0: camera scan (3.2s)
+  // 1: browser open cia.nimtechnology.com + Continue with Google tap (2.8s)
+  // 2: google email entry learner@example.com (4.0s)
+  // 3: google password entry masked bullets (4.0s)
+  // 4: google consent screen (4.0s)
+  // 5: miniature presentation visible (5.0s hold)
   const [stage, setStage] = useState<number>(0);
   const [replayKey, setReplayKey] = useState<number>(0);
 
@@ -72,6 +154,9 @@ export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
 
     let t1: ReturnType<typeof setTimeout> | undefined;
     let t2: ReturnType<typeof setTimeout> | undefined;
+    let t3: ReturnType<typeof setTimeout> | undefined;
+    let t4: ReturnType<typeof setTimeout> | undefined;
+    let t5: ReturnType<typeof setTimeout> | undefined;
     let tLoop: ReturnType<typeof setTimeout> | undefined;
 
     const runCycle = () => {
@@ -82,12 +167,24 @@ export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
 
       t2 = setTimeout(() => {
         setStage(2);
-      }, 6400);
+      }, 6000);
 
-      // Total cycle: 3.2s + 3.2s + 4.0s = 10.4s
+      t3 = setTimeout(() => {
+        setStage(3);
+      }, 10000);
+
+      t4 = setTimeout(() => {
+        setStage(4);
+      }, 14000);
+
+      t5 = setTimeout(() => {
+        setStage(5);
+      }, 18000);
+
+      // Total cycle: 3.2s + 2.8s + 4.0s + 4.0s + 4.0s + 5.0s = 23.0s
       tLoop = setTimeout(() => {
         setReplayKey((k) => k + 1);
-      }, 10400);
+      }, 23000);
     };
 
     runCycle();
@@ -95,6 +192,9 @@ export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
     return () => {
       if (t1) clearTimeout(t1);
       if (t2) clearTimeout(t2);
+      if (t3) clearTimeout(t3);
+      if (t4) clearTimeout(t4);
+      if (t5) clearTimeout(t5);
       if (tLoop) clearTimeout(tLoop);
     };
   }, [active, replayKey]);
@@ -106,15 +206,15 @@ export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
 
   const steps = [
     { num: 1, title: t.scanTitle, desc: t.scanDesc },
-    { num: 2, title: t.openTitle, desc: t.openDesc },
-    { num: 3, title: t.loginTitle, desc: t.loginDesc },
+    { num: 2, title: t.loginTitle, desc: t.loginDesc },
+    { num: 3, title: t.viewTitle, desc: t.viewDesc },
   ];
 
   return (
     <main className="join-slide" aria-label="Join CIA Workshop">
       <div className="join-grid-bg" aria-hidden="true" />
 
-      {/* Left Column: Title + Glowing QR Card + Direct URL */}
+      {/* Left Column: Header + QR + Controls */}
       <section className="join-left">
         <header className="join-header">
           <p className="join-kicker">{t.kicker}</p>
@@ -172,14 +272,25 @@ export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
 
       {/* Right Column: Vertical Neon Timeline + Slim 9:19.5 Phone */}
       <section className="join-right" aria-label={t.simBadge}>
-        {/* Vertical Timeline Steps */}
+        {/* Vertical Timeline Steps (3 broad groups) */}
         <ol className="join-timeline">
           <div className="join-timeline-track" aria-hidden="true">
             <div className={`join-timeline-fill stage-${stage}`} />
           </div>
           {steps.map((s, idx) => {
-            const isDone = stage > idx;
-            const isActive = stage === idx;
+            let isDone = false;
+            let isActive = false;
+            if (idx === 0) {
+              isActive = stage === 0;
+              isDone = stage > 0;
+            } else if (idx === 1) {
+              isActive = stage >= 1 && stage <= 4;
+              isDone = stage >= 5;
+            } else if (idx === 2) {
+              isActive = stage === 5;
+              isDone = false;
+            }
+
             return (
               <li
                 key={s.num}
@@ -197,7 +308,7 @@ export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
           })}
         </ol>
 
-        {/* Slim Phone Mockup (max-width 220px, max-height 420px, ~9:19.5) */}
+        {/* Slim Phone Mockup */}
         <div className="join-phone-wrap" key={replayKey}>
           <div className="phone-mockup">
             <div className="phone-island">
@@ -243,9 +354,9 @@ export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
                 </div>
               )}
 
-              {/* Stage 1: Browser Opening cia.nimtechnology.com */}
+              {/* Stage 1: Browser Opening cia.nimtechnology.com + Continue with Google tap */}
               {stage === 1 && (
-                <div className="stage-browser">
+                <div className="stage-browser stage-cia-landing">
                   <div className="browser-bar">
                     <div className="browser-url-pill">
                       <Lock size={10} />
@@ -259,10 +370,19 @@ export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
                   <div className="browser-page-body">
                     <div className="browser-hero-card">
                       <div className="browser-hero-icon">
-                        <Globe size={22} />
+                        <Globe size={20} />
                       </div>
                       <h3 className="browser-page-title">{t.browserPageTitle}</h3>
                       <p className="browser-page-sub">{t.browserPageSub}</p>
+
+                      <div className="google-auth-btn cia-google-trigger">
+                        <GoogleGIcon />
+                        <span>{t.googleBtn}</span>
+                        <div className="sim-tap-cursor tap-step-1" aria-hidden="true">
+                          <MousePointer size={14} color="#020617" fill="#67e8f9" />
+                        </div>
+                      </div>
+
                       <div className="browser-status-pill">
                         <span className="browser-status-dot" />
                         <span>{t.browserStatus}</span>
@@ -272,59 +392,216 @@ export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
                 </div>
               )}
 
-              {/* Stage 2: iOS Bottom Auth Sheet + Google Button + Tap + Success */}
+              {/* Stage 2: Google Email Entry (accounts.google.com) */}
               {stage === 2 && (
-                <div className="stage-auth">
-                  <div className="auth-backdrop-content">
-                    <div className="auth-mini-logo">CIA</div>
+                <div className="stage-browser stage-email">
+                  <div className="browser-bar">
+                    <div className="browser-url-pill">
+                      <Lock size={10} />
+                      <span>accounts.google.com</span>
+                    </div>
                   </div>
 
-                  <div className="auth-sheet">
-                    <div className="auth-sheet-handle" />
-                    <div className="auth-brand-logo">CIA</div>
-                    <h3 className="auth-headline">{t.simAuthTitle}</h3>
-                    <p className="auth-instructions">{t.simAuthSub}</p>
+                  <div className="google-screen-body">
+                    <div className="google-top-brand">
+                      <GoogleGIcon />
+                      <span className="google-brand-text">Sign in with Google</span>
+                    </div>
 
-                    <div className="google-auth-btn">
-                      <svg className="google-g-icon" viewBox="0 0 24 24" aria-hidden="true">
-                        <path
-                          fill="#4285F4"
-                          d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.15z"
-                        />
-                        <path
-                          fill="#34A853"
-                          d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.94H1.26v3.14C3.25 21.35 7.33 24 12 24z"
-                        />
-                        <path
-                          fill="#FBBC05"
-                          d="M5.28 14.26c-.25-.72-.38-1.49-.38-2.26s.13-1.54.38-2.26V6.6H1.26C.46 8.21 0 10.05 0 12s.46 3.79 1.26 5.4l4.02-3.14z"
-                        />
-                        <path
-                          fill="#EA4335"
-                          d="M12 4.77c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.25 2.65 1.26 6.6l4.02 3.14c.95-2.84 3.6-4.97 6.72-4.97z"
-                        />
-                      </svg>
-                      <span>{t.googleBtn}</span>
+                    <div className="google-header-block">
+                      <h3 className="google-page-title">{t.googleSignIn}</h3>
+                      <p className="google-page-subtitle">{t.googleSub}</p>
+                    </div>
 
-                      <div className="sim-tap-cursor" aria-hidden="true">
-                        <MousePointer size={16} color="#020617" fill="#67e8f9" />
+                    <div className="google-field-group">
+                      <div className="google-outlined-field is-focused">
+                        <span className="google-floating-label">{t.googleEmailLabel}</span>
+                        <div className="google-fake-input">
+                          <span className="sim-typing-email">learner@example.com</span>
+                          <span className="sim-cursor-caret" aria-hidden="true" />
+                        </div>
+                      </div>
+                      <span className="google-inline-link">{t.googleForgotEmail}</span>
+                    </div>
+
+                    <div className="google-card-footer">
+                      <span className="google-inline-link">{t.googleCreateAccount}</span>
+                      <div className="google-primary-btn">
+                        <span>{t.googleNext}</span>
+                        <div className="sim-tap-cursor tap-step-2" aria-hidden="true">
+                          <MousePointer size={14} color="#020617" fill="#67e8f9" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Stage 3: Google Password Entry (accounts.google.com) */}
+              {stage === 3 && (
+                <div className="stage-browser stage-password">
+                  <div className="browser-bar">
+                    <div className="browser-url-pill">
+                      <Lock size={10} />
+                      <span>accounts.google.com</span>
+                    </div>
+                  </div>
+
+                  <div className="google-screen-body">
+                    <div className="google-top-brand">
+                      <GoogleGIcon />
+                      <span className="google-brand-text">Sign in with Google</span>
+                    </div>
+
+                    <div className="google-header-block">
+                      <h3 className="google-page-title">{t.googleWelcome}</h3>
+                      <div className="google-account-chip">
+                        <div className="google-chip-avatar">
+                          <User size={10} />
+                        </div>
+                        <span className="google-chip-email">learner@example.com</span>
+                        <ChevronDown size={10} />
                       </div>
                     </div>
 
-                    <div className="auth-success-toast">
-                      <span className="auth-success-icon">
-                        <Check size={12} strokeWidth={3} />
-                      </span>
-                      <span>{t.simSuccess}</span>
+                    <div className="google-field-group">
+                      <div className="google-outlined-field is-focused">
+                        <span className="google-floating-label">{t.googlePasswordLabel}</span>
+                        <div className="google-fake-input">
+                          <span className="sim-masked-password">••••••••</span>
+                          <span className="sim-cursor-caret" aria-hidden="true" />
+                        </div>
+                      </div>
+                      <div className="google-checkbox-row">
+                        <span className="google-fake-checkbox" />
+                        <span className="google-checkbox-label">{t.googleShowPassword}</span>
+                      </div>
                     </div>
 
-                    <p className="sim-auth-disclaimer">{t.simDisclaimer}</p>
+                    <div className="google-card-footer">
+                      <span className="google-inline-link">{t.googleTryAnother}</span>
+                      <div className="google-primary-btn">
+                        <span>{t.googleNext}</span>
+                        <div className="sim-tap-cursor tap-step-3" aria-hidden="true">
+                          <MousePointer size={14} color="#020617" fill="#67e8f9" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Stage 4: Google Consent Screen (accounts.google.com) */}
+              {stage === 4 && (
+                <div className="stage-browser stage-consent">
+                  <div className="browser-bar">
+                    <div className="browser-url-pill">
+                      <Lock size={10} />
+                      <span>accounts.google.com</span>
+                    </div>
+                  </div>
+
+                  <div className="google-screen-body consent-body">
+                    <div className="google-top-brand">
+                      <GoogleGIcon />
+                      <span className="google-brand-text">Sign in with Google</span>
+                    </div>
+
+                    <div className="google-header-block">
+                      <h3 className="google-page-title consent-title">{t.googleConsentTitle}</h3>
+                      <div className="google-account-chip">
+                        <div className="google-chip-avatar">
+                          <User size={10} />
+                        </div>
+                        <span className="google-chip-email">learner@example.com</span>
+                      </div>
+                    </div>
+
+                    <div className="google-consent-box">
+                      <div className="consent-icon-row">
+                        <ShieldCheck size={14} className="consent-shield" />
+                        <p className="consent-scope-desc">{t.googleConsentScope}</p>
+                      </div>
+                      <p className="consent-notice">{t.googleConsentNotice}</p>
+                    </div>
+
+                    <div className="google-card-footer consent-footer">
+                      <span className="google-secondary-btn">{t.googleCancel}</span>
+                      <div className="google-primary-btn">
+                        <span>{t.googleContinue}</span>
+                        <div className="sim-tap-cursor tap-step-4" aria-hidden="true">
+                          <MousePointer size={14} color="#020617" fill="#67e8f9" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Stage 5: Miniature Presentation (cia.nimtechnology.com) */}
+              {stage === 5 && (
+                <div className="stage-browser stage-presentation">
+                  <div className="browser-bar">
+                    <div className="browser-url-pill">
+                      <Lock size={10} />
+                      <span>cia.nimtechnology.com</span>
+                    </div>
+                  </div>
+
+                  <div className="mini-pres-container">
+                    <header className="mini-pres-header">
+                      <div className="mini-pres-brand">
+                        <span className="mini-pres-logo-dot" />
+                        <span className="mini-pres-brand-name">{t.presHeader}</span>
+                      </div>
+                      <div className="mini-pres-live-tag">
+                        <span className="live-dot-pulse" />
+                        <span>{t.presLive}</span>
+                      </div>
+                    </header>
+
+                    <div className="mini-pres-slide-card">
+                      <span className="mini-slide-kicker">{t.presKicker}</span>
+                      <h4 className="mini-slide-title">{t.presTitle}</h4>
+
+                      <div className="mini-slide-grid">
+                        <div className="mini-grid-card">
+                          <span className="mini-card-tag">01</span>
+                          <span className="mini-card-text">{t.presBlock1}</span>
+                          <div className="mini-metric-bar">
+                            <div className="mini-metric-fill" />
+                          </div>
+                        </div>
+                        <div className="mini-grid-card">
+                          <span className="mini-card-tag">02</span>
+                          <span className="mini-card-text">{t.presBlock2}</span>
+                          <div className="mini-metric-bar">
+                            <div className="mini-metric-fill v2" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <footer className="mini-pres-controls">
+                      <div className="mini-nav-btn is-disabled">
+                        <ChevronLeft size={12} />
+                      </div>
+                      <span className="mini-page-indicator">{t.presCounter}</span>
+                      <div className="mini-nav-btn">
+                        <ChevronRight size={12} />
+                      </div>
+                    </footer>
                   </div>
                 </div>
               )}
             </div>
 
             <div className="phone-home-indicator" />
+          </div>
+
+          <div className="phone-sim-caption">
+            <span className="phone-sim-badge">{t.simBadge}</span>
+            <span className="phone-sim-note">{t.simSessionNote}</span>
           </div>
         </div>
       </section>

@@ -18,6 +18,7 @@ try {
       reducedMotion: reduced ? 'reduce' : 'no-preference'
     });
 
+    await page.clock.install();
     await page.addInitScript(l => localStorage.setItem('deck-language', l), lang);
     await page.goto(`${baseUrl}/#1`);
 
@@ -43,6 +44,11 @@ try {
     assert.equal(await urlLink.getAttribute('href'), 'https://cia.nimtechnology.com');
     const rel = (await urlLink.getAttribute('rel')) || '';
     assert.ok(rel.includes('noopener'), 'rel includes noopener');
+
+    // Verify simulation label outside phone mockup exists
+    const simCaption = page.locator('.phone-sim-caption');
+    await simCaption.waitFor();
+    assert.ok(await simCaption.isVisible(), 'phone simulation caption outside phone visible');
 
     // Verify bounds above footer and outer no overflow
     const layout = await page.evaluate(() => {
@@ -88,45 +94,91 @@ try {
     assert.ok(insets.rightInsetTop >= 32, `rightInsetTop (${insets.rightInsetTop}) >= 32`);
     assert.ok(insets.rightInsetBottom >= 32, `rightInsetBottom (${insets.rightInsetBottom}) >= 32`);
 
-    // Check initial stage: stage-camera
+    // Stage 0: Camera Scan (0 -> 3200ms)
     await page.locator('.stage-camera').waitFor();
-    assert.equal(await page.locator('.stage-camera').count(), 1, 'Initially .stage-camera');
+    assert.equal(await page.locator('.stage-camera').count(), 1, 'Initial stage is .stage-camera');
+    assert.equal(await page.locator('.stage-presentation').count(), 0, 'No presentation in stage 0');
+    // Ensure no real editable input fields exist
+    assert.equal(await page.locator('input').count(), 0, 'No real input tags in DOM');
     if (stageScreenshots) {
-      await page.screenshot({path: '/root/.openclaw/workspace-nim/media/join-stage-camera.png'});
+      await page.screenshot({path: '/root/.openclaw/workspace-nim/media/join-google-0-camera.png'});
     }
 
-    // Observe stage 1: .stage-browser (~3200ms)
-    await page.locator('.stage-browser').waitFor({timeout: 6000});
-    assert.equal(await page.locator('.stage-browser').count(), 1, '.stage-browser after 3200ms');
+    // Advance to Stage 1: cia.nimtechnology.com browser landing (~3200ms)
+    await page.clock.fastForward(3300);
+    await page.locator('.stage-browser.stage-cia-landing').waitFor();
+    assert.equal(await page.locator('.stage-browser.stage-cia-landing').count(), 1, 'Stage 1 reached');
+    const stage1Host = await page.locator('.browser-url-pill').textContent();
+    assert.ok(stage1Host.includes('cia.nimtechnology.com'), 'Stage 1 host is cia.nimtechnology.com');
+    assert.equal(await page.locator('.stage-presentation').count(), 0, 'No presentation in stage 1');
     if (stageScreenshots) {
-      await page.screenshot({path: '/root/.openclaw/workspace-nim/media/join-stage-browser.png'});
+      await page.screenshot({path: '/root/.openclaw/workspace-nim/media/join-google-1-browser.png'});
     }
 
-    // Observe stage 2: .stage-auth (~6400ms)
-    await page.locator('.stage-auth').waitFor({timeout: 6000});
-    assert.equal(await page.locator('.stage-auth').count(), 1, '.stage-auth after 6400ms');
+    // Advance to Stage 2: accounts.google.com email entry (~6000ms total, +2800ms)
+    await page.clock.fastForward(2900);
+    await page.locator('.stage-email').waitFor();
+    assert.equal(await page.locator('.stage-email').count(), 1, 'Stage 2 reached (email)');
+    const stage2Host = await page.locator('.browser-url-pill').textContent();
+    assert.ok(stage2Host.includes('accounts.google.com'), 'Stage 2 host is accounts.google.com');
+    assert.ok((await page.locator('.stage-email').textContent()).includes('learner@example.com'), 'learner@example.com in email screen');
+    assert.equal(await page.locator('.stage-presentation').count(), 0, 'No presentation in stage 2');
     if (stageScreenshots) {
-      await page.screenshot({path: '/root/.openclaw/workspace-nim/media/join-stage-auth.png'});
+      await page.screenshot({path: '/root/.openclaw/workspace-nim/media/join-google-2-email.png'});
     }
 
-    // Verify replay button resets to camera stage
+    // Advance to Stage 3: accounts.google.com password entry (~10000ms total, +4000ms)
+    await page.clock.fastForward(4100);
+    await page.locator('.stage-password').waitFor();
+    assert.equal(await page.locator('.stage-password').count(), 1, 'Stage 3 reached (password)');
+    const stage3Host = await page.locator('.browser-url-pill').textContent();
+    assert.ok(stage3Host.includes('accounts.google.com'), 'Stage 3 host is accounts.google.com');
+    assert.ok((await page.locator('.stage-password').textContent()).includes('learner@example.com'), 'learner@example.com in password screen');
+    assert.ok((await page.locator('.stage-password').textContent()).includes('••••••••'), 'Masked password bullets present');
+    assert.equal(await page.locator('.stage-presentation').count(), 0, 'No presentation in stage 3');
+    if (stageScreenshots) {
+      await page.screenshot({path: '/root/.openclaw/workspace-nim/media/join-google-3-password.png'});
+    }
+
+    // Advance to Stage 4: accounts.google.com consent screen (~14000ms total, +4000ms)
+    await page.clock.fastForward(4100);
+    await page.locator('.stage-consent').waitFor();
+    assert.equal(await page.locator('.stage-consent').count(), 1, 'Stage 4 reached (consent)');
+    const stage4Host = await page.locator('.browser-url-pill').textContent();
+    assert.ok(stage4Host.includes('accounts.google.com'), 'Stage 4 host is accounts.google.com');
+    assert.ok((await page.locator('.stage-consent').textContent()).includes('learner@example.com'), 'learner@example.com in consent screen');
+    assert.equal(await page.locator('.stage-presentation').count(), 0, 'Presentation hidden during consent stage');
+    if (stageScreenshots) {
+      await page.screenshot({path: '/root/.openclaw/workspace-nim/media/join-google-4-consent.png'});
+    }
+
+    // Advance to Stage 5: cia.nimtechnology.com miniature presentation (~18000ms total, +4000ms)
+    await page.clock.fastForward(4100);
+    await page.locator('.stage-presentation').waitFor();
+    assert.equal(await page.locator('.stage-presentation').count(), 1, 'Stage 5 reached (presentation visible only after consent)');
+    const stage5Host = await page.locator('.browser-url-pill').textContent();
+    assert.ok(stage5Host.includes('cia.nimtechnology.com'), 'Stage 5 host is cia.nimtechnology.com');
+    const presContent = await page.locator('.stage-presentation').textContent();
+    assert.ok(presContent.includes('AI BODY'), 'Miniature presentation has AI BODY header');
+    assert.ok(presContent.includes('01 / 12'), 'Miniature presentation has 01 / 12 controls');
+    if (stageScreenshots) {
+      await page.screenshot({path: '/root/.openclaw/workspace-nim/media/join-google-5-presentation.png'});
+    }
+
+    // Verify Replay button resets to camera stage
     const replayBtn = page.locator('.join-replay-btn');
     await replayBtn.click();
     await page.locator('.stage-camera').waitFor();
     assert.equal(await page.locator('.stage-camera').count(), 1, 'Replay resets to .stage-camera');
 
-    // For desktop (width === 1366, !reduced), observe continuous loop second cycle:
-    // camera -> browser -> auth -> camera -> browser
-    if (width === 1366 && !reduced && stageScreenshots) {
-      await page.locator('.stage-browser').waitFor({timeout: 6000});
-      await page.locator('.stage-auth').waitFor({timeout: 6000});
-      // After ~4s hold in auth, auto loops back to camera
-      await page.locator('.stage-camera').waitFor({timeout: 7000});
-      assert.equal(await page.locator('.stage-camera').count(), 1, 'Auto-loop cycled back to .stage-camera');
-      // Second loop reaches browser
-      await page.locator('.stage-browser').waitFor({timeout: 6000});
-      assert.equal(await page.locator('.stage-browser').count(), 1, 'Auto-loop cycle 2 reached .stage-browser');
-    }
+    // Advance back to stage 5 then check auto-loop to second cycle
+    await page.clock.fastForward(18500);
+    await page.locator('.stage-presentation').waitFor();
+    assert.equal(await page.locator('.stage-presentation').count(), 1, 'Reached presentation again');
+    // Hold 5000ms at presentation, then loop back to stage-camera (total 23000ms cycle)
+    await page.clock.fastForward(5100);
+    await page.locator('.stage-camera').waitFor();
+    assert.equal(await page.locator('.stage-camera').count(), 1, 'Auto-loop cycled back to .stage-camera');
 
     // Screenshots as required
     if (screenshot) {
