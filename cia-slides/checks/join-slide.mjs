@@ -67,6 +67,26 @@ try {
     assert.ok(layout.slideBottom <= layout.footerTop + 1, 'Join bounds stay above footer');
     assert.ok(!layout.overflowX, 'Outer horizontal no overflow');
 
+    // Verify title and copy according to lang
+    const joinTitle = await page.locator('.join-title').textContent();
+    const expectedTitle = lang === 'vi' ? 'Mở bài thuyết trình' : 'Open Presentation';
+    assert.equal(joinTitle, expectedTitle, `Title matches expected for lang ${lang}`);
+
+    // Verify QR card to timeline gap <= 160 source px
+    const gapMetrics = await page.evaluate(() => {
+      const qrCard = document.querySelector('.join-qr-card').getBoundingClientRect();
+      const timeline = document.querySelector('.join-timeline').getBoundingClientRect();
+      const canvas = document.querySelector('.deck-canvas');
+      const scale = canvas ? (canvas.getBoundingClientRect().width / 1280) : 1;
+      return {
+        sourceGap: (timeline.left - qrCard.right) / scale,
+        qrRight: qrCard.right,
+        timelineLeft: timeline.left
+      };
+    });
+    assert.ok(gapMetrics.sourceGap <= 160, `QR card to timeline gap (${gapMetrics.sourceGap}) <= 160`);
+    assert.ok(gapMetrics.timelineLeft >= gapMetrics.qrRight, 'QR card and timeline do not overlap');
+
     // Safe margins assertion: main left/right content bounds >=40px horizontally and >=32px vertically from slide edges in unscaled canvas
     const insets = await page.evaluate(() => {
       const slide = document.querySelector('.join-slide');
@@ -94,6 +114,43 @@ try {
     assert.ok(insets.rightInsetTop >= 32, `rightInsetTop (${insets.rightInsetTop}) >= 32`);
     assert.ok(insets.rightInsetBottom >= 32, `rightInsetBottom (${insets.rightInsetBottom}) >= 32`);
 
+    // Helper to settle CSS animations strictly inside current phone screen without global pauses
+    async function settlePhoneScreen(stageSelector) {
+      await page.evaluate(() => {
+        const screen = document.querySelector('.phone-screen');
+        if (!screen) return;
+        const anims = document.getAnimations().filter(a => {
+          const target = a.effect && a.effect.target;
+          return target && screen.contains(target);
+        });
+        for (const a of anims) {
+          const timing = a.effect.getComputedTiming ? a.effect.getComputedTiming() : null;
+          const duration = (timing && typeof timing.duration === 'number') ? timing.duration : 1000;
+          const iterations = (timing && typeof timing.iterations === 'number') ? timing.iterations : 1;
+          if (iterations !== Infinity) {
+            a.pause();
+            a.currentTime = Math.min(duration, 1800);
+          }
+        }
+      });
+      const opacity = await page.locator(stageSelector).evaluate(el => parseFloat(window.getComputedStyle(el).opacity));
+      assert.ok(opacity >= 0.99, `${stageSelector} opacity (${opacity}) >= 0.99 after settling`);
+    }
+
+    async function resumePhoneScreen() {
+      await page.evaluate(() => {
+        const screen = document.querySelector('.phone-screen');
+        if (!screen) return;
+        const anims = document.getAnimations().filter(a => {
+          const target = a.effect && a.effect.target;
+          return target && screen.contains(target);
+        });
+        for (const a of anims) {
+          if (a.playState === 'paused') a.play();
+        }
+      });
+    }
+
     // Stage 0: Camera Scan (0 -> 3200ms)
     await page.locator('.stage-camera').waitFor();
     assert.equal(await page.locator('.stage-camera').count(), 1, 'Initial stage is .stage-camera');
@@ -101,7 +158,9 @@ try {
     // Ensure no real editable input fields exist
     assert.equal(await page.locator('input').count(), 0, 'No real input tags in DOM');
     if (stageScreenshots) {
+      await settlePhoneScreen('.stage-camera');
       await page.screenshot({path: '/root/.openclaw/workspace-nim/media/join-google-0-camera.png'});
+      await resumePhoneScreen();
     }
 
     // Advance to Stage 1: cia.nimtechnology.com browser landing (~3200ms)
@@ -110,9 +169,14 @@ try {
     assert.equal(await page.locator('.stage-browser.stage-cia-landing').count(), 1, 'Stage 1 reached');
     const stage1Host = await page.locator('.browser-url-pill').textContent();
     assert.ok(stage1Host.includes('cia.nimtechnology.com'), 'Stage 1 host is cia.nimtechnology.com');
+    const stage1Title = await page.locator('.browser-page-title').textContent();
+    const expectedPageTitle = lang === 'vi' ? 'AI BODY — Bài thuyết trình' : 'AI BODY — Presentation';
+    assert.equal(stage1Title, expectedPageTitle, `Stage 1 page title matches expected for lang ${lang}`);
     assert.equal(await page.locator('.stage-presentation').count(), 0, 'No presentation in stage 1');
     if (stageScreenshots) {
+      await settlePhoneScreen('.stage-browser.stage-cia-landing');
       await page.screenshot({path: '/root/.openclaw/workspace-nim/media/join-google-1-browser.png'});
+      await resumePhoneScreen();
     }
 
     // Advance to Stage 2: accounts.google.com email entry (~6000ms total, +2800ms)
@@ -124,7 +188,9 @@ try {
     assert.ok((await page.locator('.stage-email').textContent()).includes('learner@example.com'), 'learner@example.com in email screen');
     assert.equal(await page.locator('.stage-presentation').count(), 0, 'No presentation in stage 2');
     if (stageScreenshots) {
+      await settlePhoneScreen('.stage-email');
       await page.screenshot({path: '/root/.openclaw/workspace-nim/media/join-google-2-email.png'});
+      await resumePhoneScreen();
     }
 
     // Advance to Stage 3: accounts.google.com password entry (~10000ms total, +4000ms)
@@ -137,7 +203,9 @@ try {
     assert.ok((await page.locator('.stage-password').textContent()).includes('••••••••'), 'Masked password bullets present');
     assert.equal(await page.locator('.stage-presentation').count(), 0, 'No presentation in stage 3');
     if (stageScreenshots) {
+      await settlePhoneScreen('.stage-password');
       await page.screenshot({path: '/root/.openclaw/workspace-nim/media/join-google-3-password.png'});
+      await resumePhoneScreen();
     }
 
     // Advance to Stage 4: accounts.google.com consent screen (~14000ms total, +4000ms)
@@ -149,7 +217,9 @@ try {
     assert.ok((await page.locator('.stage-consent').textContent()).includes('learner@example.com'), 'learner@example.com in consent screen');
     assert.equal(await page.locator('.stage-presentation').count(), 0, 'Presentation hidden during consent stage');
     if (stageScreenshots) {
+      await settlePhoneScreen('.stage-consent');
       await page.screenshot({path: '/root/.openclaw/workspace-nim/media/join-google-4-consent.png'});
+      await resumePhoneScreen();
     }
 
     // Advance to Stage 5: cia.nimtechnology.com miniature presentation (~18000ms total, +4000ms)
@@ -162,7 +232,9 @@ try {
     assert.ok(presContent.includes('AI BODY'), 'Miniature presentation has AI BODY header');
     assert.ok(presContent.includes('01 / 12'), 'Miniature presentation has 01 / 12 controls');
     if (stageScreenshots) {
+      await settlePhoneScreen('.stage-presentation');
       await page.screenshot({path: '/root/.openclaw/workspace-nim/media/join-google-5-presentation.png'});
+      await resumePhoneScreen();
     }
 
     // Verify Replay button resets to camera stage

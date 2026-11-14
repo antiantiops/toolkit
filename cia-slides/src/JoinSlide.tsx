@@ -23,22 +23,22 @@ interface JoinSlideProps {
 const copy = {
   vi: {
     kicker: 'THAM GIA',
-    title: 'Mở CIA',
-    subtitle: 'Quét mã QR bằng điện thoại để mở website và đăng nhập bằng Google.',
+    title: 'Mở bài thuyết trình',
+    subtitle: 'Quét mã QR bằng điện thoại để xem bài thuyết trình và đăng nhập nhanh bằng Google.',
     scanTitle: 'Quét mã QR',
     scanDesc: 'Mở Máy ảnh trên điện thoại và hướng vào mã QR.',
     loginTitle: 'Đăng nhập Google',
-    loginDesc: 'Xác thực tài khoản và cấp quyền đăng nhập nhanh.',
+    loginDesc: 'Xác thực tài khoản và vào bài thuyết trình nhanh.',
     viewTitle: 'Xem bài thuyết trình',
-    viewDesc: 'Theo dõi bài giảng và tương tác theo thời gian thực.',
+    viewDesc: 'Theo dõi slide bài nói trực tiếp theo thời gian thực.',
     directLink: 'Truy cập trực tiếp:',
     replay: 'Phát lại',
     simBadge: 'Minh hoạ thao tác',
     simSessionNote: 'Phiên đã lưu có thể bỏ qua bước đăng nhập',
     simCam: 'Máy ảnh',
     simDetected: 'Tìm thấy cia.nimtechnology.com',
-    browserPageTitle: 'Nền tảng CIA',
-    browserPageSub: 'Trợ lý AI tương tác thời gian thực',
+    browserPageTitle: 'AI BODY — Bài thuyết trình',
+    browserPageSub: 'Bài nói tương tác trực tiếp qua di động',
     browserStatus: 'Sẵn sàng kết nối',
     googleBtn: 'Continue with Google',
     googleSignIn: 'Đăng nhập',
@@ -60,29 +60,29 @@ const copy = {
     presHeader: 'AI BODY',
     presLive: 'TRỰC TIẾP',
     presKicker: 'BÀI THUYẾT TRÌNH',
-    presTitle: 'Kiến trúc Trợ lý AI',
-    presBlock1: 'Lý luận mô hình',
-    presBlock2: 'Giọng nói thời gian thực',
+    presTitle: 'Nội dung bài nói AI BODY',
+    presBlock1: 'Slide thuyết trình',
+    presBlock2: 'Tương tác trực tiếp',
     presCounter: '01 / 12',
   },
   en: {
     kicker: 'JOIN',
-    title: 'Open CIA',
-    subtitle: 'Scan the QR code with your phone to open the site and sign in with Google.',
+    title: 'Open Presentation',
+    subtitle: 'Scan the QR code with your phone to access this talk and sign in with Google.',
     scanTitle: 'Scan QR Code',
     scanDesc: 'Open phone camera and point at the QR code.',
     loginTitle: 'Google Sign-in',
-    loginDesc: 'Authenticate account and confirm quick access.',
+    loginDesc: 'Authenticate account and open presentation instantly.',
     viewTitle: 'View Presentation',
-    viewDesc: 'Follow lecture slides and interact in real time.',
+    viewDesc: 'Follow talk slides and interact in real time.',
     directLink: 'Direct access:',
     replay: 'Replay',
     simBadge: 'Phone simulation',
     simSessionNote: 'Saved sessions may skip login steps',
     simCam: 'Camera',
     simDetected: 'Detected: cia.nimtechnology.com',
-    browserPageTitle: 'CIA Platform',
-    browserPageSub: 'Real-time interactive AI workspace',
+    browserPageTitle: 'AI BODY — Presentation',
+    browserPageSub: 'Interactive live talk companion',
     browserStatus: 'Connected',
     googleBtn: 'Continue with Google',
     googleSignIn: 'Sign in',
@@ -104,9 +104,9 @@ const copy = {
     presHeader: 'AI BODY',
     presLive: 'LIVE',
     presKicker: 'PRESENTATION',
-    presTitle: 'Embodied AI Agent Systems',
-    presBlock1: 'Model Reasoning',
-    presBlock2: 'Real-time Voice Pipeline',
+    presTitle: 'AI BODY Talk Slides',
+    presBlock1: 'Talk Slides',
+    presBlock2: 'Live Interactions',
     presCounter: '01 / 12',
   },
 };
@@ -211,7 +211,7 @@ export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
   ];
 
   return (
-    <main className="join-slide" aria-label="Join CIA Workshop">
+    <main className="join-slide" aria-label="Join Presentation">
       <div className="join-grid-bg" aria-hidden="true" />
 
       {/* Left Column: Header + QR + Controls */}
@@ -261,13 +261,11 @@ export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
         </footer>
       </section>
 
-      {/* CSS-only curved particle data stream from QR to Phone */}
-      <div className="join-data-stream" aria-hidden="true">
-        <span className="join-particle join-p1" />
-        <span className="join-particle join-p2" />
-        <span className="join-particle join-p3" />
-        <span className="join-particle join-p4" />
-        <span className="join-particle join-p5" />
+      {/* Short direct connector across QR-to-Timeline gap */}
+      <div className={`join-gap-connector stage-${stage}`} aria-hidden="true">
+        <span className="join-connector-line" />
+        <span className="join-connector-pulse" />
+        <span className="join-connector-arrow">›</span>
       </div>
 
       {/* Right Column: Vertical Neon Timeline + Slim 9:19.5 Phone */}
