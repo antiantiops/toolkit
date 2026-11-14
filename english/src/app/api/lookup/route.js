@@ -1,4 +1,5 @@
 import { currentUser } from '../me/auth';
+import { normalizeTargetLang, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from '../../../lib/lookup/languages.mjs';
 import { cachedLookup, cacheLookup } from '../../../lib/lookup/cache';
 import { NextResponse } from "next/server";
 
@@ -11,6 +12,10 @@ export async function POST(request) {
   try {
     const form = await request.formData();
     const text = String(form.get("text") || "").trim();
+    const rawTargetLang = form.get("targetLang");
+    const targetLang = normalizeTargetLang(rawTargetLang);
+    if (!targetLang) return NextResponse.json({ error: "Ngôn ngữ không được hỗ trợ" }, { status: 400 });
+
     const direction = String(form.get("direction") || "en-vi").trim(); // "en-vi" or "vi-en"
     const image = form.get("image");
     if (!text && !(image instanceof File)) {
@@ -24,16 +29,20 @@ export async function POST(request) {
 
     if (!['en-vi', 'vi-en'].includes(direction)) return NextResponse.json({ error: 'Invalid direction' }, { status: 400 });
     const owner = currentUser(request)?.id;
-    const cacheKey = JSON.stringify(["translation-ipa-v1", direction, text.trim().toLowerCase()]);
+    const textLower = text.trim().toLowerCase();
+    const cacheKey = targetLang === DEFAULT_LANGUAGE
+      ? JSON.stringify(["translation-ipa-v1", direction, textLower])
+      : JSON.stringify(["translation-i18n-v1", targetLang, direction, textLower]);
     const cached = !(image instanceof File) && cachedLookup(owner, cacheKey);
     if (cached) return NextResponse.json({ result: cached }, {headers:{"Cache-Control":"private, no-store","X-Lookup-Cache":"HIT"}});
     const headers = { "Content-Type": "application/json" };
     if (KEY) headers.Authorization = `Bearer ${KEY}`;
 
     let prompt = "";
-    if (direction === "vi-en") {
-      const source = text ? `Typed Vietnamese: ${JSON.stringify(text)}` : "Read Vietnamese text from the supplied image.";
-      prompt = `You help Vietnamese learners translate Vietnamese into natural, modern, idiomatic English.
+    if (targetLang === DEFAULT_LANGUAGE) {
+      if (direction === "vi-en") {
+        const source = text ? `Typed Vietnamese: ${JSON.stringify(text)}` : "Read Vietnamese text from the supplied image.";
+        prompt = `You help Vietnamese learners translate Vietnamese into natural, modern, idiomatic English.
 ${source}
 If an image is supplied, extract readable Vietnamese text first.
 Translate to natural English as a native speaker would say it. If input contains typos, correct them before translating.
@@ -48,9 +57,9 @@ Return ONLY valid JSON:
   "note": "short Vietnamese explanation of key English phrases/grammar/collocations used"
 }
 Include US IPA for the full corrected English phrase/sentence, not a Vietnamese pronunciation approximation. Do not include markdown or extra text. Only JSON.`;
-    } else {
-      const source = text ? `Typed English: ${JSON.stringify(text)}` : "Read English text from the supplied image.";
-      prompt = `You help Vietnamese learners look up English.
+      } else {
+        const source = text ? `Typed English: ${JSON.stringify(text)}` : "Read English text from the supplied image.";
+        prompt = `You help Vietnamese learners look up English.
 ${source}
 If an image is supplied, extract only readable English text first. Correct only obvious spelling, spacing, capitalization, or grammar mistakes. Keep intended meaning.
 Return ONLY valid JSON:
@@ -64,6 +73,50 @@ Return ONLY valid JSON:
   "note": "short Vietnamese explanation of correction or empty string"
 }
 Include US IPA for the full corrected English phrase/sentence, not a Vietnamese pronunciation approximation. If input is already correct, corrected must equal original and changed must be false. Do not invent a different meaning. Do not include markdown. Only JSON.`;
+      }
+    } else {
+      const langConfig = SUPPORTED_LANGUAGES[targetLang] || SUPPORTED_LANGUAGES[DEFAULT_LANGUAGE];
+      const promptName = langConfig.promptName;
+      if (direction === "vi-en") {
+        const source = text ? `Typed ${promptName}: ${JSON.stringify(text)}` : `Read ${promptName} text from the supplied image.`;
+        prompt = `You help ${promptName} learners translate ${promptName} into natural, modern, idiomatic English.
+${source}
+If an image is supplied, extract readable ${promptName} text first.
+Translate to natural English as a native speaker would say it. If input contains typos, correct them before translating.
+Return ONLY valid JSON:
+{
+  "direction": "vi-en",
+  "original": "extracted or typed ${promptName} text",
+  "corrected": "natural idiomatic English translation",
+  "ipa": "US IPA transcription of the complete corrected English text, enclosed in slashes",
+  "changed": false,
+  "meaning": "natural ${promptName} translation of the English (or same as original)",
+  "note": "short ${promptName} explanation of key English phrases/grammar/collocations used"
+}
+Include US IPA for the full corrected English phrase/sentence. Do not include markdown or extra text. Only JSON.`;
+      } else {
+        const source = text ? `Typed English: ${JSON.stringify(text)}` : "Read English text from the supplied image.";
+        const meaningDesc = targetLang === "en"
+          ? "plain English explanation for English learners, without foreign translation"
+          : `natural ${promptName} translation`;
+        const noteDesc = targetLang === "en"
+          ? "short English explanation of correction or usage notes, or empty string"
+          : `short ${promptName} explanation of correction or empty string`;
+        prompt = `You help ${promptName} learners look up English.
+${source}
+If an image is supplied, extract only readable English text first. Correct only obvious spelling, spacing, capitalization, or grammar mistakes. Keep intended meaning.
+Return ONLY valid JSON:
+{
+  "direction": "en-vi",
+  "original": "extracted or typed English",
+  "corrected": "correct English text",
+  "ipa": "US IPA transcription of the complete corrected English text, enclosed in slashes",
+  "changed": true,
+  "meaning": "${meaningDesc}",
+  "note": "${noteDesc}"
+}
+Include US IPA for the full corrected English phrase/sentence. If input is already correct, corrected must equal original and changed must be false. Do not invent a different meaning. Do not include markdown. Only JSON.`;
+      }
     }
 
     const content = [{ type: "text", text: prompt }];
@@ -95,7 +148,11 @@ Include US IPA for the full corrected English phrase/sentence, not a Vietnamese 
     result.direction = direction;
     if (!(image instanceof File)) {
       cacheLookup(owner, cacheKey, result);
-      cacheLookup(owner, JSON.stringify(["search-summary-v1", result.corrected.trim().toLowerCase(), ""]), {meaning:result.meaning,ipa:result.ipa || ""});
+      const correctedLower = result.corrected.trim().toLowerCase();
+      const summaryKey = targetLang === DEFAULT_LANGUAGE
+        ? JSON.stringify(["search-summary-v1", correctedLower, ""])
+        : JSON.stringify(["search-summary-i18n-v1", targetLang, correctedLower, ""]);
+      cacheLookup(owner, summaryKey, {meaning:result.meaning,ipa:result.ipa || ""});
     }
     return NextResponse.json({ result }, {headers:{"Cache-Control":"private, no-store","X-Lookup-Cache":"MISS"}});
   } catch (error) {

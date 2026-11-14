@@ -5,11 +5,18 @@ import { saveSession } from '../session/storage';
 import { getUploadedFile } from '../upload/storage';
 import { callJsonArray } from '../../../lib/vocabulary/ai';
 import { runPipeline, progress } from '../../../lib/vocabulary/pipeline';
+import { pronunciation } from '../../../lib/lookup/pronunciation';
+import { normalizeTargetLang, DEFAULT_LANGUAGE } from '../../../lib/lookup/languages.mjs';
 
 // ponytail: process-local jobs, single standalone server. Durable queue required before replicas/restart recovery.
 const jobs = globalThis.vocabAnalysisJobs ||= new Map();
 const TTL = 2 * 60 * 60 * 1000;
 const cookie = { maxAge: 86400, path: '/', sameSite: 'lax', httpOnly: true };
+const enrichWords = words => (words || []).map(w => {
+  if (w.pronunciation) return w;
+  const p = typeof w.word === 'string' ? pronunciation(w.word) : null;
+  return p ? { ...w, pronunciation: p } : w;
+});
 function response(data, status = 200) {
   return NextResponse.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 }
@@ -19,7 +26,13 @@ function schedule(job) {
     const item = getUploadedFile(job.imageId);
     if (!item) { job.status = 'failed'; job.error = 'Ảnh đã hết hạn trên server'; return; }
     const image = `data:${item.mime};base64,${item.buffer.toString('base64')}`;
-    await runPipeline(job, { call: callJsonArray, image, persist: words => saveSession(job.owner, { words, preview: image }) });
+    const targetLang = job.targetLang || DEFAULT_LANGUAGE;
+    const sessionPayload = {
+      words: enrichWords(job.words),
+      preview: image,
+      wordsTargetLang: targetLang
+    };
+    await runPipeline(job, { call: callJsonArray, image, persist: words => saveSession(job.owner, { ...sessionPayload, words: enrichWords(words) }) });
     console.info('[vocab-job]', JSON.stringify({ jobId: job.id, status: job.status, ...progress(job) }));
   });
 }
@@ -33,14 +46,22 @@ export async function POST(request) {
   if (body.retry === true) {
     job = jobs.get(body.jobId);
     if (!job || job.owner !== owner) return response({ error: 'Tác vụ không tồn tại' }, 404);
+    if (body.targetLang !== undefined) {
+      const requestedLang = normalizeTargetLang(body.targetLang);
+      if (!requestedLang || requestedLang !== (job.targetLang || DEFAULT_LANGUAGE)) {
+        return response({ error: 'Invalid or differing targetLang for retry' }, 400);
+      }
+    }
     if (job.status !== 'running' && job.status !== 'completed') schedule(job);
   } else {
+    const targetLang = normalizeTargetLang(body.targetLang);
+    if (!targetLang) return response({ error: 'Invalid targetLang' }, 400);
     if (typeof body.imageId !== 'string' || !/^[a-f0-9-]{36}\.[a-z0-9]{1,10}$/.test(body.imageId)) return response({ error: 'Invalid imageId' }, 400);
-    job = [...jobs.values()].find(j => j.owner === owner && j.imageId === body.imageId);
+    job = [...jobs.values()].find(j => j.owner === owner && j.imageId === body.imageId && (j.targetLang || DEFAULT_LANGUAGE) === targetLang);
     if (!job) {
       if ([...jobs.values()].some(j => j.status === 'running')) return response({ error: 'AI đang xử lý bài khác. Thử lại khi bài đó hoàn tất.' }, 429);
       if (!getUploadedFile(body.imageId)) return response({ error: 'Ảnh không tồn tại hoặc hết hạn' }, 400);
-      job = { id: randomUUID(), owner, imageId: body.imageId, status: 'running', stage: 'extract', createdAt: Date.now(), entries: [], words: [], batches: [] };
+      job = { id: randomUUID(), owner, imageId: body.imageId, targetLang, status: 'running', stage: 'extract', createdAt: Date.now(), entries: [], words: [], batches: [] };
       jobs.set(job.id, job);
       schedule(job);
     }
@@ -54,5 +75,5 @@ export async function GET(request) {
   const id = new URL(request.url).searchParams.get('jobId');
   const job = jobs.get(id);
   if (!job || job.owner !== cacheOwner(request)) return response({ error: 'Tác vụ hết hạn hoặc server đã restart. Phân tích lại ảnh.' }, 404);
-  return response({ jobId: id, requestId: id, status: job.status, stage: job.stage, elapsedMs: Date.now() - job.createdAt, progress: progress(job), words: job.words, error: job.error, failures: job.batches.filter(b => b.status === 'failed').map(b => ({ offset: b.offset, error: b.error })) });
+  return response({ jobId: id, requestId: id, status: job.status, stage: job.stage, elapsedMs: Date.now() - job.createdAt, progress: progress(job), words: enrichWords(job.words), error: job.error, failures: job.batches.filter(b => b.status === 'failed').map(b => ({ offset: b.offset, error: b.error })) });
 }

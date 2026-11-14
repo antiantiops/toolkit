@@ -1,4 +1,30 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
+import {useLanguage} from './LanguageContext';
 import {CHAT_WORDS_NOTICE} from '../lib/feature-notices.mjs';
-export default function ChatWordsNotice(){const dialog=useRef(null);const [show,setShow]=useState(false);useEffect(()=>{let live=true;const timer=setTimeout(()=>{if(document.querySelector('dialog[open]'))return;fetch('/api/feature-notices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:CHAT_WORDS_NOTICE})}).then(r=>r.json()).then(d=>{if(live&&d.show)setShow(true);}).catch(()=>{});},2500);return()=>{live=false;clearTimeout(timer);};},[]);useEffect(()=>{if(!show)return;const old=document.activeElement;dialog.current?.showModal();return()=>{dialog.current?.close();old?.focus?.();};},[show]);return <dialog ref={dialog} onCancel={()=>setShow(false)} aria-labelledby="chat-words-notice" className="m-auto max-w-sm rounded-2xl border border-teal-700 bg-slate-900 p-6 text-slate-100 backdrop:bg-black/70"><h2 id="chat-words-notice" className="text-xl font-bold">Chat xong, từ hay tự vào My Words</h2><p className="mt-3 text-sm leading-7">Không cần chọn từng từ. Sau mỗi lượt chat, AI tự lưu tối đa 3 từ, cụm hoặc mẫu câu đáng học, kèm nghĩa và ví dụ đúng ngữ cảnh. Không có mục phù hợp thì không lưu.</p><p className="mt-3 text-sm leading-7 text-slate-300">Tự lưu đang bật. Bạn có thể tắt ngay trong khung chat, hoặc bấm Hoàn tác sau khi lưu. My Words gắn nhãn Chat. AI có thể chọn chưa đúng; hãy kiểm tra khi ôn.</p><button onClick={()=>setShow(false)} className="mt-5 min-h-11 w-full rounded-xl bg-teal-600 p-3">Đã hiểu</button></dialog>}
+
+export default function ChatWordsNotice(){
+ const {t}=useLanguage();
+ const dialog=useRef(null);
+ const [show,setShow]=useState(false);
+ useEffect(()=>{
+  let live=true;
+  const timer=setTimeout(()=>{
+   if(document.querySelector('dialog[open]'))return;
+   fetch('/api/feature-notices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:CHAT_WORDS_NOTICE})}).then(r=>r.json()).then(d=>{if(live&&d.show)setShow(true);}).catch(()=>{});
+  },2500);
+  return ()=>{live=false;clearTimeout(timer);};
+ },[]);
+ useEffect(()=>{
+  if(!show)return;
+  const old=document.activeElement;
+  dialog.current?.showModal();
+  return ()=>{dialog.current?.close();old?.focus?.();};
+ },[show]);
+ return <dialog ref={dialog} onCancel={()=>setShow(false)} aria-labelledby="chat-words-notice" className="m-auto max-w-sm rounded-2xl border border-teal-700 bg-slate-900 p-6 text-slate-100 backdrop:bg-black/70">
+  <h2 id="chat-words-notice" className="text-xl font-bold">{t('Chat xong, từ hay tự vào My Words')}</h2>
+  <p className="mt-3 text-sm leading-7">{t('Không cần chọn từng từ. Sau mỗi lượt chat, AI tự lưu tối đa 3 từ, cụm hoặc mẫu câu đáng học, kèm nghĩa và ví dụ đúng ngữ cảnh. Không có mục phù hợp thì không lưu.')}</p>
+  <p className="mt-3 text-sm leading-7 text-slate-300">{t('Tự lưu đang bật. Bạn có thể tắt ngay trong khung chat, hoặc bấm Hoàn tác sau khi lưu. My Words gắn nhãn Chat. AI có thể chọn chưa đúng; hãy kiểm tra khi ôn.')}</p>
+  <button onClick={()=>setShow(false)} className="mt-5 min-h-11 w-full rounded-xl bg-teal-600 p-3">{t('Đã hiểu')}</button>
+ </dialog>;
+}

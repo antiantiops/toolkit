@@ -7,3 +7,16 @@
 /* Narrative hand-off line at the end of slides 9 and 10. */
 .story-bridge{margin:10px auto 0;max-width:620px;text-align:center;font-size:15px;line-height:1.45;color:#475569;animation:bridgeIn .5s .25s ease-out both}.story-bridge b{display:block;margin-top:2px;color:#6d28d9}@keyframes bridgeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@media(prefers-reduced-motion:reduce){.story-bridge{animation:none}}
  .recall-failure .story-bridge{color:#cbd5e1}.recall-failure .story-bridge b{color:#c4b5fd}
+
+/* Flow spotlight controls and effects */
+.flow-spotlight-btn{margin:10px auto 14px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid #cbd5e1;background:#fff;border-radius:20px;padding:6px 14px;font:inherit;font-size:12px;font-weight:600;color:#475569;cursor:pointer;transition:all 180ms ease}
+.flow-spotlight-btn:hover{background:#f8fafc;border-color:#94a3b8}
+.flow-spotlight-btn:focus-visible{outline:2px solid #f59e0b;outline-offset:2px}
+.flow-spotlight-btn[aria-pressed=true]{background:#fef3c7;border-color:#f59e0b;color:#92400e;box-shadow:0 0 10px rgba(245,158,11,0.25)}
+.flow-panel{display:flex;flex-direction:column}
+.flow-spotlight-group{pointer-events:none;transition:opacity 400ms ease}
+.flow-spotlight-group.spotlight-active{opacity:1}
+.flow-spotlight-group.spotlight-inactive{opacity:0}
+.flow-spotlight-overlay{pointer-events:none;transition:opacity 200ms ease}
+.flow-spotlight-glow{pointer-events:none;transition:all 200ms ease}
+@media(prefers-reduced-motion:reduce){.flow-spotlight-btn,.flow-spotlight-group,.flow-spotlight-overlay,.flow-spotlight-glow{transition:none}}

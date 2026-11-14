@@ -2,7 +2,7 @@ import {CiaAgentLoop} from './CiaAgentLoop';
 import {useId,useState} from 'react';
 import './build-story.css';
 import {MessageSquare,BrainCircuit,Globe,FileCheck,AppWindow,MonitorCog,ListChecks,PenLine} from 'lucide-react';
-function Diagram({agent,english}:{agent:boolean;english:boolean}){
+function Diagram({agent,english,spotlight='off'}:{agent:boolean;english:boolean;spotlight?:string}){
  const id=useId().replace(/:/g,'');const t=(vi:string,en:string)=>english?en:vi;
  const node=(x:number,y:number,w:number,title:string,sub:string,Icon=MessageSquare)=><g><rect x={x} y={y} width={w} height="58" rx="9" className="flow-node"/><Icon x={x+9} y={y+13} width={18} height={18} strokeWidth={1.6} color="currentColor"/><text x={x+w/2+12} y={y+24} textAnchor="middle" className="flow-title" style={{fontSize:w<180?12:14}}>{title}</text><text x={x+w/2} y={y+44} textAnchor="middle" className="flow-sub">{sub}</text></g>;
  const wire=(d:string,n:number,x:number,y:number,label:string)=><g><path d={d} className="flow-wire" markerEnd={`url(#${id})`}/><circle cx={x} cy={y} r="10" className="flow-step"/><text x={x} y={y+4} textAnchor="middle" className="flow-number">{n}</text><text x={x+15} y={y+4} className="flow-label">{label}</text></g>;
@@ -43,6 +43,25 @@ function Diagram({agent,english}:{agent:boolean;english:boolean}){
  {wire('M280 423H118V249',5,118,370,t('Trả lời về ứng dụng','Answer back to app'))}
  </>}
  {messages}
+ {spotlight!=='off'&&<><defs><mask id={`${id}-spotlight-mask`}><rect width="520" height="530" fill="white"/>{spotlight==='device'?<rect x="16" y="67" width="203" height="443" rx="12" fill="black"/>:<rect x="252" y="67" width="254" height="443" rx="12" fill="black"/>}</mask><filter id={`${id}-glow`} x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#f59e0b" floodOpacity="0.75"/><feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="#fbbf24" floodOpacity="0.9"/></filter></defs><rect width="520" height="530" fill="#0f172a" fillOpacity="0.55" mask={`url(#${id}-spotlight-mask)`} className="flow-spotlight-overlay"/>{spotlight==='device'?<rect x="16" y="67" width="203" height="443" rx="12" fill="none" stroke="#f59e0b" strokeWidth="3" filter={`url(#${id}-glow)`} className="flow-spotlight-glow"/>:<rect x="252" y="67" width="254" height="443" rx="12" fill="none" stroke="#f59e0b" strokeWidth="3" filter={`url(#${id}-glow)`} className="flow-spotlight-glow"/>}</>}
  </svg>;
 }
-export function WorkflowComparison({english=false}:{english?:boolean}){const [run,setRun]=useState(0);const t=(vi:string,en:string)=>english?en:vi;return <main className="access-slide flow-comparison" data-slide="5"><div className="access-heading"><p>{t('CÙNG MODEL · KHÁC CÔNG CỤ VÀ QUYỀN TRUY CẬP','SAME MODEL · DIFFERENT TOOLS AND ACCESS')}</p><h1>ChatGPT web <span>vs</span> Model + Agent on PC</h1></div><div className="flow-columns" key={run}><section className="flow-panel"><h2>ChatGPT web</h2><Diagram agent={false} english={english}/></section><section className="flow-panel flow-agent"><h2>Model + Agent on PC</h2><CiaAgentLoop english={english}/></section></div><button className="flow-replay" onClick={()=>setRun(run+1)} aria-label={t('Chạy lại hai luồng minh họa','Replay both illustrated flows')}>↻ {t('Chạy lại','Replay')}</button><p className="access-footnote">{t('ChatGPT trên thiết bị chỉ là giao diện. Câu hỏi được gửi đến OpenAI; AI xử lý rồi gửi câu trả lời về.','ChatGPT on your device is the interface. Questions go to OpenAI; AI processes them and sends answers back.')}<br/>{t('Chat minh họa, không gọi AI thật · Tìm kiếm có thể truy cập nguồn bên ngoài. Agent chỉ dùng công cụ trong quyền đã cấp; tác vụ nhạy cảm cần xác nhận.','Simulated chat, no real AI call · Search may access external sources. Agents use authorized tools; sensitive actions require confirmation.')}</p></main>}
+export function WorkflowComparison({english=false}:{english?:boolean}){
+ const [run,setRun]=useState(0);
+ const [leftSpotlight,setLeftSpotlight]=useState<'off'|'device'|'cloud'>('off');
+ const [rightSpotlight,setRightSpotlight]=useState<'off'|'pc'|'cloud'>('off');
+ const t=(vi:string,en:string)=>english?en:vi;
+ const cycleLeft=()=>setLeftSpotlight(s=>s==='off'?'device':s==='device'?'cloud':'off');
+ const cycleRight=()=>setRightSpotlight(s=>s==='off'?'pc':s==='pc'?'cloud':'off');
+ const leftLabel=leftSpotlight==='off'?t('Tiêu điểm: Tắt','Spotlight: Off'):leftSpotlight==='device'?t('Tiêu điểm: Thiết bị của bạn','Spotlight: Your Device'):t('Tiêu điểm: Hệ thống OpenAI','Spotlight: OpenAI Systems');
+ const rightLabel=rightSpotlight==='off'?t('Tiêu điểm: Tắt','Spotlight: Off'):rightSpotlight==='pc'?t('Tiêu điểm: Máy tính của bạn','Spotlight: Your PC'):t('Tiêu điểm: OpenAI Cloud','Spotlight: OpenAI Cloud');
+ return <main className="access-slide flow-comparison" data-slide="5">
+ <div className="access-heading"><p>{t('CÙNG MODEL · KHÁC CÔNG CỤ VÀ QUYỀN TRUY CẬP','SAME MODEL · DIFFERENT TOOLS AND ACCESS')}</p><h1>ChatGPT web <span>vs</span> Model + Agent on PC</h1></div>
+ <div className="flow-columns" key={run}>
+ <section className="flow-panel"><h2>ChatGPT web</h2><Diagram agent={false} english={english} spotlight={leftSpotlight}/><button className="flow-spotlight-btn" onClick={cycleLeft} aria-pressed={leftSpotlight!=='off'} aria-label={t(`Đổi tiêu điểm ChatGPT web: hiện tại ${leftLabel}`,`Cycle ChatGPT web spotlight: currently ${leftLabel}`)}>✦ {leftLabel}</button></section>
+ <section className="flow-panel flow-agent"><h2>Model + Agent on PC</h2><CiaAgentLoop english={english} spotlight={rightSpotlight}/><button className="flow-spotlight-btn" onClick={cycleRight} aria-pressed={rightSpotlight!=='off'} aria-label={t(`Đổi tiêu điểm Agent trên PC: hiện tại ${rightLabel}`,`Cycle PC agent spotlight: currently ${rightLabel}`)}>✦ {rightLabel}</button></section>
+ </div>
+ <button className="flow-replay" onClick={()=>setRun(run+1)} aria-label={t('Chạy lại hai luồng minh họa','Replay both illustrated flows')}>↻ {t('Chạy lại','Replay')}</button>
+ <p className="access-footnote">{t('ChatGPT trên thiết bị chỉ là giao diện. Câu hỏi được gửi đến OpenAI; AI xử lý rồi gửi câu trả lời về.','ChatGPT on your device is the interface. Questions go to OpenAI; AI processes them and sends answers back.')}<br/>{t('Chat minh họa, không gọi AI thật · Tìm kiếm có thể truy cập nguồn bên ngoài. Agent chỉ dùng công cụ trong quyền đã cấp; tác vụ nhạy cảm cần xác nhận.','Simulated chat, no real AI call · Search may access external sources. Agents use authorized tools; sensitive actions require confirmation.')}</p>
+ </main>;
+}

@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { normalizeTargetLang, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from "../../../lib/lookup/languages.mjs";
+import { languageInstruction } from "../../../lib/lessons/language.mjs";
 
 const NINEROUTER_URL = process.env.NINEROUTER_URL || "http://192.168.101.36:20128";
 const NINEROUTER_KEY = process.env.NINEROUTER_KEY || "";
@@ -6,7 +8,10 @@ const MODEL = process.env.NINEROUTER_MODEL || "ag/gemini-3.8-flash-high";
 
 export async function POST(request) {
   try {
-    const { word, sentence = "", context = "" } = await request.json();
+    const body = await request.json();
+    const { word, sentence = "", context = "", targetLang: rawTargetLang } = body;
+    const targetLang = normalizeTargetLang(rawTargetLang);
+    if (!targetLang) return NextResponse.json({ error: "Invalid targetLang" }, { status: 400 });
     if (!word || typeof word !== "string") {
       return NextResponse.json({ error: "Thiếu từ cần tra" }, { status: 400 });
     }
@@ -40,7 +45,8 @@ Trả về DUY NHẤT một JSON hợp lệ, không bọc markdown hay lời gi�
   "partOfSpeech": "loại từ / vai trò ngữ pháp",
   "contextUsage": "giải thích ngắn gọn vị trí, giới từ đi kèm và sắc thái đàm phán trong đoạn",
   "sentenceEn": "câu tiếng Anh hoàn chỉnh tương ứng"
-}`;
+}${targetLang !== DEFAULT_LANGUAGE ? `${languageInstruction(targetLang)}
+- easyReading: Pronunciation guidance in ${SUPPORTED_LANGUAGES[targetLang]?.promptName || targetLang}: do NOT use Vietnamese respelling. Provide IPA for both 🇬🇧 UK and 🇺🇸 US, and practical pronunciation notes in ${SUPPORTED_LANGUAGES[targetLang]?.promptName || targetLang}.` : ''}`;
 
     const res = await fetch(`${NINEROUTER_URL}/v1/chat/completions`, {
       method: "POST",

@@ -1,10 +1,13 @@
 "use client";
 import ContrastTip from "./ContrastTip";
+import OxfordPronunciation from "./OxfordPronunciation";
 import PronunciationRecorder from "./PronunciationRecorder";
 import { prioritizeWords } from "../lib/vocab-game.mjs";
 import { normalizeGrammarAnswer } from "../lib/grammar/answers";
 import { fetchWithRetry, parseApiResponse, formatErrorMessage, pollLesson } from "./fetch-helper";
 import { useState, useRef, useCallback, useEffect } from "react";
+import LookupLanguage from "./LookupLanguage";
+import { useLanguage } from "./LanguageContext";
 import ImageCrop from "./ImageCrop";
 import WritingProgress from "./WritingProgress";
 import LessonChat from "./LessonChat";
@@ -23,10 +26,25 @@ import ListeningSpotify from "./ListeningSpotify";
 import BusinessPractice from "./BusinessPractice";
 import MyWords, { rememberEnglish } from "./MyWords";
 import { meanings, complete } from "../lib/lookup/local";
+import { translatePage } from "../lib/lookup/page-ui.mjs";
 
 const AiTag = () => <span title="Sách không có, AI tự tạo 100%" className="ml-1 rounded bg-fuchsia-900/60 px-1.5 py-0.5 text-[10px] font-semibold text-fuchsia-200">🤖 AI</span>;
 
-const SpeakViBtn = ({ text }) => <SpeakBtn text={text} lang="vi-VN" className="ml-2 mt-1 inline-flex items-center rounded-md bg-slate-800 px-2 py-1 text-xs text-slate-300 hover:bg-slate-700 hover:text-white" title="Đọc tiếng Việt" aria-label="Đọc tiếng Việt" />;
+const SpeakViBtn = ({ text }) => {
+  const { targetLang, supportedLanguages } = useLanguage();
+  const langMap = { vi: "vi-VN", en: "en-US", ja: "ja-JP", ko: "ko-KR", "zh-TW": "zh-TW" };
+  const speechLang = langMap[targetLang] || "vi-VN";
+  const label = `Đọc ${supportedLanguages[targetLang]?.nativeLabel || "tiếng Việt"}`;
+  return (
+    <SpeakBtn
+      text={text}
+      lang={speechLang}
+      className="ml-2 mt-1 inline-flex items-center rounded-md bg-slate-800 px-2 py-1 text-xs text-slate-300 hover:bg-slate-700 hover:text-white"
+      title={label}
+      aria-label={label}
+    />
+  );
+};
 
 // ponytail: basic error banner with refresh shortcut for auth/connection drops. Add Sentry when error tracking is set up.
 function ErrorBanner({ message, onDismiss }) {
@@ -70,6 +88,9 @@ function ErrorBanner({ message, onDismiss }) {
 
 export default function Home() {
   // --- Mode: "vocab" | "grammar" ---
+  const { targetLang, setLanguage, t } = useLanguage();
+  const ptext = (text) => translatePage(text, targetLang);
+  const pendingJobKey = useCallback((base) => (!targetLang || targetLang === "vi" ? `${base}-pending-job` : `${base}-pending-job-${targetLang}`), [targetLang]);
   const [mode, setMode] = useState("vocab");
   const skipVocabRestore = useRef(false);
   const [listeningSource,setListeningSource]=useState("image");
@@ -243,7 +264,7 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false;
     const get = async (type, offset = 0) => {
-      const response = await fetch(`/api/session?type=${type}&offset=${offset}`, { signal: controller.signal });
+      const response = await fetch(`/api/session?type=${type}&offset=${offset}&targetLang=${encodeURIComponent(targetLang || "vi")}`, { signal: controller.signal });
       if (!response.ok) throw new Error(`Session HTTP ${response.status}`);
       return response.json();
     };
@@ -277,11 +298,11 @@ export default function Home() {
       } catch {}
     })();
     return () => { cancelled = true; controller.abort(); };
-  }, []);
+  }, [targetLang]);
 
   const clearCachedLesson = async (type = "vocab") => {
     try {
-      await fetch(`/api/session?type=${type}`, { method: "DELETE" });
+      await fetch(`/api/session?type=${type}&targetLang=${encodeURIComponent(targetLang || "vi")}`, { method: "DELETE" });
     } catch {}
     setWords([]);
     setPreview(null);
@@ -337,15 +358,16 @@ export default function Home() {
   const analyze = async (targetArg = null) => {
     const idToAnalyze = typeof targetArg === "string" ? targetArg : vImageId;
     const fileToAnalyze = targetArg instanceof File || targetArg instanceof Blob ? targetArg : image;
-    if (!vRetryJob && !idToAnalyze && !fileToAnalyze && !sessionStorage.getItem("vocab-pending-job")) return;
+    const vKey = pendingJobKey("vocab");
+    if (!vRetryJob && !idToAnalyze && !fileToAnalyze && !sessionStorage.getItem(vKey)) return;
     setLoading(true);
     setError(null);
     try {
-      let jobId = sessionStorage.getItem("vocab-pending-job");
+      let jobId = sessionStorage.getItem(vKey);
       if (vRetryJob && !jobId) {
-        const retry = await parseApiResponse(await fetchWithRetry("/api/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jobId: vRetryJob, retry: true }), timeout: 15000 }, 0));
+        const retry = await parseApiResponse(await fetchWithRetry("/api/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jobId: vRetryJob, retry: true, targetLang }), timeout: 15000 }, 0));
         jobId = retry.jobId;
-        sessionStorage.setItem("vocab-pending-job", jobId);
+        sessionStorage.setItem(vKey, jobId);
       }
       if (!jobId) {
         let imageId = idToAnalyze;
@@ -357,26 +379,26 @@ export default function Home() {
         }
         const started = await parseApiResponse(await fetchWithRetry("/api/analyze", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageId }), timeout: 15000,
+          body: JSON.stringify({ imageId, targetLang }), timeout: 15000,
         }, 0));
         jobId = started.jobId;
         if (!jobId) throw new Error("Server không trả jobId");
-        sessionStorage.setItem("vocab-pending-job", jobId);
+        sessionStorage.setItem(vKey, jobId);
       }
       let data;
       const deadline = Date.now() + 15 * 60 * 1000;
       while (Date.now() < deadline) {
         const statusRes = await fetchWithRetry(`/api/analyze?jobId=${encodeURIComponent(jobId)}`, { timeout: 15000, cache: "no-store" }, 2, 1500);
-        if (statusRes.status === 404) sessionStorage.removeItem("vocab-pending-job");
+        if (statusRes.status === 404) sessionStorage.removeItem(vKey);
         data = await parseApiResponse(statusRes);
         setVProgress({ ...data.progress, stage: data.stage });
         if (data.words?.length) setWords(data.words);
         if (data.status === "failed" || data.status === "partial") {
           setVRetryJob(jobId);
-          sessionStorage.removeItem("vocab-pending-job");
+          sessionStorage.removeItem(vKey);
           throw new Error(`${data.error || data.failures?.map(f => `Nhóm ${f.offset / 3 + 1}: ${f.error}`).join("\n")}\nRequest ID: ${data.requestId || jobId}\nStage: ${data.stage || "AI"}`);
         }
-        if (data.status === "completed") { setVRetryJob(null); sessionStorage.removeItem("vocab-pending-job"); break; }
+        if (data.status === "completed") { setVRetryJob(null); sessionStorage.removeItem(vKey); break; }
         await new Promise(resolve => setTimeout(resolve, 3000));
       }
       if (data?.status !== "completed") throw new Error(`Tác vụ vẫn đang chạy. Tải lại trang để tiếp tục. Job ID: ${jobId}`);
@@ -394,7 +416,7 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (sessionStorage.getItem("vocab-pending-job")) analyze();
+    if (sessionStorage.getItem(pendingJobKey("vocab"))) analyze();
   }, []);
 
   // --- Grammar handlers ---
@@ -489,14 +511,15 @@ export default function Home() {
     (!wImage2 || Boolean(wUpload2.id));
 
   const analyzeWriting = async () => {
-    if (!canAnalyzeWriting && !wRetry && !sessionStorage.getItem("writing-pending-job")) return;
+    const wKey = pendingJobKey("writing");
+    if (!canAnalyzeWriting && !wRetry && !sessionStorage.getItem(wKey)) return;
     setWLoading(true);
     setWError(null);
     try {
-      const payload = {};
+      const payload = { targetLang };
       if (wUpload1.id) payload.image1Id = wUpload1.id;
       if (wUpload2.id) payload.image2Id = wUpload2.id;
-      const data = await pollLesson("writing", wRetry ? {jobId: wRetry, retry: true} : payload, setWJob);
+      const data = await pollLesson("writing", wRetry ? {jobId: wRetry, retry: true, targetLang} : payload, setWJob);
       setWRetry(null);
       setWriting(data.writing);
     } catch (e) {
@@ -510,17 +533,18 @@ export default function Home() {
   const analyzeGrammar = async (targetArg = null) => {
     const idToAnalyze = typeof targetArg === "string" ? targetArg : gImageId;
     const fileToAnalyze = targetArg instanceof File || targetArg instanceof Blob ? targetArg : gImage;
-    if (!idToAnalyze && !fileToAnalyze && !gRetry && !sessionStorage.getItem("grammar-pending-job")) return;
+    const gKey = pendingJobKey("grammar");
+    if (!idToAnalyze && !fileToAnalyze && !gRetry && !sessionStorage.getItem(gKey)) return;
     setGLoading(true);
     setGError(null);
     try {
       let imageId = idToAnalyze;
-      if (!imageId && !gRetry && !sessionStorage.getItem("grammar-pending-job")) {
+      if (!imageId && !gRetry && !sessionStorage.getItem(gKey)) {
         const fd = new FormData(); fd.append("file", fileToAnalyze);
         const uploaded = await parseApiResponse(await fetchWithRetry("/api/upload", {method: "POST", body: fd, timeout: 90000}, 0));
         imageId = uploaded.id; setGImageId(imageId);
       }
-      const data = await pollLesson("grammar", gRetry ? {jobId: gRetry, retry: true} : {imageId}, setGJob);
+      const data = await pollLesson("grammar", gRetry ? {jobId: gRetry, retry: true, targetLang} : {imageId, targetLang}, setGJob);
       setGRetry(null);
       setGrammar(data.grammar);
       setGPractice(false);
@@ -535,8 +559,8 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (sessionStorage.getItem("grammar-pending-job")) analyzeGrammar();
-    if (sessionStorage.getItem("writing-pending-job")) analyzeWriting();
+    if (sessionStorage.getItem(pendingJobKey("grammar"))) analyzeGrammar();
+    if (sessionStorage.getItem(pendingJobKey("writing"))) analyzeWriting();
   }, []);
 
   const createGrammarPractice = async () => {
@@ -546,7 +570,7 @@ export default function Home() {
     setGRewriteAnswers({});
     setGSubmitted(false);
     try {
-      const res = await fetchWithRetry("/api/grammar-practice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ grammar }), timeout: 90000 }, 2, 1500);
+      const res = await fetchWithRetry("/api/grammar-practice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ grammar, targetLang }), timeout: 90000 }, 2, 1500);
       const data = await parseApiResponse(res);
       setGPracticeData(data);
     } catch (e) { setGError(formatErrorMessage(e)); }
@@ -563,7 +587,7 @@ export default function Home() {
     translationAbort.current?.abort();
     const controller = new AbortController();
     translationAbort.current = controller;
-    const cacheKey = JSON.stringify([dir, text]);
+    const cacheKey = JSON.stringify([dir, text, targetLang]);
     if (!imageFile && translationCache.current.has(cacheKey)) { const cached = translationCache.current.get(cacheKey); setQuickResult({...cached, fromCache: true}); rememberEnglish(cached.corrected).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại.")); setQuickLoading(false); return; }
     setQuickLoading(true);
     setQuickResult(null);
@@ -571,6 +595,7 @@ export default function Home() {
       const form = new FormData();
       form.append("text", text);
       form.append("direction", dir);
+      form.append("targetLang", targetLang);
       if (imageFile) form.append("image", imageFile);
       const res = await fetchWithRetry("/api/lookup", { method: "POST", body: form, timeout: 60000, signal: controller.signal }, 2, 1000);
       const data = await parseApiResponse(res);
@@ -586,11 +611,9 @@ export default function Home() {
   const lookupWord = async (word, context = "", save = true) => {
     setSaveError("");
     const requestId = ++lookupRequest.current;
-    const key = JSON.stringify([word.toLowerCase(), context]);
+    const key = JSON.stringify([word.toLowerCase(), context, targetLang]);
     const cached = lookupCache.current.get(key);
     if (cached) { if (save) rememberEnglish(cached.word || word).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại.")); setLookup({ ...cached, pronunciation: pronunciationCache.current.get((cached.word || word).toLowerCase()), loading: false, detailLoading: false }); return; }
-    const meaning = meanings[word.toLowerCase()];
-    const body = JSON.stringify({ word, context });
     const pronunciationKey = word.toLowerCase();
     const knownPronunciation = pronunciationCache.current.get(pronunciationKey);
     const loadMeta = target => {
@@ -609,22 +632,34 @@ export default function Home() {
         if (requestId === lookupRequest.current && data.partsOfSpeech?.length) setLookup(current => current ? { ...current, dictionaryParts: data.partsOfSpeech } : current);
       }).catch(() => {});
     };
-    setLookup({ word, meaning, pronunciation: knownPronunciation, loading: !meaning, detailLoading: true });
+    setLookup({ word, pronunciation: knownPronunciation, loading: true, detailLoading: true });
     loadMeta(word);
-    const quick = meaning ? Promise.resolve() : fetch("/api/quick-word", { method: "POST", headers: { "Content-Type": "application/json" }, body })
+    let quickMeaning = "";
+    const quickBody = JSON.stringify({ word, context, targetLang, definition: words.find(item => item.word?.toLowerCase() === word.toLowerCase())?.definition || "" });
+    const quick = fetch("/api/quick-word", { method: "POST", headers: { "Content-Type": "application/json" }, body: quickBody })
       .then(parseApiResponse)
-      .then(data => setLookup(current => requestId === lookupRequest.current && current?.word === word && current.detailLoading ? { ...current, meaning: data.meaning, ipa: data.ipa || current.ipa, loading: false, quick: true } : current))
+      .then(data => {
+        if (!data?.meaning) return;
+        quickMeaning = data.meaning;
+        const cached = lookupCache.current.get(key);
+        if (cached) lookupCache.current.set(key, { ...cached, meaning: data.meaning });
+        if (requestId === lookupRequest.current) {
+          setLookup(current => (current ? { ...current, meaning: data.meaning, ipa: data.ipa || current.ipa, loading: false, quick: true } : current));
+        }
+      })
       .catch(() => {});
     try {
+      const body = JSON.stringify({ word, context, targetLang });
       const res = await fetchWithRetry("/api/word", { method: "POST", headers: { "Content-Type": "application/json" }, body, timeout: 60000 }, 0);
       const data = await parseApiResponse(res);
       const canonical = data.word.word || word;
       if (save) rememberEnglish(canonical).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại."));
+      const mergedWord = { ...data.word, ...(quickMeaning ? { meaning: quickMeaning } : {}) };
       if (lookupCache.current.size >= 100) lookupCache.current.delete(lookupCache.current.keys().next().value);
-      lookupCache.current.set(key, data.word);
+      lookupCache.current.set(key, mergedWord);
       if (requestId === lookupRequest.current) {
         const canonicalPron = pronunciationCache.current.get(canonical.toLowerCase());
-        setLookup(current => current ? { ...data.word, practice: current.practice, pronunciation: canonical.toLowerCase() === pronunciationKey ? current.pronunciation : canonicalPron, dictionaryParts: canonical.toLowerCase() === pronunciationKey ? current.dictionaryParts : undefined, loading: false, detailLoading: false } : null);
+        setLookup(current => current ? { ...mergedWord, practice: current.practice, pronunciation: canonical.toLowerCase() === pronunciationKey ? current.pronunciation : canonicalPron, dictionaryParts: canonical.toLowerCase() === pronunciationKey ? current.dictionaryParts : undefined, loading: false, detailLoading: false } : null);
         if (canonical.toLowerCase() !== pronunciationKey) loadMeta(canonical);
       }
     } catch (e) {
@@ -647,7 +682,7 @@ export default function Home() {
     setGroupAnswers({});
     setSubmitted(false);
     try {
-      const res = await fetchWithRetry("/api/practice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ words }), timeout: 90000 }, 2, 1500);
+      const res = await fetchWithRetry("/api/practice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ words, targetLang }), timeout: 90000 }, 2, 1500);
       const data = await parseApiResponse(res);
       setGroupQuestions(data.groups);
       setGeneratedFills(data.fills);
@@ -743,13 +778,13 @@ export default function Home() {
               {confirmAnalyze.loading ? "⏳" : confirmAnalyze.error ? "⚠️" : "🔍"}
             </div>
             <h3 className="text-lg font-bold text-white mb-2">
-              {confirmAnalyze.loading ? "Đang tải ảnh lên server..." : confirmAnalyze.error ? "Tải ảnh không thành công" : "Ảnh đã sẵn sàng!"}
+              {confirmAnalyze.loading ? ptext("Đang tải ảnh lên server...") : confirmAnalyze.error ? ptext("Tải ảnh không thành công") : ptext("Ảnh đã sẵn sàng!")}
             </h3>
             <div className="text-sm text-slate-400 mb-6 leading-relaxed">
               {confirmAnalyze.loading ? (
                 <div className="flex items-center justify-center gap-2 text-amber-300">
                   <span className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-                  <span>Đang tải lên server ({((confirmAnalyze.size || 0) / (1024 * 1024)).toFixed(1)} MB)...</span>
+                  <span>{ptext("Đang tải lên server (")}{((confirmAnalyze.size || 0) / (1024 * 1024)).toFixed(1)}{ptext(" MB)...")}</span>
                 </div>
               ) : confirmAnalyze.error ? (
                 <span className="text-red-300 text-xs block bg-red-950/60 border border-red-800/60 rounded-lg p-2.5">
@@ -757,7 +792,7 @@ export default function Home() {
                 </span>
               ) : (
                 <span className="text-emerald-300 text-xs block font-medium">
-                  ✓ Đã lưu ảnh trên server ({((confirmAnalyze.size || 0) / (1024 * 1024)).toFixed(1)} MB). Nhấn bên dưới để AI phân tích.
+                  {ptext("✓ Đã lưu ảnh trên server (")}{((confirmAnalyze.size || 0) / (1024 * 1024)).toFixed(1)}{ptext(" MB). Nhấn bên dưới để AI phân tích.")}
                 </span>
               )}
             </div>
@@ -768,7 +803,7 @@ export default function Home() {
                 onClick={() => setConfirmAnalyze(null)}
                 className="flex-1 rounded-xl bg-slate-800 py-3 text-sm font-semibold text-slate-300 hover:bg-slate-700 disabled:opacity-40 transition-colors"
               >
-                Để sau
+                {ptext("Để sau")}
               </button>
               {confirmAnalyze.error ? (
                 <button
@@ -776,7 +811,7 @@ export default function Home() {
                   onClick={() => startConfirmUpload(confirmAnalyze.file, confirmAnalyze.target)}
                   className="flex-1 rounded-xl bg-amber-600 hover:bg-amber-500 py-3 text-sm font-semibold text-white shadow-lg transition-colors"
                 >
-                  Thử lại
+                  {ptext("Thử lại")}
                 </button>
               ) : confirmAnalyze.loading ? (
                 <button
@@ -785,7 +820,7 @@ export default function Home() {
                   className="flex-1 rounded-xl bg-slate-800/80 border border-slate-700 py-3 text-sm font-semibold text-slate-400 cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <span className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
-                  Đang tải...
+                  {ptext("Đang tải...")}
                 </button>
               ) : (
                 <button
@@ -801,7 +836,7 @@ export default function Home() {
                     confirmAnalyze.target === "grammar" ? "bg-purple-600 hover:bg-purple-500" : "bg-blue-600 hover:bg-blue-500"
                   }`}
                 >
-                  OK, phân tích
+                  {ptext("OK, phân tích")}
                 </button>
               )}
             </div>
@@ -810,6 +845,7 @@ export default function Home() {
       )}
 
       <header className="relative mb-2 flex min-h-11 items-center justify-center px-11 sm:mb-4">
+      <LookupLanguage />
       <h1 className="text-lg sm:text-3xl font-bold text-center bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
         📚 English Learner
       </h1>
@@ -819,12 +855,12 @@ export default function Home() {
       {saveError && <p role="alert" className="mb-2 text-xs text-red-300">{saveError}</p>}
       <Account />
       {/* Mode tabs */}
-      <div role="navigation" aria-label="Chọn kỹ năng" className="flex gap-2 mb-3 sm:mb-6 overflow-x-auto whitespace-nowrap pb-2 [&>button]:shrink-0">
-        <button onClick={() => setMode("vocab")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "vocab" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>📖 Vocabulary</button>
-        <button onClick={() => setMode("grammar")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "grammar" ? "bg-purple-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>📐 Grammar</button>
-        <button onClick={() => setMode("writing")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "writing" ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>✍️ Writing</button>
-        <button onClick={() => setMode("listening")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "listening" ? "bg-teal-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}><span aria-hidden="true">🎧</span> Listening</button>
-        <button onClick={() => setMode("my-words")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "my-words" ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}><span aria-hidden="true">📚</span> My Words</button>
+      <div role="navigation" aria-label={t("Chọn kỹ năng")} className="flex gap-2 mb-3 sm:mb-6 overflow-x-auto whitespace-nowrap pb-2 [&>button]:shrink-0">
+        <button onClick={() => setMode("vocab")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "vocab" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>📖 {t("Từ vựng")}</button>
+        <button onClick={() => setMode("grammar")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "grammar" ? "bg-purple-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>📐 {t("Ngữ pháp")}</button>
+        <button onClick={() => setMode("writing")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "writing" ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}>✍️ {t("Luyện viết")}</button>
+        <button onClick={() => setMode("listening")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "listening" ? "bg-teal-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}><span aria-hidden="true">🎧</span> {t("Nghe")}</button>
+        <button onClick={() => setMode("my-words")} className={`rounded-xl px-3 py-2 sm:px-5 sm:py-2.5 text-sm font-semibold transition-colors ${mode === "my-words" ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}><span aria-hidden="true">📚</span> {t("Từ của tôi")}</button>
       </div>
 
       {mode === "my-words" && <MyWords onLookup={word => lookupWord(word, "", false)} />}
@@ -835,7 +871,7 @@ export default function Home() {
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-200">
             <span className="inline-block animate-pulse text-base">🔎</span>
-            <span>{quickDirection === "en-vi" ? "Tra từ / câu tiếng Anh" : "Dịch câu tiếng Việt → Anh"}</span>
+            <span>{quickDirection === "en-vi" ? t("Tra từ / câu tiếng Anh") : t("Dịch câu tiếng Việt → Anh")}</span>
           </div>
 
           {/* Interactive Switch Button */}
@@ -850,7 +886,7 @@ export default function Home() {
               }}
               className={quickDirection === "en-vi" ? "rounded-lg px-2.5 py-1 text-xs font-semibold transition-all duration-200 bg-blue-600 text-white shadow-sm" : "rounded-lg px-2.5 py-1 text-xs font-semibold transition-all duration-200 text-slate-400 hover:text-slate-200"}
             >
-              🇺🇸 Anh
+              🇺🇸 {t("Anh")}
             </button>
 
             <button
@@ -861,8 +897,8 @@ export default function Home() {
                 setQuickResult(null);
               }}
               className="group mx-1 flex h-6 w-6 items-center justify-center rounded-lg bg-slate-800 text-xs text-slate-300 transition-all duration-300 hover:bg-slate-700 hover:text-white active:scale-90"
-              title="Đổi chiều tra cứu (Anh ⇄ Việt)"
-              aria-label="Đổi chiều tra cứu"
+              title={t("Đổi chiều tra cứu (Anh ⇄ Việt)")}
+              aria-label={t("Đổi chiều tra cứu")}
             >
               <span className="inline-block transition-transform duration-300 group-hover:rotate-180">⇄</span>
             </button>
@@ -877,7 +913,7 @@ export default function Home() {
               }}
               className={quickDirection === "vi-en" ? "rounded-lg px-2.5 py-1 text-xs font-semibold transition-all duration-200 bg-purple-600 text-white shadow-sm" : "rounded-lg px-2.5 py-1 text-xs font-semibold transition-all duration-200 text-slate-400 hover:text-slate-200"}
             >
-              🇻🇳 Việt
+              🇻🇳 {t("Việt")}
             </button>
           </div>
         </div>
@@ -888,7 +924,7 @@ export default function Home() {
             <input
               ref={quickInputRef}
               role="combobox"
-              aria-label="Từ hoặc câu cần tra"
+              aria-label={t("Từ hoặc câu cần tra")}
               aria-autocomplete="list"
               aria-expanded={suggestOpen && suggestions.length > 0}
               aria-controls="word-suggestions"
@@ -919,8 +955,8 @@ export default function Home() {
               }}
               placeholder={
                 quickDirection === "en-vi"
-                  ? "Ví dụ: I goed to school yesterday"
-                  : "Ví dụ: Hôm qua tôi đi học muộn vì kẹt xe"
+                  ? t("Ví dụ: I goed to school yesterday")
+                  : t("Ví dụ: Hôm qua tôi đi học muộn vì kẹt xe")
               }
               className={quickLoading ? "w-full rounded-lg border bg-slate-950 px-3 py-2.5 text-sm text-white outline-none border-sky-500 ring-2 ring-sky-500/20" : quickDirection === "vi-en" ? "w-full rounded-lg border bg-slate-950 px-3 py-2.5 text-sm text-white outline-none border-purple-600/60 focus:border-purple-400" : "w-full rounded-lg border bg-slate-950 px-3 py-2.5 text-sm text-white outline-none border-slate-600 focus:border-blue-400"}
             />
@@ -954,8 +990,8 @@ export default function Home() {
             onClick={() => quickFileRef.current?.click()}
             disabled={quickLoading}
             className="shrink-0 rounded-lg bg-slate-700 px-3 py-2 text-sm transition-colors hover:bg-slate-600 disabled:bg-slate-800 disabled:opacity-50"
-            title={quickDirection === "en-vi" ? "Chọn hoặc chụp ảnh tiếng Anh" : "Chọn hoặc chụp ảnh tiếng Việt"}
-            aria-label="Chụp ảnh"
+            title={quickDirection === "en-vi" ? t("Chọn hoặc chụp ảnh tiếng Anh") : t("Chọn hoặc chụp ảnh tiếng Việt")}
+            aria-label={t("Chụp ảnh")}
           >
             📷
           </button>
@@ -968,10 +1004,10 @@ export default function Home() {
             {quickLoading ? (
               <span className="flex items-center gap-1.5">
                 <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white"></span>
-                <span>Đang tra...</span>
+                <span>{t("Đang tra...")}</span>
               </span>
             ) : (
-              <span>{quickDirection === "vi-en" ? "Dịch" : "Tra"}</span>
+              <span>{quickDirection === "vi-en" ? t("Dịch") : t("Tra")}</span>
             )}
           </button>
         </div>
@@ -987,11 +1023,11 @@ export default function Home() {
                 </span>
                 <span className="font-medium">
                   {quickDirection === "en-vi"
-                    ? "Đang tra cứu nghĩa và phiên âm..."
-                    : "Đang tra cứu bản dịch tiếng Anh..."}
+                    ? t("Đang tra cứu nghĩa và phiên âm...")
+                    : t("Đang tra cứu bản dịch tiếng Anh...")}
                 </span>
               </div>
-              <span className="font-mono text-[11px] text-sky-400/80 animate-pulse">Tra cứu</span>
+              <span className="font-mono text-[11px] text-sky-400/80 animate-pulse">{t("Tra cứu")}</span>
             </div>
 
             {/* Glowing animated scan beam */}
@@ -1006,10 +1042,10 @@ export default function Home() {
         <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
           <span>
             {quickDirection === "en-vi"
-              ? "Gõ câu tiếng Anh hoặc bấm 📷 để sửa lỗi & dịch nghĩa."
-              : "Gõ câu tiếng Việt hoặc bấm 📷 để dịch sang tiếng Anh tự nhiên."}
+              ? t("Gõ câu tiếng Anh hoặc bấm 📷 để sửa lỗi & dịch nghĩa.")
+              : t("Gõ câu tiếng Việt hoặc bấm 📷 để dịch sang tiếng Anh tự nhiên.")}
           </span>
-          <span className="text-slate-600">Phím Enter ↵ để tra</span>
+          <span className="text-slate-600">{t("Phím Enter ↵ để tra")}</span>
         </div>
 
         {/* Results view */}
@@ -1023,9 +1059,9 @@ export default function Home() {
               {/* Header / Direction tag */}
               <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-sky-900/60 pb-2 text-xs">
                 <span className={quickResult.direction === "vi-en" ? "shrink-0 rounded-full px-2 py-0.5 font-medium bg-purple-900/70 text-purple-200 border border-purple-700/50" : "shrink-0 rounded-full px-2 py-0.5 font-medium bg-sky-900/70 text-sky-200 border border-sky-700/50"}>
-                  {quickResult.direction === "vi-en" ? "🇻🇳 → 🇺🇸 Dịch sang tiếng Anh" : "🇺🇸 → 🇻🇳 Tra cứu tiếng Anh"}
+                  {quickResult.direction === "vi-en" ? t("🇻🇳 → 🇺🇸 Dịch sang tiếng Anh") : t("🇺🇸 → 🇻🇳 Tra cứu tiếng Anh")}
                 </span>
-                <span className="min-w-0 text-slate-400">Chạm từ tiếng Anh để tra từ điển</span>
+                <span className="min-w-0 text-slate-400">{t("Chạm từ tiếng Anh để tra từ điển")}</span>
               </div>
 
               {quickResult.fromCache && <p data-testid="search-cache-hit" className="mb-2 text-xs text-emerald-300">Từ cache · Không gọi AI dịch lại</p>}
@@ -1040,8 +1076,8 @@ export default function Home() {
                   <SpeakBtn
                     text={quickResult.corrected}
                     className="inline-flex h-7 w-7 items-center justify-center rounded-md text-sky-300 transition-colors hover:bg-sky-900"
-                    title="Nghe đọc tiếng Anh"
-                    aria-label="Nghe tiếng Anh"
+                    title={t("Nghe đọc tiếng Anh")}
+                    aria-label={t("Nghe tiếng Anh")}
                   >
                     🔊
                   </SpeakBtn>
@@ -1053,7 +1089,7 @@ export default function Home() {
               {/* Corrections if any */}
               {quickResult.direction === "en-vi" && quickResult.changed && (
                 <div className="mt-2 rounded-lg bg-amber-950/40 border border-amber-800/40 px-3 py-2 text-xs text-amber-200 leading-relaxed">
-                  <span className="font-semibold text-amber-400">Sửa: </span>
+                  <span className="font-semibold text-amber-400">{t("Sửa:")} </span>
                   <span className="line-through text-slate-500 mr-1.5">{quickResult.original}</span>
                   → <span className="text-emerald-300 font-medium ml-1.5">{quickResult.corrected}</span>
                 </div>
@@ -1062,7 +1098,7 @@ export default function Home() {
               {/* Vietnamese Meaning */}
               <div className="mt-2 flex items-start gap-1 leading-relaxed text-slate-200">
                 <div className="flex-1">
-                  <span className="font-medium text-slate-400 mr-1.5">Nghĩa:</span>
+                  <span className="font-medium text-slate-400 mr-1.5">{t("Nghĩa")}:</span>
                   <span>{quickResult.meaning}</span>
                   <SpeakViBtn text={quickResult.meaning} />
                 </div>
@@ -1071,7 +1107,7 @@ export default function Home() {
               {/* Note / Tip */}
               {quickResult.note && (
                 <div className="mt-2.5 rounded-lg bg-slate-900/80 border border-slate-800 p-2.5 text-xs text-slate-300 leading-relaxed">
-                  <span className="font-semibold text-amber-400 mr-1">💡 Giải thích:</span>
+                  <span className="font-semibold text-amber-400 mr-1">💡 {t("Giải thích")}:</span>
                   <span>{quickResult.note}</span>
                 </div>
               )}
@@ -1087,19 +1123,19 @@ export default function Home() {
           className="border-2 border-dashed border-slate-600 rounded-2xl p-10 text-center cursor-pointer hover:border-blue-400 hover:bg-slate-900 transition-all mb-6">
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { selectImage(e.target.files[0], "vocab"); e.target.value = ""; }} />
           <div className="text-4xl sm:text-5xl mb-3">📷</div>
-          <p className="text-sm sm:text-base text-slate-400">Kéo thả ảnh trang từ vựng vào đây hoặc bấm chọn</p>
+          <p className="text-sm sm:text-base text-slate-400">{ptext("Kéo thả ảnh trang từ vựng vào đây hoặc bấm chọn")}</p>
         </div>
 
         {preview && <div className="text-center mb-6"><img src={preview} alt="preview" className="max-h-64 sm:max-h-72 max-w-full rounded-xl border border-slate-700 inline-block" /></div>}
 
         <div className="text-center mb-6">
           <button onClick={analyze} disabled={!image || loading} className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-xl font-semibold text-base sm:text-lg transition-colors">
-            {loading ? <span className="flex items-center gap-2 justify-center"><span className="w-5 h-5 border-2 border-slate-400 border-t-blue-400 rounded-full animate-spin" />Đang phân tích...</span> : "🔍 Phân tích từ vựng"}
+            {loading ? <span className="flex items-center gap-2 justify-center"><span className="w-5 h-5 border-2 border-slate-400 border-t-blue-400 rounded-full animate-spin" />{ptext("Đang phân tích...")}</span> : ptext("🔍 Phân tích từ vựng")}
           </button>
         </div>
 
         {vProgress && <div className="mb-4 text-sm text-blue-200" role="status">{vProgress.total ? `Đã xử lý ${vProgress.completed}/${vProgress.total} từ` : "Đang đọc từ và ngữ cảnh trong ảnh..."}{vProgress.total > 0 && <progress className="mt-2 w-full" value={vProgress.completed} max={vProgress.total} aria-label="Số từ đã xử lý" />}</div>}
-        {vRetryJob && !loading && <button onClick={() => analyze()} className="mb-4 rounded-lg bg-amber-600 px-4 py-2">Thử lại nhóm lỗi</button>}
+        {vRetryJob && !loading && <button onClick={() => analyze()} className="mb-4 rounded-lg bg-amber-600 px-4 py-2">{ptext("Thử lại nhóm lỗi")}</button>}
         {/* Error notification */}
         <ErrorBanner message={error} onDismiss={() => setError(null)} />
 
@@ -1112,7 +1148,7 @@ export default function Home() {
               className="text-xs text-red-400 hover:text-red-300 hover:underline px-2 py-1 rounded bg-slate-800/80"
               title="Xóa bài học đang lưu trên server"
             >
-              ✕ Xóa bài / Bài mới
+              {ptext("✕ Xóa bài / Bài mới")}
             </button>
           </div>
         )}
@@ -1121,7 +1157,7 @@ export default function Home() {
           <div className="mb-5 rounded-2xl border border-amber-600/40 bg-amber-950/30 p-4 text-center">
             <div className="text-base font-semibold text-amber-200">Sẵn sàng luyện các từ vừa học?</div>
             <p className="mt-1 text-sm text-amber-100/70">2 dạng: chọn từ lạc nhóm và điền từ.</p>
-            <button onClick={() => { resetPractice(); setTestType("match"); setPractice(true); if (!groupQuestions.length) createGroupTest(); }} className="mt-3 w-full sm:w-auto rounded-xl bg-amber-500 px-6 py-3 font-semibold text-slate-950 hover:bg-amber-400">✍️ Practice test</button>
+            <button onClick={() => { resetPractice(); setTestType("match"); setPractice(true); if (!groupQuestions.length) createGroupTest(); }} className="mt-3 w-full sm:w-auto rounded-xl bg-amber-500 px-6 py-3 font-semibold text-slate-950 hover:bg-amber-400">{ptext("✍️ Practice test")}</button>
           </div>
         )}
 
@@ -1129,17 +1165,17 @@ export default function Home() {
           <section className="mb-7 rounded-2xl border border-slate-700 bg-slate-900 p-4 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 pb-4">
               <div><h2 className="text-xl font-bold text-white">Practice test</h2><p className="text-sm text-slate-400">Luyện với {testWords.length} từ vừa phân tích</p></div>
-              <button onClick={() => setPractice(false)} className="rounded-lg bg-slate-800 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700">← Quay lại từ vựng</button>
+              <button onClick={() => setPractice(false)} className="rounded-lg bg-slate-800 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700">{ptext("← Quay lại từ vựng")}</button>
             </div>
             <div className="mt-4 flex gap-2">
-              <button onClick={() => { setTestType("match"); resetPractice(); }} className={`flex-1 rounded-xl px-3 py-3 text-sm font-semibold ${testType === "match" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400"}`}>Bài 1: Chọn từ lạc nhóm</button>
-              <button onClick={() => { setTestType("fill"); resetPractice(); }} className={`flex-1 rounded-xl px-3 py-3 text-sm font-semibold ${testType === "fill" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400"}`}>Bài 2: Điền từ</button>
+              <button onClick={() => { setTestType("match"); resetPractice(); }} className={`flex-1 rounded-xl px-3 py-3 text-sm font-semibold ${testType === "match" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400"}`}>{ptext("Bài 1: Chọn từ lạc nhóm")}</button>
+              <button onClick={() => { setTestType("fill"); resetPractice(); }} className={`flex-1 rounded-xl px-3 py-3 text-sm font-semibold ${testType === "fill" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400"}`}>{ptext("Bài 2: Điền từ")}</button>
             </div>
 
             {testType === "match" ? <div className="mt-5">
               <p className="mb-4 text-sm text-slate-300">Chọn từ không thuộc nhóm. Mỗi hàng có 4 từ, chỉ 1 đáp án đúng.</p>
               {groupLoading && <div className="rounded-xl bg-slate-950 p-5 text-center text-slate-400">Đang tạo 4 câu từ vocab của bạn...</div>}
-              {!groupLoading && groupQuestions.length === 0 && <button onClick={createGroupTest} className="w-full rounded-xl bg-blue-600 py-3 font-semibold hover:bg-blue-500">Tạo bài 1</button>}
+              {!groupLoading && groupQuestions.length === 0 && <button onClick={createGroupTest} className="w-full rounded-xl bg-blue-600 py-3 font-semibold hover:bg-blue-500">{ptext("Tạo bài 1")}</button>}
               <div className="space-y-4">{groupQuestions.map((q, qi) => (
                 <div key={qi} className="rounded-xl border border-slate-700 bg-slate-950 p-4">
                   <div className="mb-3 text-sm font-semibold text-slate-300">{qi + 1}. Underline word that does not belong to group.</div>
@@ -1152,11 +1188,11 @@ export default function Home() {
                   {submitted && <div className="mt-2 text-sm text-slate-300"><span className="font-medium text-emerald-300">Đáp án: {q.answer}.</span> {q.explanation}</div>}
                 </div>
               ))}</div>
-              {groupQuestions.length > 0 && <button onClick={() => setSubmitted(true)} className="mt-5 w-full rounded-xl bg-emerald-600 py-3 font-semibold hover:bg-emerald-500">Nộp bài · {submitted ? `${groupQuestions.filter((q, i) => groupAnswers[i] === q.answer).length}/4 đúng` : "Chấm điểm"}</button>}
+              {groupQuestions.length > 0 && <button onClick={() => setSubmitted(true)} className="mt-5 w-full rounded-xl bg-emerald-600 py-3 font-semibold hover:bg-emerald-500">Nộp bài · {submitted ? `${groupQuestions.filter((q, i) => groupAnswers[i] === q.answer).length}/4 đúng` : ptext("Chấm điểm")}</button>}
             </div> : <div className="mt-5">
               {fillQuestions.length === 0 ? <div className="rounded-xl bg-slate-950 p-4 text-center text-slate-400">Đề đang tạo, hãy mở Bài 1 trước.</div> : <><p className="rounded-xl bg-slate-950 p-3 text-sm text-slate-300">Từ gợi ý: <span className="font-semibold text-amber-300">{fillQuestions.map((w) => w.word).join(" · ")}</span></p>
-              <div className="mt-4 space-y-4">{fillQuestions.map((w, i) => <div key={w.word} className={`rounded-xl border p-4 ${submitted ? (fillAnswers[i]?.trim().toLowerCase() === w.word.toLowerCase() ? "border-emerald-500" : "border-red-500") : "border-slate-700"}`}><label className="block text-sm leading-7 text-slate-200">{i + 1}. {w.sentence}</label><input value={fillAnswers[i] || ""} onChange={(e) => setFillAnswers((v) => ({ ...v, [i]: e.target.value }))} disabled={submitted} placeholder="Điền từ vào đây" className="mt-3 w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-3 text-white outline-none focus:border-blue-400" />{submitted && fillAnswers[i]?.trim().toLowerCase() !== w.word.toLowerCase() && <div className="mt-2 text-sm text-emerald-300">Đáp án: {w.word}</div>}</div>)}</div>
-              <button onClick={() => setSubmitted(true)} className="mt-5 w-full rounded-xl bg-emerald-600 py-3 font-semibold hover:bg-emerald-500">Nộp bài · {submitted ? `${fillScore}/${fillQuestions.length} đúng` : "Chấm điểm"}</button></>}
+              <div className="mt-4 space-y-4">{fillQuestions.map((w, i) => <div key={w.word} className={`rounded-xl border p-4 ${submitted ? (fillAnswers[i]?.trim().toLowerCase() === w.word.toLowerCase() ? "border-emerald-500" : "border-red-500") : "border-slate-700"}`}><label className="block text-sm leading-7 text-slate-200">{i + 1}. {w.sentence}</label><input value={fillAnswers[i] || ""} onChange={(e) => setFillAnswers((v) => ({ ...v, [i]: e.target.value }))} disabled={submitted} placeholder={ptext("Điền từ vào đây")} className="mt-3 w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-3 text-white outline-none focus:border-blue-400" />{submitted && fillAnswers[i]?.trim().toLowerCase() !== w.word.toLowerCase() && <div className="mt-2 text-sm text-emerald-300">Đáp án: {w.word}</div>}</div>)}</div>
+              <button onClick={() => setSubmitted(true)} className="mt-5 w-full rounded-xl bg-emerald-600 py-3 font-semibold hover:bg-emerald-500">Nộp bài · {submitted ? `${fillScore}/${fillQuestions.length} đúng` : ptext("Chấm điểm")}</button></>}
             </div>}
           </section>
         )}
@@ -1169,11 +1205,12 @@ export default function Home() {
             <div key={i} className="bg-slate-900 border border-slate-700 rounded-xl p-4 sm:p-5 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/10 transition-all">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <div className="flex items-center gap-1 text-lg sm:text-xl font-bold text-blue-400 break-words"><span>{w.word}</span><CopyBtn text={w.word} /></div>
-                  <div className="mt-1 flex items-center gap-2"><span className="text-purple-400 italic text-sm">{w.ipa}</span>{w.partOfSpeech && <span className="rounded-full border border-blue-800 bg-blue-950 px-2 py-0.5 text-xs font-semibold text-blue-200">{w.partOfSpeech}</span>}</div>
+                  <div className="flex flex-wrap items-center gap-1 text-lg sm:text-xl font-bold text-blue-400 break-words"><span>{w.word}</span><CopyBtn text={w.word} />{w.partOfSpeech && <span className="rounded-full border border-blue-800 bg-blue-950 px-2 py-0.5 text-xs font-semibold not-italic text-blue-200">{w.partOfSpeech}</span>}</div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm italic text-purple-400">
+                    <OxfordPronunciation word={w.word} pronunciation={w.pronunciation} ipa={w.ipa} />
+                  </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
-                  <SpeakBtn text={w.word} className="w-10 h-10 rounded-full bg-emerald-600 hover:bg-emerald-500 flex items-center justify-center text-lg transition-colors" title="Nghe phát âm">🔊</SpeakBtn>
                   <button
                     type="button"
                     onClick={() => setLookup({ ...w, practice: true })}
@@ -1251,20 +1288,20 @@ export default function Home() {
           className="border-2 border-dashed border-purple-600/50 rounded-2xl p-10 text-center cursor-pointer hover:border-purple-400 hover:bg-slate-900 transition-all mb-6">
           <input ref={gFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { selectImage(e.target.files[0], "grammar"); e.target.value = ""; }} />
           <div className="text-4xl sm:text-5xl mb-3">📐</div>
-          <p className="text-sm sm:text-base text-slate-400">Kéo thả ảnh trang ngữ pháp vào đây hoặc bấm chọn</p>
+          <p className="text-sm sm:text-base text-slate-400">{ptext("Kéo thả ảnh trang ngữ pháp vào đây hoặc bấm chọn")}</p>
         </div>
 
         {gPreview && <div className="text-center mb-6"><img src={gPreview} alt="preview" className="max-h-64 sm:max-h-72 max-w-full rounded-xl border border-slate-700 inline-block" /></div>}
 
         <div className="text-center mb-6">
           <button onClick={analyzeGrammar} disabled={!gImage || gLoading} className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-xl font-semibold text-base sm:text-lg transition-colors">
-            {gLoading ? <span className="flex items-center gap-2 justify-center"><span className="w-5 h-5 border-2 border-slate-400 border-t-purple-400 rounded-full animate-spin" />Đang phân tích...</span> : "🔍 Phân tích ngữ pháp"}
+            {gLoading ? <span className="flex items-center gap-2 justify-center"><span className="w-5 h-5 border-2 border-slate-400 border-t-purple-400 rounded-full animate-spin" />{ptext("Đang phân tích...")}</span> : ptext("🔍 Phân tích ngữ pháp")}
           </button>
         </div>
 
         {/* Error notification */}
         {gJob && <p role="status" className="mb-3 text-sm text-blue-200">{gJob.stage === "extract" ? "Đang đọc ảnh..." : `Đã xử lý ${gJob.progress?.completed || 0}/2 phần`}</p>}
-        {gRetry && !gLoading && <button onClick={() => analyzeGrammar()} className="mb-3 rounded-lg bg-amber-600 px-4 py-2">Thử lại phần lỗi</button>}
+        {gRetry && !gLoading && <button onClick={() => analyzeGrammar()} className="mb-3 rounded-lg bg-amber-600 px-4 py-2">{ptext("Thử lại phần lỗi")}</button>}
         <ErrorBanner message={gError} onDismiss={() => setGError(null)} />
 
         {/* Grammar cards */}
@@ -1336,7 +1373,7 @@ export default function Home() {
             <div className="rounded-2xl border border-amber-600/40 bg-amber-950/30 p-4 text-center">
               <div className="text-base font-semibold text-amber-200">Sẵn sàng luyện tập ngữ pháp?</div>
               <p className="mt-1 text-sm text-amber-100/70">2 dạng: trắc nghiệm và viết lại câu.</p>
-              <button onClick={() => { setGPractice(true); setGPracticeType("choose"); setGSubmitted(false); if (!gPracticeData) createGrammarPractice(); }} className="mt-3 w-full sm:w-auto rounded-xl bg-amber-500 px-6 py-3 font-semibold text-slate-950 hover:bg-amber-400">✍️ Luyện tập</button>
+              <button onClick={() => { setGPractice(true); setGPracticeType("choose"); setGSubmitted(false); if (!gPracticeData) createGrammarPractice(); }} className="mt-3 w-full sm:w-auto rounded-xl bg-amber-500 px-6 py-3 font-semibold text-slate-950 hover:bg-amber-400">{ptext("✍️ Luyện tập")}</button>
             </div>
           </div>
         )}
@@ -1348,11 +1385,11 @@ export default function Home() {
           <section className="mb-7 rounded-2xl border border-slate-700 bg-slate-900 p-4 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 pb-4">
               <div><h2 className="text-xl font-bold text-white">Grammar Practice</h2><p className="text-sm text-slate-400">{grammar.title}</p></div>
-              <button onClick={() => setGPractice(false)} className="rounded-lg bg-slate-800 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700">← Quay lại ngữ pháp</button>
+              <button onClick={() => setGPractice(false)} className="rounded-lg bg-slate-800 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700">{ptext("← Quay lại ngữ pháp")}</button>
             </div>
             <div className="mt-4 flex gap-2">
-              <button onClick={() => { setGPracticeType("choose"); setGSubmitted(false); }} className={`flex-1 rounded-xl px-3 py-3 text-sm font-semibold ${gPracticeType === "choose" ? "bg-purple-600 text-white" : "bg-slate-800 text-slate-400"}`}>Bài 1: Trắc nghiệm</button>
-              <button onClick={() => { setGPracticeType("rewrite"); setGSubmitted(false); }} className={`flex-1 rounded-xl px-3 py-3 text-sm font-semibold ${gPracticeType === "rewrite" ? "bg-purple-600 text-white" : "bg-slate-800 text-slate-400"}`}>Bài 2: Viết lại câu</button>
+              <button onClick={() => { setGPracticeType("choose"); setGSubmitted(false); }} className={`flex-1 rounded-xl px-3 py-3 text-sm font-semibold ${gPracticeType === "choose" ? "bg-purple-600 text-white" : "bg-slate-800 text-slate-400"}`}>{ptext("Bài 1: Trắc nghiệm")}</button>
+              <button onClick={() => { setGPracticeType("rewrite"); setGSubmitted(false); }} className={`flex-1 rounded-xl px-3 py-3 text-sm font-semibold ${gPracticeType === "rewrite" ? "bg-purple-600 text-white" : "bg-slate-800 text-slate-400"}`}>{ptext("Bài 2: Viết lại câu")}</button>
             </div>
 
             {gPracticeLoading && <div className="mt-5 rounded-xl bg-slate-950 p-5 text-center text-slate-400">Đang tạo bài luyện tập...</div>}
@@ -1376,7 +1413,7 @@ export default function Home() {
                     {gSubmitted && <div className="mt-2 text-sm text-slate-300"><span className="font-medium text-emerald-300">Đáp án: {q.answer}.</span> {q.explanation}</div>}
                   </div>
                 ))}
-                <button onClick={() => setGSubmitted(true)} className="w-full rounded-xl bg-emerald-600 py-3 font-semibold hover:bg-emerald-500">Nộp bài · {gSubmitted ? `${gChooseScore}/${gPracticeData.choose?.length} đúng` : "Chấm điểm"}</button>
+                <button onClick={() => setGSubmitted(true)} className="w-full rounded-xl bg-emerald-600 py-3 font-semibold hover:bg-emerald-500">Nộp bài · {gSubmitted ? `${gChooseScore}/${gPracticeData.choose?.length} đúng` : ptext("Chấm điểm")}</button>
               </div>
             )}
 
@@ -1386,11 +1423,11 @@ export default function Home() {
                   <div key={qi} className={`rounded-xl border p-4 ${gSubmitted ? (normalizeGrammarAnswer(gRewriteAnswers[qi]) === normalizeGrammarAnswer(q.answer) ? "border-emerald-500" : "border-red-500") : "border-slate-700"} bg-slate-950`}>
                     <div className="text-sm text-slate-200 mb-1">{qi + 1}. {q.instruction}</div>
                     <div className="mb-3 break-words text-sm font-medium text-sky-300">{clickableText(q.input)}<CopyBtn text={q.input} /></div>
-                    <input value={gRewriteAnswers[qi] || ""} onChange={(e) => setGRewriteAnswers((v) => ({ ...v, [qi]: e.target.value }))} disabled={gSubmitted} placeholder="Viết lại câu ở đây" className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-3 text-white outline-none focus:border-purple-400" />
+                    <input value={gRewriteAnswers[qi] || ""} onChange={(e) => setGRewriteAnswers((v) => ({ ...v, [qi]: e.target.value }))} disabled={gSubmitted} placeholder={ptext("Viết lại câu ở đây")} className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-3 text-white outline-none focus:border-purple-400" />
                     {gSubmitted && normalizeGrammarAnswer(gRewriteAnswers[qi]) !== normalizeGrammarAnswer(q.answer) && <div className="mt-2 text-sm text-emerald-300">Đáp án: {clickableText(q.answer)}</div>}
                   </div>
                 ))}
-                <button onClick={() => setGSubmitted(true)} className="w-full rounded-xl bg-emerald-600 py-3 font-semibold hover:bg-emerald-500">Nộp bài · {gSubmitted ? `${gRewriteScore}/${gPracticeData.rewrite?.length} đúng` : "Chấm điểm"}</button>
+                <button onClick={() => setGSubmitted(true)} className="w-full rounded-xl bg-emerald-600 py-3 font-semibold hover:bg-emerald-500">Nộp bài · {gSubmitted ? `${gRewriteScore}/${gPracticeData.rewrite?.length} đúng` : ptext("Chấm điểm")}</button>
               </div>
             )}
           </section>
@@ -1412,18 +1449,18 @@ export default function Home() {
           }`}>
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-bold uppercase tracking-wider text-emerald-300 bg-emerald-950/80 border border-emerald-800/80 rounded-md px-2.5 py-1">
-                Trang 1 · Bài mẫu (Sample)
+                {ptext("Trang 1 · Bài mẫu (Sample)")}
               </span>
               <div className="flex items-center gap-2">
                 {wUpload1.loading && (
                   <span className="text-xs text-amber-300 flex items-center gap-1">
                     <span className="w-3.5 h-3.5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-                    Đang tải...
+                    {ptext("Đang tải...")}
                   </span>
                 )}
                 {wUpload1.id && (
                   <span className="text-xs text-emerald-400 font-medium">
-                    ✓ Đã lưu server
+                    {ptext("✓ Đã lưu server")}
                   </span>
                 )}
                 {wImage1 && !wUpload1.loading && (
@@ -1432,7 +1469,7 @@ export default function Home() {
                     onClick={removeWImage1}
                     className="rounded px-2 py-0.5 text-xs text-red-400 hover:bg-red-950/50 hover:text-red-300"
                   >
-                    ✕ Xóa
+                    {ptext("✕ Xóa")}
                   </button>
                 )}
               </div>
@@ -1449,7 +1486,7 @@ export default function Home() {
                       onClick={() => uploadWritingFile(wImage1, 1)}
                       className="ml-2 underline font-semibold text-white"
                     >
-                      Thử tải lại
+                      {ptext("Thử tải lại")}
                     </button>
                   </div>
                 )}
@@ -1464,7 +1501,7 @@ export default function Home() {
                   disabled={wUpload1.loading}
                   className="mt-3 text-xs text-slate-400 hover:text-emerald-300 underline block mx-auto disabled:opacity-40"
                 >
-                  Đổi ảnh khác
+                  {ptext("Đổi ảnh khác")}
                 </button>
               </div>
             ) : (
@@ -1475,7 +1512,7 @@ export default function Home() {
                 className="py-8 text-center cursor-pointer my-auto rounded-xl hover:bg-slate-800/50 transition-colors"
               >
                 <div className="text-3xl sm:text-4xl mb-2">📖</div>
-                <p className="text-sm font-semibold text-slate-200">Ảnh trang bài mẫu</p>
+                <p className="text-sm font-semibold text-slate-200">{ptext("Ảnh trang bài mẫu")}</p>
                 <p className="text-xs text-slate-400 mt-1">Email / thư mẫu của bài</p>
               </div>
             )}
@@ -1499,18 +1536,18 @@ export default function Home() {
           }`}>
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-bold uppercase tracking-wider text-amber-300 bg-amber-950/80 border border-amber-800/80 rounded-md px-2.5 py-1">
-                Trang 2 · Bài tập (Self-Writing)
+                {ptext("Trang 2 · Bài tập (Self-Writing)")}
               </span>
               <div className="flex items-center gap-2">
                 {wUpload2.loading && (
                   <span className="text-xs text-amber-300 flex items-center gap-1">
                     <span className="w-3.5 h-3.5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-                    Đang tải...
+                    {ptext("Đang tải...")}
                   </span>
                 )}
                 {wUpload2.id && (
                   <span className="text-xs text-amber-300 font-medium">
-                    ✓ Đã lưu server
+                    {ptext("✓ Đã lưu server")}
                   </span>
                 )}
                 {wImage2 && !wUpload2.loading && (
@@ -1519,7 +1556,7 @@ export default function Home() {
                     onClick={removeWImage2}
                     className="rounded px-2 py-0.5 text-xs text-red-400 hover:bg-red-950/50 hover:text-red-300"
                   >
-                    ✕ Xóa
+                    {ptext("✕ Xóa")}
                   </button>
                 )}
               </div>
@@ -1536,7 +1573,7 @@ export default function Home() {
                       onClick={() => uploadWritingFile(wImage2, 2)}
                       className="ml-2 underline font-semibold text-white"
                     >
-                      Thử tải lại
+                      {ptext("Thử tải lại")}
                     </button>
                   </div>
                 )}
@@ -1551,20 +1588,20 @@ export default function Home() {
                   disabled={wUpload2.loading}
                   className="mt-3 text-xs text-slate-400 hover:text-amber-300 underline block mx-auto disabled:opacity-40"
                 >
-                  Đổi ảnh khác
+                  {ptext("Đổi ảnh khác")}
                 </button>
               </div>
             ) : isSlot2Locked ? (
               <div className="py-8 text-center my-auto">
                 <div className="text-3xl sm:text-4xl mb-2">🔒</div>
-                <p className="text-sm font-semibold text-slate-400">Chờ Trang 1 tải lên xong</p>
+                <p className="text-sm font-semibold text-slate-400">{ptext("Chờ Trang 1 tải lên xong")}</p>
                 <p className="text-xs text-slate-500 mt-1">Hoặc bỏ qua Trang 1 nếu chỉ học bài tập</p>
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); setWSkipSlot1(true); }}
                   className="mt-3 pointer-events-auto rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700 hover:text-white"
                 >
-                  Bỏ qua Trang 1 → Tải thẳng Trang 2
+                  {ptext("Bỏ qua Trang 1 → Tải thẳng Trang 2")}
                 </button>
               </div>
             ) : (
@@ -1575,7 +1612,7 @@ export default function Home() {
                 className="py-8 text-center cursor-pointer my-auto rounded-xl hover:bg-slate-800/50 transition-colors"
               >
                 <div className="text-3xl sm:text-4xl mb-2">✍️</div>
-                <p className="text-sm font-semibold text-slate-200">Ảnh trang bài tập</p>
+                <p className="text-sm font-semibold text-slate-200">{ptext("Ảnh trang bài tập")}</p>
                 <p className="text-xs text-slate-400 mt-1">Đề bài Self-Writing & Word Bank</p>
               </div>
             )}
@@ -1603,21 +1640,21 @@ export default function Home() {
             {wLoading ? (
               <span className="flex items-center gap-2 justify-center">
                 <span className="w-5 h-5 border-2 border-slate-400 border-t-emerald-300 rounded-full animate-spin" />
-                Đang phân tích bài viết...
+                {ptext("Đang phân tích bài viết...")}
               </span>
             ) : isUploading ? (
               <span className="flex items-center gap-2 justify-center">
                 <span className="w-5 h-5 border-2 border-slate-400 border-t-emerald-300 rounded-full animate-spin" />
-                Đang tải ảnh lên server...
+                {ptext("Đang tải ảnh lên server...")}
               </span>
             ) : wUpload1.id && wUpload2.id ? (
-              "🔍 Phân tích trọn bộ Unit (Bài mẫu + Bài tập Self-Writing)"
+              ptext("🔍 Phân tích trọn bộ Unit (Bài mẫu + Bài tập Self-Writing)")
             ) : wUpload1.id ? (
-              "🔍 Phân tích bài mẫu (Trang 1)"
+              ptext("🔍 Phân tích bài mẫu (Trang 1)")
             ) : wUpload2.id ? (
-              "🔍 Phân tích bài tập (Trang 2)"
+              ptext("🔍 Phân tích bài tập (Trang 2)")
             ) : (
-              "Vui lòng chọn ảnh"
+              ptext("Vui lòng chọn ảnh")
             )}
           </button>
           {(!wUpload1.id || !wUpload2.id) && (wUpload1.id || wUpload2.id) && (
@@ -1630,12 +1667,12 @@ export default function Home() {
         {/* Error notification */}
         {wJob && <p role="status" className="mb-3 text-sm text-blue-200">{wJob.stage === "reconnecting" ? `Mất kết nối tạm thời. Đang tự nối lại, không cần gửi lại ảnh. Mã hỗ trợ: ${wJob.jobId}` : wJob.stage === "extract" ? "Đang đọc ảnh..." : `Đã xử lý ${wJob.progress?.completed || 0}/${wJob.progress?.total || 4} phần`}</p>}
         <WritingProgress job={wJob} />
-        {wRetry && !wLoading && <button onClick={() => analyzeWriting()} className="mb-3 rounded-lg bg-amber-600 px-4 py-2">Thử lại phần lỗi</button>}
+        {wRetry && !wLoading && <button onClick={() => analyzeWriting()} className="mb-3 rounded-lg bg-amber-600 px-4 py-2">{ptext("Thử lại phần lỗi")}</button>}
         <ErrorBanner message={wError} onDismiss={() => setWError(null)} />
         {writing && <Writing tourStep={writingTourStep} writing={writing} cachedModelDraft={wModelDraft} onModelDraft={setWModelDraft} SpeakBtn={SpeakBtn} CopyBtn={CopyBtn} />}
       </>}
 
-      <div hidden={mode !== "listening"}><ListeningHistory onSelect={entry=>{setListeningEntry(entry);setListeningSource(entry.source);}} /><div className="mb-4 flex gap-2 overflow-x-auto">{[["image","Ảnh bài nghe"],["audio","File audio"],["text","Văn bản"],["spotify","Spotify"]].map(([value,label])=><button key={value} onClick={()=>{document.querySelectorAll("audio").forEach(player=>player.pause());if(value==="text")setListeningEntry(null);setListeningSource(value);}} className={`min-h-11 shrink-0 min-w-[140px] flex-1 rounded-xl px-4 text-sm font-semibold ${listeningSource===value?"bg-teal-600 text-white":"bg-slate-800 text-slate-400"}`}>{label}</button>)}</div><div hidden={listeningSource!=="image"}><ListeningImage key={listeningEntry?.id||"current-image"} historyEntry={listeningEntry?.source==="image"?listeningEntry:null} onContextChange={setImageChatContext} clickableText={clickableText} /></div><div hidden={listeningSource!=="text"}><ListeningText historyEntry={listeningEntry?.source==="text"?listeningEntry:null} onContextChange={setTextChatContext} clickableText={clickableText} /></div><div hidden={listeningSource!=="spotify"}>{listeningSource==="spotify"&&<ListeningSpotify/>}</div><div hidden={listeningSource!=="audio"}><ListeningAudio key={listeningEntry?.id||"current-audio"} historyEntry={listeningEntry?.source==="audio"?listeningEntry:null} onContextChange={setAudioChatContext} clickableText={clickableText} /></div></div>
+      <div hidden={mode !== "listening"}><ListeningHistory onSelect={entry=>{setListeningEntry(entry);setListeningSource(entry.source);}} /><div className="mb-4 flex gap-2 overflow-x-auto">{[["image","Ảnh bài nghe"],["audio","File audio"],["text","Văn bản"],["spotify","Spotify"]].map(([value,label])=><button key={value} onClick={()=>{document.querySelectorAll("audio").forEach(player=>player.pause());if(value==="text")setListeningEntry(null);setListeningSource(value);}} className={`min-h-11 shrink-0 min-w-[140px] flex-1 rounded-xl px-4 text-sm font-semibold ${listeningSource===value?"bg-teal-600 text-white":"bg-slate-800 text-slate-400"}`}>{ptext(label)}</button>)}</div><div hidden={listeningSource!=="image"}><ListeningImage key={listeningEntry?.id||"current-image"} historyEntry={listeningEntry?.source==="image"?listeningEntry:null} onContextChange={setImageChatContext} clickableText={clickableText} /></div><div hidden={listeningSource!=="text"}><ListeningText historyEntry={listeningEntry?.source==="text"?listeningEntry:null} onContextChange={setTextChatContext} clickableText={clickableText} /></div><div hidden={listeningSource!=="spotify"}>{listeningSource==="spotify"&&<ListeningSpotify/>}</div><div hidden={listeningSource!=="audio"}><ListeningAudio key={listeningEntry?.id||"current-audio"} historyEntry={listeningEntry?.source==="audio"?listeningEntry:null} onContextChange={setAudioChatContext} clickableText={clickableText} /></div></div>
 
       {/* Lookup modal */}
       <LessonChat context={{ mode, ...(mode === "listening" ? {source:listeningSource} : {}), lesson: mode === "listening" ? (listeningSource === "text" ? textChatContext : listeningSource === "audio" ? audioChatContext : listeningSource === "image" ? imageChatContext : null) : mode === "grammar" ? grammar : mode === "writing" ? writing : words, practice: mode === "listening" ? null : mode === "grammar" ? gPractice : practice, translation: mode === "listening" ? null : quickResult, wordLookup: mode !== "listening" && lookup && !lookup.loading && !lookup.error ? lookup : null }} />
@@ -1646,12 +1683,11 @@ export default function Home() {
               <div data-testid="lookup-word-header" className="flex min-w-0 flex-wrap items-center gap-2">
                 <div className="break-words text-xl font-bold text-sky-300">{lookup.word}</div>
                 <CopyBtn text={lookup.word} />
-                <SpeakBtn text={lookup.word} title="Nghe từ" aria-label="Nghe từ" className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-base text-white hover:bg-emerald-500" />
               </div>
               <div className="flex shrink-0 items-center gap-1">
-                <button type="button" title="Ghi âm để luyện phát âm" aria-label={lookup.practice ? "Thu gọn luyện nói" : "Luyện nói"} aria-expanded={!!lookup.practice} aria-controls="word-pronunciation-practice" onClick={() => setLookup(current => ({ ...current, practice: !current.practice }))} className="inline-flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-violet-700/60 bg-violet-950/40 px-2.5 text-xs font-medium text-violet-200 hover:bg-violet-900/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400">
+                <button type="button" title={ptext("Ghi âm để luyện phát âm")} aria-label={lookup.practice ? ptext("Thu gọn luyện nói") : ptext("Luyện nói")} aria-expanded={!!lookup.practice} aria-controls="word-pronunciation-practice" onClick={() => setLookup(current => ({ ...current, practice: !current.practice }))} className="inline-flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-violet-700/60 bg-violet-950/40 px-2.5 text-xs font-medium text-violet-200 hover:bg-violet-900/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400">
                   <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 shrink-0"><path d="M6 9a6 6 0 0 1 12 0c0 3-1.5 4.3-3.3 5.7-1.2.9-1.4 2-1.8 3.2A3 3 0 0 1 7 17"/><path d="M9 9a3 3 0 0 1 6 0c0 1.6-1 2.3-2 3l-1 1"/><path d="M9 9v3"/></svg>
-                  <span>{lookup.practice ? "Thu gọn" : "Luyện nói"}</span>
+                  <span>{lookup.practice ? ptext("Thu gọn") : ptext("Luyện nói")}</span>
                 </button>
               <button onClick={() => setLookup(null)} className="rounded-lg px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-white" aria-label="Đóng">✕</button>
               </div>
@@ -1664,10 +1700,9 @@ export default function Home() {
               </div>
             )}
             {(lookup.partOfSpeech || lookup.dictionaryParts?.length > 0) && <div data-testid="lookup-word-class" className="mt-2 text-sm font-semibold text-amber-200">{lookup.partOfSpeech || lookup.dictionaryParts.join(' · ')}{!lookup.partOfSpeech && <small className="ml-2 font-normal text-slate-400">Từ loại trong từ điển</small>}</div>}
-            {lookup.pronunciation && <div data-testid="lookup-pronunciation" className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-violet-300"><span>🇬🇧 UK: {lookup.pronunciation.uk || "Chưa có"}</span><span>🇺🇸 US: {lookup.pronunciation.us || "Chưa có"}</span><small className="w-full text-xs text-slate-400">Nguồn: {lookup.pronunciation.source} · Phiên âm từ điển; có thể khác theo từ loại/ngữ cảnh.</small></div>}
+            <OxfordPronunciation key={lookup.word} word={lookup.word} pronunciation={lookup.pronunciation} ipa={lookup.ipa} />
             {lookup.practice && <div id="word-pronunciation-practice"><PronunciationRecorder key={lookup.word} word={lookup.word} ipa={lookup.pronunciation?.us || lookup.pronunciation?.uk || lookup.ipa || ""} lookup={lookup} /></div>}
-            {lookup.loading && !lookup.meaning ? <div className="mt-5 text-slate-400">Đang tra nghĩa tiếng Việt...</div> : lookup.error ? <div className="mt-4 text-red-300">{lookup.error}</div> : <>
-              {!lookup.pronunciation && <div className="mt-1 text-violet-300 italic">{lookup.ipa}</div>}
+            {lookup.loading && !lookup.meaning ? <div className="mt-5 text-slate-400">{ptext("Đang tra nghĩa…")}</div> : lookup.error ? <div className="mt-4 text-red-300">{lookup.error}</div> : <>
               {lookup.easyReading && <div className="mt-4 rounded-xl border border-sky-900 bg-sky-950/50 p-3 text-sm leading-relaxed text-sky-100"><span className="font-semibold text-sky-300">Dễ đọc: </span>{lookup.easyReading}</div>}
               <div data-testid="lookup-meaning" className="mt-4 text-lg font-medium text-white">{lookup.meaning}</div>
               {lookup.detailLoading && <div data-testid="lookup-detail-loading" className="mt-2 flex items-center gap-2 text-xs text-slate-400"><span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-slate-600 border-t-sky-300" />Đang bổ sung giải thích, ví dụ…</div>}

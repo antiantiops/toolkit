@@ -3,6 +3,7 @@ import { fetchWithRetry, parseApiResponse, formatErrorMessage } from "./fetch-he
 import { DEFAULT_WRITING_PROMPT } from "../lib/writing-prompt.mjs";
 import { useState, useEffect, useRef } from "react";
 import { bankParts } from "../lib/writing-bank.mjs";
+import { useLanguage } from "./LanguageContext";
 
 const COLORS = [
   ["border-sky-600", "bg-sky-950/40", "text-sky-300"],
@@ -26,6 +27,8 @@ const frame = (t = "") =>
   );
 
 export default function Writing({ tourStep, writing: w, cachedModelDraft, onModelDraft, SpeakBtn, CopyBtn }) {
+  const { targetLang } = useLanguage();
+  const { t = (text) => text } = useLanguage();
   const [customPrompt, setCustomPrompt] = useState(DEFAULT_WRITING_PROMPT);
   const [promptStatus, setPromptStatus] = useState("");
   const [savingPrompt, setSavingPrompt] = useState(false);
@@ -33,7 +36,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
   useEffect(() => {
     const controller = new AbortController();
     fetch("/api/writing-preferences", { signal: controller.signal }).then(async res => {
-      if (!res.ok) throw new Error("Không tải được prompt đã lưu");
+      if (!res.ok) throw new Error(t("Không tải được prompt đã lưu"));
       const data = await res.json();
       if (!controller.signal.aborted && !promptEdited.current) setCustomPrompt(data.customPrompt);
     }).catch(e => { if (!controller.signal.aborted) setPromptStatus(e.message); });
@@ -44,8 +47,8 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
     try {
       const res = await fetch("/api/writing-preferences", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ customPrompt }) });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Không lưu được prompt");
-      setPromptStatus("Đã lưu cho tài khoản của bạn");
+      if (!res.ok) throw new Error(data.error || t("Không lưu được prompt"));
+      setPromptStatus(t("Đã lưu cho tài khoản của bạn"));
     } catch(e) { setPromptStatus(e.message); }
     finally { setSavingPrompt(false); }
   };
@@ -72,7 +75,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
       return;
     }
 
-    const cacheKey = `${wordClean.toLowerCase()}::${fullSentence}`;
+    const cacheKey = `${targetLang || 'vi'}::${wordClean.toLowerCase()}::${fullSentence}`;
     if (viCache[cacheKey]) {
       setSelectedPhrase(viCache[cacheKey]);
       return;
@@ -82,26 +85,26 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
       vi: wordClean,
       en: "",
       loading: true,
-      contextUsage: "Đang tra cứu ngữ cảnh tiếng Anh..."
+      contextUsage: t("Đang tra cứu ngữ cảnh tiếng Anh...")
     });
 
     try {
       const res = await fetch("/api/writing-lookup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ word: wordClean, sentence: fullSentence, context: paraContext }),
+        body: JSON.stringify({ word: wordClean, sentence: fullSentence, context: paraContext, targetLang }),
       });
       const d = await res.json();
-      if (!res.ok) throw new Error(d.error || "Không tra được từ");
+      if (!res.ok) throw new Error(d.error || t("Không tra được từ"));
       const info = d.result;
       setViCache(prev => ({ ...prev, [cacheKey]: info }));
       setSelectedPhrase(info);
     } catch (e) {
       setSelectedPhrase({
         vi: wordClean,
-        en: "Chưa thể tra",
+        en: t("Chưa thể tra"),
         error: e.message,
-        contextUsage: "Lỗi kết nối hoặc AI không xử lý được."
+        contextUsage: t("Lỗi kết nối hoặc AI không xử lý được.")
       });
     }
   };
@@ -117,7 +120,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
       const res = await fetchWithRetry("/api/writing-model", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task, title: w.title, level, customPrompt }),
+        body: JSON.stringify({ task, title: w.title, level, customPrompt, targetLang }),
       }, 2, 1000);
       const d = await parseApiResponse(res);
       setModelDraft(d.modelDraft);
@@ -140,7 +143,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
   const task = isDual ? w.task || {} : isTask ? w.task || {} : {};
 
   const bankText = (text = "") => bankParts(text, task.wordBank || []).map((part, i) => part.matched
-    ? <mark key={i} data-writing-bank className="rounded bg-amber-300/20 px-0.5 font-semibold text-amber-200" title="Từ trong Word Bank">{part.text}</mark>
+    ? <mark key={i} data-writing-bank className="rounded bg-amber-300/20 px-0.5 font-semibold text-amber-200" title={t("Từ trong Word Bank")}>{part.text}</mark>
     : part.text);
   const bankFrame = (text = "") => text.split(/(\[[^\]]+\])/g).map((part, i) => /^\[[^\]]+\]$/.test(part)
     ? <mark key={i} className="rounded bg-amber-300/20 px-1 font-semibold text-amber-200">{part}</mark> : bankText(part));
@@ -149,21 +152,21 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
 
   const tabs = isDual
     ? [
-        ["sample", "📖 1. Bài mẫu"],
-        ["task", "📋 2. Đề bài & Word Bank"],
-        ["outline", "🧭 3. Dàn ý gợi ý"],
-        ["write", "✍️ 4. Viết & Chấm AI"],
+        ["sample", t("📖 1. Bài mẫu")],
+        ["task", t("📋 2. Đề bài & Word Bank")],
+        ["outline", t("🧭 3. Dàn ý gợi ý")],
+        ["write", t("✍️ 4. Viết & Chấm AI")],
       ]
     : isTask
     ? [
-        ["brief", "📋 Đề bài"],
-        ["map", "🧭 Dàn ý"],
-        ["write", "✍️ Viết & chấm"],
+        ["brief", t("📋 Đề bài")],
+        ["map", t("🧭 Dàn ý")],
+        ["write", t("✍️ Viết & chấm")],
       ]
     : [
-        ["map", "🗺️ Cấu trúc"],
-        ["phrases", "🧩 Câu mẫu"],
-        ["check", "✅ Tự viết & kiểm tra"],
+        ["map", t("🗺️ Cấu trúc")],
+        ["phrases", t("🧩 Câu mẫu")],
+        ["check", t("✅ Tự viết & kiểm tra")],
       ];
 
   const [reqDone, setReqDone] = useState({});
@@ -185,7 +188,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
       const res = await fetch("/api/writing-review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task: { ...task, title: w.title }, draft, level, customPrompt }),
+        body: JSON.stringify({ task: { ...task, title: w.title }, draft, level, customPrompt, targetLang }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Server error");
@@ -212,8 +215,8 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
         <p className="mt-1 text-sm text-emerald-100/70">{w.titleVietnamese}</p>
         {isDual && (
           <div className="mt-2 inline-flex items-center gap-1 rounded-full border border-emerald-600/50 bg-emerald-900/40 px-3 py-1 text-xs text-emerald-200">
-            <span>📑 Trọn bộ Unit:</span>
-            <span className="font-semibold text-white">Bài mẫu + Bài tập Self-Writing</span>
+            <span>{t("📑 Trọn bộ Unit:")}</span>
+            <span className="font-semibold text-white">{t("Bài mẫu + Bài tập Self-Writing")}</span>
           </div>
         )}
       </div>
@@ -221,7 +224,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
       {/* Goal (if any) */}
       {w.goal && (
         <div className="rounded-xl border border-emerald-800 bg-emerald-950/40 p-4 text-sm text-emerald-100">
-          <span className="font-semibold text-emerald-300">Mục tiêu: </span>
+          <span className="font-semibold text-emerald-300">{t("Mục tiêu: ")}</span>
           {w.goal}
         </div>
       )}
@@ -246,7 +249,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
         <div className="space-y-4">
           {sample.scenario && (
             <div className="rounded-xl border border-slate-700 bg-slate-900 p-4 text-sm">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Tình huống bài mẫu</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t("Tình huống bài mẫu")}</div>
               <div className="mt-1 text-slate-100 leading-relaxed">
                 {sample.scenario}
                 <SpeakBtn text={sample.scenario} className="ml-2 text-xs text-slate-400 hover:text-white" />
@@ -256,7 +259,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
           )}
 
           <p className="text-sm text-slate-400">
-            Mỗi khối màu là một phần của email mẫu. Bấm vào từng câu để xem nghĩa và lý do người bản xứ viết như vậy:
+            {t("Mỗi khối màu là một phần của email mẫu. Bấm vào từng câu để xem nghĩa và lý do người bản xứ viết như vậy:")}
           </p>
 
           {sections.map((s, si) => {
@@ -312,24 +315,22 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
 
           {fullText && (
             <div className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm text-slate-300">
-              <span>Toàn bộ bài mẫu (đã diễn đạt lại)</span>
+              <span>{t("Toàn bộ bài mẫu (đã diễn đạt lại)")}</span>
               <span className="flex items-center gap-1">
                 <CopyBtn text={fullText} />
                 <SpeakBtn
                   text={fullText.slice(0, 900)}
                   className="rounded-md bg-emerald-700 px-2 py-1 text-xs hover:bg-emerald-600"
-                >
-                  🔊 Nghe
-                </SpeakBtn>
+                >{t("🔊 Nghe")}</SpeakBtn>
               </span>
             </div>
           )}
 
           {sample.usefulPhrases?.length > 0 && (
             <div className="mt-6 space-y-3 pt-2">
-              <h3 className="text-base font-bold text-teal-300">🧩 Khung câu mẫu tái sử dụng</h3>
+              <h3 className="text-base font-bold text-teal-300">{t("🧩 Khung câu mẫu tái sử dụng")}</h3>
               <p className="text-sm text-slate-400">
-                Thay phần <mark className="rounded bg-amber-300/20 px-1 text-amber-200">[trong ngoặc]</mark> bằng thông tin của bạn.
+                {t("Thay phần")} <mark className="rounded bg-amber-300/20 px-1 text-amber-200">{t("[trong ngoặc]")}</mark> {t("bằng thông tin của bạn.")}
               </p>
               {sample.usefulPhrases.map((p, i) => (
                 <div key={i} className="rounded-xl border border-teal-800/70 bg-teal-950/40 p-4">
@@ -354,19 +355,19 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
       {isDual && view === "task" && (
         <div className="space-y-4">
           <div className="rounded-xl border border-amber-700 bg-amber-950/30 p-4 text-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-amber-300">Đề bài Self-Writing</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-amber-300">{t("Đề bài Self-Writing")}</div>
             <p className="mt-1 text-slate-100 leading-relaxed">
               {task.scenario}
               <SpeakBtn text={task.scenario || ""} className="ml-2 text-xs text-slate-400 hover:text-white" />
             </p>
             <p className="mt-1 italic text-slate-300 leading-relaxed">{task.scenarioVietnamese}</p>
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
-              {task.sender && <span className="rounded bg-slate-800 px-2 py-1 text-slate-200">Người viết: {task.sender}</span>}
-              {task.recipient && <span className="rounded bg-slate-800 px-2 py-1 text-slate-200">Người nhận: {task.recipient}</span>}
-              {task.format && <span className="rounded bg-slate-800 px-2 py-1 text-slate-200">Dạng bài: {task.format}</span>}
+              {task.sender && <span className="rounded bg-slate-800 px-2 py-1 text-slate-200">{t("Người viết: ")}{task.sender}</span>}
+              {task.recipient && <span className="rounded bg-slate-800 px-2 py-1 text-slate-200">{t("Người nhận: ")}{task.recipient}</span>}
+              {task.format && <span className="rounded bg-slate-800 px-2 py-1 text-slate-200">{t("Dạng bài: ")}{task.format}</span>}
               {task.minWords && (
                 <span className="rounded bg-amber-900/60 px-2 py-1 font-semibold text-amber-200">
-                  Tối thiểu {task.minWords} từ
+                  {t("Tối thiểu ")}{task.minWords}{t(" từ")}
                 </span>
               )}
             </div>
@@ -374,7 +375,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
 
           {task.strategy && (
             <div className="rounded-xl border border-emerald-700/80 bg-emerald-950/30 p-4 text-sm">
-              <div className="font-semibold text-emerald-300 mb-1">💡 Chiến lược làm bài</div>
+              <div className="font-semibold text-emerald-300 mb-1">{t("💡 Chiến lược làm bài")}</div>
               <p className="text-slate-200 leading-relaxed">{task.strategy}</p>
             </div>
           )}
@@ -382,7 +383,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
           {task.requirements?.length > 0 && (
             <div className="rounded-xl border border-slate-700 bg-slate-900 p-4">
               <div className="mb-2 font-semibold text-emerald-300">
-                Phải có trong bài ({task.requirements.filter((_, i) => reqDone[i]).length}/{task.requirements.length})
+                {t("Phải có trong bài")} ({task.requirements.filter((_, i) => reqDone[i]).length}/{task.requirements.length})
               </div>
               <div className="space-y-2">
                 {task.requirements.map((r, i) => (
@@ -405,9 +406,9 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
 
           {task.wordBank?.length > 0 && (
             <div className="rounded-xl border border-teal-800/70 bg-teal-950/30 p-4">
-              <div className="mb-2 font-semibold text-teal-300">Word Bank cho sẵn ({task.wordBank.length} từ)</div>
+              <div className="mb-2 font-semibold text-teal-300">{t("Word Bank cho sẵn")} ({task.wordBank.length} {t(" từ").trim()})</div>
               <p className="text-xs text-slate-400 mb-3">
-                Đề bài khuyến khích sử dụng các từ này trong bài viết:
+                {t("Đề bài khuyến khích sử dụng các từ này trong bài viết:")}
               </p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {task.wordBank.map((b, i) => (
@@ -439,8 +440,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
       {isDual && view === "outline" && (
         <div className="space-y-4">
           <p className="text-sm text-slate-400">
-            Dàn ý gợi ý chi tiết để viết bài Self-Writing dựa trên cấu trúc bài mẫu. Thay phần{" "}
-            <mark className="rounded bg-amber-300/20 px-1 text-amber-200">[trong ngoặc]</mark> để viết câu của bạn:
+            {t("Dàn ý gợi ý chi tiết để viết bài Self-Writing dựa trên cấu trúc bài mẫu. Thay phần")}{" "}<mark className="rounded bg-amber-300/20 px-1 text-amber-200">{t("[trong ngoặc]")}</mark> {t("để viết câu của bạn:")}
           </p>
           {/* Modal popup tra từ/cụm từ tiếng Việt sang tiếng Anh */}
           {selectedPhrase && (
@@ -455,7 +455,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
               >
                 <div className="flex items-start justify-between gap-3 border-b border-slate-800 pb-3">
                   <div>
-                    <span className="text-xs uppercase font-bold text-teal-400 tracking-wider">🇻🇳 Từ / Cụm từ tiếng Việt:</span>
+                    <span className="text-xs uppercase font-bold text-teal-400 tracking-wider">{t("🇻🇳 Từ / Cụm từ tiếng Việt:")}</span>
                     <h3 className="text-lg font-bold text-white mt-0.5">{selectedPhrase.vi}</h3>
                   </div>
                   <button
@@ -470,13 +470,13 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
                 {selectedPhrase.loading ? (
                   <div className="py-8 text-center space-y-3">
                     <span className="inline-block w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
-                    <p className="text-sm text-teal-300 font-medium">Đang dịch và phân tích ngữ cảnh tiếng Anh...</p>
+                    <p className="text-sm text-teal-300 font-medium">{t("Đang dịch và phân tích ngữ cảnh tiếng Anh...")}</p>
                   </div>
                 ) : (
                   <>
                     <div className="rounded-xl border border-teal-700/50 bg-teal-950/40 p-4 space-y-2">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-bold text-emerald-300 uppercase">🇬🇧 Tiếng Anh tương đương:</span>
+                        <span className="text-xs font-bold text-emerald-300 uppercase">{t("🇬🇧 Tiếng Anh tương đương:")}</span>
                         {selectedPhrase.partOfSpeech && (
                           <span className="text-xs rounded-full border border-teal-800 bg-teal-900/60 px-2 py-0.5 text-teal-200">
                             {selectedPhrase.partOfSpeech}
@@ -499,7 +499,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
                       )}
                       {selectedPhrase.easyReading && (
                         <div className="text-xs text-amber-200 bg-amber-950/40 border border-amber-800/60 rounded-lg p-2">
-                          🗣️ <b>Đọc dễ:</b> <i>{selectedPhrase.easyReading}</i>
+                          🗣️ <b>{t("Đọc dễ:")}</b> <i>{selectedPhrase.easyReading}</i>
                         </div>
                       )}
                     </div>
@@ -507,14 +507,14 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
                     <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4 space-y-2 text-sm">
                       <div className="text-xs font-bold text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
                         <span>📌</span>
-                        <span>Cách dùng trong ngữ cảnh đoạn văn:</span>
+                        <span>{t("Cách dùng trong ngữ cảnh đoạn văn:")}</span>
                       </div>
                       <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
                         {selectedPhrase.contextUsage}
                       </p>
                       {selectedPhrase.sentenceEn && (
                         <div className="mt-3 pt-3 border-t border-slate-800">
-                          <span className="text-xs font-semibold text-slate-400 block mb-1">Câu tiếng Anh mẫu hoàn chỉnh:</span>
+                          <span className="text-xs font-semibold text-slate-400 block mb-1">{t("Câu tiếng Anh mẫu hoàn chỉnh:")}</span>
                           <div className="flex items-start gap-2 bg-slate-900 rounded-lg p-2.5 border border-slate-800">
                             <span className="text-xs sm:text-sm text-emerald-200 italic flex-1">
                               "{selectedPhrase.sentenceEn}"
@@ -534,7 +534,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
                     onClick={() => setSelectedPhrase(null)}
                     className="rounded-xl bg-slate-800 hover:bg-slate-700 px-5 py-2 text-sm font-semibold text-white transition-colors"
                   >
-                    Đóng
+                    {t("Đóng")}
                   </button>
                 </div>
               </div>
@@ -573,38 +573,38 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
             <div className="flex flex-wrap items-center justify-between gap-3 mb-3 pb-3 border-b border-slate-800">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-teal-300 bg-teal-950/80 border border-teal-800 rounded px-2 py-0.5">
-                  🇻🇳 🇬🇧 Bài mẫu email đơn giản
+                  {t("🇻🇳 🇬🇧 Bài mẫu email đơn giản")}
                 </span>
                 <h3 className="text-base sm:text-lg font-bold text-white mt-1">
-                  Đoạn văn email tự nhiên (Bấm vào câu để tra chi tiết)
+                  {t("Đoạn văn email tự nhiên (Bấm vào câu để tra chi tiết)")}
                 </h3>
               </div>
-      <label className="flex items-center gap-3 text-sm text-slate-200">Trình độ viết (CEFR)
+      <label className="flex items-center gap-3 text-sm text-slate-200">{t("Trình độ viết (CEFR)")}
         <select value={level} disabled={loadingModel || reviewing} onChange={e => { setLevel(e.target.value); setModelDraft(null); onModelDraft?.(null); setReview(null); }} className="min-h-11 rounded-lg bg-slate-800 px-3 py-2">
           {["A1", "A2", "B1", "B2", "C1", "C2"].map(value => <option key={value} value={value}>{value}</option>)}
         </select>
       </label>
-      <p className="text-xs text-slate-400">Áp dụng cho bài mẫu AI và chấm/sửa bài bạn viết. Không thay đổi thư mẫu gốc.</p>
+      <p className="text-xs text-slate-400">{t("Áp dụng cho bài mẫu AI và chấm/sửa bài bạn viết. Không thay đổi thư mẫu gốc.")}</p>
       <section className="w-full overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-950/50" data-writing-custom-prompt>
-        <button type="button" aria-label={promptOpen ? "− Đóng tùy chỉnh prompt" : "+ Tùy chỉnh prompt"} aria-expanded={promptOpen} aria-controls="writing-custom-prompt" onClick={() => setPromptOpen(!promptOpen)} className="flex min-h-16 w-full items-center gap-3 p-4 text-left transition-colors hover:bg-slate-800/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-400">
+        <button type="button" aria-label={promptOpen ? t("− Đóng tùy chỉnh prompt") : t("+ Tùy chỉnh prompt")} aria-expanded={promptOpen} aria-controls="writing-custom-prompt" onClick={() => setPromptOpen(!promptOpen)} className="flex min-h-16 w-full items-center gap-3 p-4 text-left transition-colors hover:bg-slate-800/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-400">
           <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-400/10 text-xl text-teal-300">{promptOpen ? "−" : "+"}</span>
-          <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-100">Tùy chỉnh cách AI viết</span><span className="mt-0.5 block text-xs leading-relaxed text-slate-400">Chọn cách diễn đạt phù hợp với bạn</span></span>
+          <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-100">{t("Tùy chỉnh cách AI viết")}</span><span className="mt-0.5 block text-xs leading-relaxed text-slate-400">{t("Chọn cách diễn đạt phù hợp với bạn")}</span></span>
           <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`h-4 w-4 shrink-0 text-slate-400 transition-transform motion-reduce:transition-none ${promptOpen ? "rotate-180" : ""}`}><path d="m6 9 6 6 6-6" /></svg>
         </button>
         {promptOpen && <div id="writing-custom-prompt" className="space-y-3 border-t border-slate-800 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <label htmlFor="writing-prompt-text" className="text-sm font-medium text-slate-200">Yêu cầu của bạn</label>
-            <span className="rounded-full border border-teal-900 bg-teal-950/50 px-2.5 py-1 text-xs text-teal-200">CEFR đang chọn: {level}</span>
+            <label htmlFor="writing-prompt-text" className="text-sm font-medium text-slate-200">{t("Yêu cầu của bạn")}</label>
+            <span className="rounded-full border border-teal-900 bg-teal-950/50 px-2.5 py-1 text-xs text-teal-200">{t("CEFR đang chọn: ")}{level}</span>
           </div>
           <textarea id="writing-prompt-text" aria-describedby="writing-prompt-help" value={customPrompt} maxLength={4000} rows={8} disabled={loadingModel || reviewing} onChange={e => { promptEdited.current = true; setCustomPrompt(e.target.value); setPromptStatus(""); }} className="w-full resize-y rounded-xl border border-slate-700 bg-slate-900/70 p-3 text-sm leading-7 text-slate-100 outline-none transition-colors focus:border-teal-400 focus:ring-2 focus:ring-teal-400/10 disabled:opacity-60" />
-          <div className="flex items-start justify-between gap-3 text-xs text-slate-400"><p id="writing-prompt-help" className="leading-relaxed">Không ghi trình độ: dùng ô CEFR (mặc định A2). Có ghi trình độ trong prompt: ưu tiên prompt.</p><span className="shrink-0 tabular-nums">{customPrompt.length}/4000</span></div>
+          <div className="flex items-start justify-between gap-3 text-xs text-slate-400"><p id="writing-prompt-help" className="leading-relaxed">{t("Không ghi trình độ: dùng ô CEFR (mặc định A2). Có ghi trình độ trong prompt: ưu tiên prompt.")}</p><span className="shrink-0 tabular-nums">{customPrompt.length}/4000</span></div>
           <div className="flex flex-col-reverse gap-2 border-t border-slate-800 pt-3 sm:flex-row sm:items-center sm:justify-between">
-            <button type="button" disabled={loadingModel || reviewing} onClick={() => { promptEdited.current = true; setCustomPrompt(DEFAULT_WRITING_PROMPT); setPromptStatus("Bấm Lưu prompt để lưu bản mặc định"); }} className="min-h-11 rounded-xl px-3 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-white disabled:opacity-50">Khôi phục prompt mặc định</button>
-            <button type="button" disabled={loadingModel || reviewing} onClick={fetchModelDraft} className="min-h-11 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-500 disabled:opacity-50">{loadingModel ? "Đang tạo bài mẫu…" : "Áp dụng & tạo lại bài mẫu"}</button>
+            <button type="button" disabled={loadingModel || reviewing} onClick={() => { promptEdited.current = true; setCustomPrompt(DEFAULT_WRITING_PROMPT); setPromptStatus(t("Bấm Lưu prompt để lưu bản mặc định")); }} className="min-h-11 rounded-xl px-3 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-white disabled:opacity-50">{t("Khôi phục prompt mặc định")}</button>
+            <button type="button" disabled={loadingModel || reviewing} onClick={fetchModelDraft} className="min-h-11 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-500 disabled:opacity-50">{loadingModel ? t("Đang tạo bài mẫu…") : t("Áp dụng & tạo lại bài mẫu")}</button>
           </div>
-          <button type="button" disabled={savingPrompt || loadingModel || reviewing} onClick={savePrompt} className="min-h-11 w-full rounded-xl border border-teal-700 px-4 py-2 text-sm font-semibold text-teal-200 disabled:opacity-50">{savingPrompt ? "Đang lưu…" : "Lưu prompt cho tài khoản"}</button>
+          <button type="button" disabled={savingPrompt || loadingModel || reviewing} onClick={savePrompt} className="min-h-11 w-full rounded-xl border border-teal-700 px-4 py-2 text-sm font-semibold text-teal-200 disabled:opacity-50">{savingPrompt ? t("Đang lưu…") : t("Lưu prompt cho tài khoản")}</button>
           <p role="status" className="text-xs text-teal-200">{promptStatus}</p>
-          <p className="text-xs leading-relaxed text-slate-500">Lưu riêng theo tài khoản, dùng lại trên thiết bị khác. Sửa nội dung không tự gọi AI; bấm Lưu prompt để ghi nhớ.</p>
+          <p className="text-xs leading-relaxed text-slate-500">{t("Lưu riêng theo tài khoản, dùng lại trên thiết bị khác. Sửa nội dung không tự gọi AI; bấm Lưu prompt để ghi nhớ.")}</p>
         </div>}
       </section>
               <div className="flex flex-wrap items-center gap-2">
@@ -616,18 +616,14 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
                       className={`px-3 py-1 rounded-lg transition-colors ${
                         draftLang === "vi" ? "bg-teal-600 text-white shadow" : "text-slate-400 hover:text-white"
                       }`}
-                    >
-                      🇻🇳 Tiếng Việt
-                    </button>
+                    >{t("🇻🇳 Tiếng Việt")}</button>
                     <button
                       type="button"
                       onClick={() => setDraftLang("en")}
                       className={`px-3 py-1 rounded-lg transition-colors ${
                         draftLang === "en" ? "bg-teal-600 text-white shadow" : "text-slate-400 hover:text-white"
                       }`}
-                    >
-                      🇬🇧 English
-                    </button>
+                    >{t("🇬🇧 English")}</button>
                   </div>
                 )}
                 {!modelDraft && (
@@ -640,10 +636,10 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
                     {loadingModel ? (
                       <>
                         <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        <span>Đang soạn bài mẫu...</span>
+                        <span>{t("Đang soạn bài mẫu...")}</span>
                       </>
                     ) : (
-                      "✨ Tạo bài mẫu email"
+                      t("✨ Tạo bài mẫu email")
                     )}
                   </button>
                 )}
@@ -668,7 +664,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
                 >
                   <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                     <span className="text-xs uppercase font-bold text-teal-400 tracking-wider">
-                      🔍 Chi tiết đối chiếu câu & từ vựng
+                      {t("🔍 Chi tiết đối chiếu câu & từ vựng")}
                     </span>
                     <button
                       type="button"
@@ -682,7 +678,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
                   {/* Bản tiếng Anh */}
                   <div className="rounded-xl bg-slate-950/80 border border-slate-800 p-3.5 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">🇬🇧 Tiếng Anh:</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t("🇬🇧 Tiếng Anh:")}</span>
                       <div className="flex items-center gap-1">
                         <SpeakBtn text={selectedSentence.en} className="rounded-lg bg-teal-900/80 px-2.5 py-1 text-xs text-white hover:bg-teal-800" />
                         <CopyBtn text={selectedSentence.en} />
@@ -695,7 +691,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
 
                   {/* Bản dịch tiếng Việt */}
                   <div className="rounded-xl bg-slate-950/80 border border-slate-800 p-3.5 space-y-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400/90">🇻🇳 Nghĩa tiếng Việt:</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400/90">{t("🇻🇳 Nghĩa tiếng Việt:")}</span>
                     <p className="text-sm font-medium text-slate-200 leading-relaxed m-0">
                       {selectedSentence.vi}
                     </p>
@@ -705,7 +701,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
                   {(selectedSentence.phrases || []).length > 0 && (
                     <div className="rounded-xl bg-slate-950/80 border border-teal-900/60 p-3.5 space-y-2">
                       <span className="text-xs font-bold text-teal-300 uppercase tracking-wide block">
-                        🧩 Các cụm từ ăn điểm trong câu:
+                        {t("🧩 Các cụm từ ăn điểm trong câu:")}
                       </span>
                       <div className="space-y-2">
                         {selectedSentence.phrases.map((ph, phi) => (
@@ -730,7 +726,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
                       onClick={() => setSelectedSentence(null)}
                       className="w-full sm:w-auto rounded-xl bg-slate-800 hover:bg-slate-700 px-6 py-2.5 text-sm font-semibold text-white transition-colors"
                     >
-                      Đóng
+                      {t("Đóng")}
                     </button>
                   </div>
                 </div>
@@ -740,7 +736,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
             {modelDraft ? (
               <div className="space-y-4">
                 <p className="text-xs text-slate-300 italic mb-2">
-                  💡 Đoạn văn email liền mạch. Bấm vào <b className="text-teal-300">bất kỳ câu nào</b> để bật popup đối chiếu tiếng Anh - Việt và từ vựng.
+                  {t("💡 Đoạn văn email liền mạch. Bấm vào")} <b className="text-teal-300">{t("bất kỳ câu nào")}</b> {t("để bật popup đối chiếu tiếng Anh - Việt và từ vựng.")}
                 </p>
 
                 {(modelDraft.paragraphs || []).map((p, pi) => {
@@ -770,7 +766,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
                                 }
                               }}
                               className="inline cursor-pointer rounded px-1.5 py-0.5 transition-colors hover:bg-teal-900/60 hover:text-teal-200 underline decoration-teal-500/40 decoration-dotted underline-offset-4 focus:outline-none"
-                              title="Bấm để xem đối chiếu song ngữ"
+                              title={t("Bấm để xem đối chiếu song ngữ")}
                             >
                               {draftLang === "en" ? bankText(displayText) : displayText}{" "}
                             </span>
@@ -783,7 +779,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
               </div>
             ) : !loadingModel ? (
               <div className="text-center py-6 text-slate-400 text-xs sm:text-sm">
-                Bấm nút <b className="text-teal-300">"Tạo bài mẫu email"</b> để AI viết bài theo trình độ {level} dạng văn bản tự nhiên.
+                {t("Bấm nút")} <b className="text-teal-300">"{t("✨ Tạo bài mẫu email").replace("✨ ", "")}"</b> {t("để AI viết bài theo trình độ")} {level} {t("dạng văn bản tự nhiên.")}
               </div>
             ) : null}
           </div>
@@ -794,13 +790,13 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
         <div className="space-y-4">
           <div className="rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm text-slate-300">
             📌 {task.scenarioVietnamese}{" "}
-            {task.minWords ? <b className="text-amber-300">(yêu cầu tối thiểu {task.minWords} từ)</b> : null}
+            {task.minWords ? <b className="text-amber-300">({t("yêu cầu tối thiểu ")}{task.minWords}{t(" từ")})</b> : null}
           </div>
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={12}
-            placeholder="Viết bài email của bạn ở đây bằng tiếng Anh..."
+            placeholder={t("Viết bài email của bạn ở đây bằng tiếng Anh...")}
             className="w-full rounded-xl border border-slate-600 bg-slate-950 p-3 text-sm text-white outline-none focus:border-emerald-400 leading-relaxed"
           />
           <div>
@@ -811,7 +807,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
               </span>
               {task.minWords && (
                 <span className={words >= task.minWords ? "text-emerald-300 font-semibold" : "text-amber-300"}>
-                  {words >= task.minWords ? "✓ Đã đủ số từ yêu cầu" : `Còn thiếu ${task.minWords - words} từ`}
+                  {words >= task.minWords ? t("✓ Đã đủ số từ yêu cầu") : `${t("Còn thiếu ")}${task.minWords - words}${t(" từ")}`}
                 </span>
               )}
             </div>
@@ -829,7 +825,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
 
           {task.wordBank?.length > 0 && (
             <div>
-              <div className="text-xs text-slate-400 mb-1.5">Word Bank đã dùng:</div>
+              <div className="text-xs text-slate-400 mb-1.5">{t("Word Bank đã dùng:")}</div>
               <div className="flex flex-wrap gap-2">
                 {task.wordBank.map((b, i) => (
                   <span
@@ -856,10 +852,10 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
             {reviewing ? (
               <span className="flex items-center justify-center gap-2">
                 <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-400 border-t-emerald-300" />
-                AI đang phân tích và chấm bài...
+                {t("AI đang phân tích và chấm bài...")}
               </span>
             ) : (
-              "🤖 AI chấm bài & nhận xét"
+              t("🤖 AI chấm bài & nhận xét")
             )}
           </button>
 
@@ -876,13 +872,13 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
                 </div>
                 <p className="mt-2 text-sm text-emerald-100 leading-relaxed">{review.summary}</p>
                 <div className="mt-2 inline-flex items-center rounded bg-fuchsia-900/60 px-2 py-0.5 text-[10px] font-semibold text-fuchsia-200">
-                  🤖 AI chấm, dùng để học tập & tham khảo
+                  {t("🤖 AI chấm, dùng để học tập & tham khảo")}
                 </div>
               </div>
 
               {review.checks?.length > 0 && (
                 <div className="rounded-xl border border-slate-700 bg-slate-900 p-4 text-sm">
-                  <div className="mb-2 font-semibold text-slate-200">Đối chiếu yêu cầu đề bài:</div>
+                  <div className="mb-2 font-semibold text-slate-200">{t("Đối chiếu yêu cầu đề bài:")}</div>
                   <div className="space-y-1.5">
                     {review.checks.map((c, i) => (
                       <div key={i} className="text-slate-300">
@@ -896,7 +892,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
 
               {review.strengths?.length > 0 && (
                 <div className="rounded-xl border border-emerald-800 bg-emerald-950/30 p-4 text-sm text-emerald-100">
-                  <div className="mb-1 font-semibold text-emerald-300">Điểm tốt:</div>
+                  <div className="mb-1 font-semibold text-emerald-300">{t("Điểm tốt:")}</div>
                   <ul className="list-disc space-y-1 pl-5">
                     {review.strengths.map((x, i) => (
                       <li key={i}>{x}</li>
@@ -907,7 +903,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
 
               {review.issues?.length > 0 && (
                 <div className="space-y-2">
-                  <div className="font-semibold text-amber-300">Các điểm cần cải thiện:</div>
+                  <div className="font-semibold text-amber-300">{t("Các điểm cần cải thiện:")}</div>
                   {review.issues.map((x, i) => (
                     <div key={i} className="rounded-xl border border-amber-900/70 bg-slate-900 p-3 text-sm">
                       <div className="text-red-300 line-through decoration-red-500/60">{x.original}</div>
@@ -924,7 +920,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
               {review.improved && (
                 <div className="rounded-xl border border-purple-800 bg-purple-950/30 p-4 text-sm">
                   <div className="mb-2 flex items-center justify-between font-semibold text-purple-300">
-                    <span>Bản viết lại hoàn chỉnh (tham khảo):</span>
+                    <span>{t("Bản viết lại hoàn chỉnh (tham khảo):")}</span>
                     <span className="flex items-center gap-1">
                       <CopyBtn text={review.improved} />
                       <SpeakBtn
@@ -947,7 +943,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
       {isTask && view === "brief" && (
         <div className="space-y-4">
           <div className="rounded-xl border border-amber-700 bg-amber-950/30 p-4 text-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-amber-300">Đề bài</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-amber-300">{t("Đề bài")}</div>
             <p className="mt-1 text-slate-100">
               {task.scenario}
               <SpeakBtn text={task.scenario || ""} className="ml-2 text-xs text-slate-400 hover:text-white" />
@@ -989,7 +985,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
           )}
           {task.wordBank?.length > 0 && (
             <div className="rounded-xl border border-teal-800/70 bg-teal-950/30 p-4">
-              <div className="mb-2 font-semibold text-teal-300">Word bank (nên dùng)</div>
+              <div className="mb-2 font-semibold text-teal-300">{t("Word bank (nên dùng)")}</div>
               <div className="grid gap-2 sm:grid-cols-2">
                 {task.wordBank.map((b, i) => (
                   <div key={i} className="rounded-lg bg-slate-950/60 p-3 text-sm">
@@ -1018,7 +1014,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
       {isTask && view === "map" && (
         <div className="space-y-4">
           <p className="text-sm text-slate-400">
-            Dàn ý gợi ý cho bài của bạn. Câu có [ngoặc] chỉ là khung để bạn tự điền ý, không phải đáp án.
+            {t("Dàn ý gợi ý cho bài của bạn. Câu có [ngoặc] chỉ là khung để bạn tự điền ý, không phải đáp án.")}
           </p>
           {sections.map((s, si) => {
             const [bd, bg, tx] = COLORS[si % COLORS.length];
@@ -1057,7 +1053,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
       {isSample && view === "map" && (
         <div className="space-y-4">
           <p className="text-sm text-slate-400">
-            Mỗi khối màu là một phần của bài viết. Bấm vào từng câu để xem nghĩa và lý do viết như vậy.
+            {t("Mỗi khối màu là một phần của bài viết. Bấm vào từng câu để xem nghĩa và lý do viết như vậy.")}
           </p>
           {sections.map((s, si) => {
             const [bd, bg, tx] = COLORS[si % COLORS.length];
@@ -1127,7 +1123,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
       {isSample && view === "phrases" && (
         <div className="space-y-3">
           <p className="text-sm text-slate-400">
-            Khung câu dùng lại được. Thay phần <mark className="rounded bg-amber-300/20 px-1 text-amber-200">[trong ngoặc]</mark> bằng thông tin của bạn.
+            {t("Khung câu dùng lại được. Thay phần")} <mark className="rounded bg-amber-300/20 px-1 text-amber-200">{t("[trong ngoặc]")}</mark> {t("bằng thông tin của bạn.")}
           </p>
           {(w.usefulPhrases || []).map((p, i) => (
             <div key={i} className="rounded-xl border border-teal-800/70 bg-teal-950/40 p-4">
@@ -1150,7 +1146,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
         <div className="space-y-5">
           {w.yourTurn?.scenario && (
             <div className="rounded-xl border border-purple-800 bg-purple-950/30 p-4 text-sm">
-              <div className="font-semibold text-purple-300">✍️ Đến lượt bạn</div>
+              <div className="font-semibold text-purple-300">{t("✍️ Đến lượt bạn")}</div>
               <p className="mt-1 text-slate-200">{w.yourTurn.scenario}</p>
             </div>
           )}
@@ -1158,7 +1154,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={8}
-            placeholder="Viết bài của bạn ở đây, rồi tick checklist bên dưới..."
+            placeholder={t("Viết bài của bạn ở đây, rồi tick checklist bên dưới...")}
             className="w-full rounded-xl border border-slate-600 bg-slate-950 p-3 text-sm text-white outline-none focus:border-emerald-400"
           />
           <div className="text-right text-xs text-slate-500">
@@ -1166,7 +1162,7 @@ export default function Writing({ tourStep, writing: w, cachedModelDraft, onMode
           </div>
           <div className="rounded-xl border border-slate-700 bg-slate-900 p-4">
             <div className="mb-2 flex items-center justify-between">
-              <span className="font-semibold text-emerald-300">Checklist trước khi nộp</span>
+              <span className="font-semibold text-emerald-300">{t("Checklist trước khi nộp")}</span>
               <span className="text-sm text-slate-400">
                 {done}/{(w.checklist || []).length}
               </span>

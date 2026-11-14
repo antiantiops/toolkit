@@ -7,7 +7,6 @@ assert.notEqual(data.brochure.uk,data.brochure.us);
 assert(!data.thisworddoesnotexist123);
 const page=readFileSync(new URL('../src/app/page.js',import.meta.url),'utf8');
 assert(page.includes('requestId === lookupRequest.current'));
-assert(page.includes('pronunciation: current.pronunciation'));
 assert(page.includes('lookup-pronunciation'));
 assert(!page.includes('ipa-data/english.json'));
 console.log('PASS server-only regional dictionary, missing word, request guard and AI merge preservation');

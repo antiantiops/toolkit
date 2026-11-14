@@ -7,6 +7,7 @@ import { getUploadedFile } from '../../app/api/upload/storage';
 import { saveSession } from '../../app/api/session/storage';
 import { callJson } from './ai.js';
 import { runLesson } from './pipeline.js';
+import { normalizeTargetLang, DEFAULT_LANGUAGE } from './language.mjs';
 const jobs = globalThis.lessonJobs ||= new Map();
 const reply = (data, status = 200) => NextResponse.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 export function lessonRoutes(mode) {
@@ -15,7 +16,16 @@ export function lessonRoutes(mode) {
     after(async () => {
       await runLesson(job, callJson);
       if (job.status === 'completed') for(const entry of lessonSpeech(job.result)) {try{saveSpeech(job.owner,entry.text,entry.segments);}catch{console.error('[speech-cache] write failed');}}
-      if (job.status === 'completed') saveSession(job.owner, { [mode]: job.result, ...mode === 'writing' ? { wPreview1: job.images[0], wPreview2: job.images[1] || null, modelDraft: null } : { gPreview: job.images[0] } });
+      if (job.status === 'completed') {
+        const sessionPayload = {
+          [mode]: job.result,
+          [`${mode}TargetLang`]: job.targetLang || DEFAULT_LANGUAGE,
+          ...mode === 'writing'
+            ? { wPreview1: job.images[0], wPreview2: job.images[1] || null, modelDraft: null, modelDraftTargetLang: job.targetLang || DEFAULT_LANGUAGE }
+            : { gPreview: job.images[0] }
+        };
+        saveSession(job.owner, sessionPayload);
+      }
     });
   };
   return {
@@ -29,17 +39,25 @@ export function lessonRoutes(mode) {
       if (body.retry === true) {
         job = jobs.get(body.jobId);
         if (!job || job.owner !== owner || job.mode !== mode) return reply({ error: 'Job not found' }, 404);
+        if (body.targetLang !== undefined) {
+          const requestedLang = normalizeTargetLang(body.targetLang);
+          if (!requestedLang || requestedLang !== (job.targetLang || DEFAULT_LANGUAGE)) {
+            return reply({ error: 'Invalid or differing targetLang for retry' }, 400);
+          }
+        }
         if (!['running','completed'].includes(job.status)) schedule(job);
       } else {
+        const targetLang = normalizeTargetLang(body.targetLang);
+        if (!targetLang) return reply({ error: 'Invalid targetLang' }, 400);
         const ids = mode === 'grammar' ? [body.imageId] : [body.image1Id, body.image2Id].filter(Boolean);
         if (!ids.length || ids.some(id => typeof id !== 'string' || !/^[a-f0-9-]{36}\.[a-z0-9]{1,10}$/.test(id))) return reply({ error: 'Invalid image IDs' }, 400);
-        const key = JSON.stringify(ids);
+        const key = targetLang === DEFAULT_LANGUAGE ? JSON.stringify(ids) : JSON.stringify({ ids, targetLang });
         job = [...jobs.values()].find(j => j.owner === owner && j.mode === mode && j.key === key);
         if (!job) {
           if ([...jobs.values()].some(j => j.status === 'running')) return reply({ error: 'AI đang xử lý bài khác. Thử lại sau.' }, 429);
           const items = ids.map(getUploadedFile);
           if (items.some(x => !x)) return reply({ error: 'Ảnh hết hạn hoặc không tồn tại' }, 400);
-          job = { id: randomUUID(), mode, owner, key, createdAt: Date.now(), status: 'running', stage: 'extract', result: {}, images: items.map(x => `data:${x.mime};base64,${x.buffer.toString('base64')}`) };
+          job = { id: randomUUID(), mode, owner, key, targetLang, createdAt: Date.now(), status: 'running', stage: 'extract', result: {}, images: items.map(x => `data:${x.mime};base64,${x.buffer.toString('base64')}`) };
           jobs.set(job.id, job); schedule(job);
         }
       }

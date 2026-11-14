@@ -13,3 +13,8 @@ assert(source.includes('setManual(true)'));
 assert(source.includes('readOnly value={text}'));
 assert(source.includes('Không tạo bài tập dịch câu Việt -> Anh'));
 console.log('chat prompt checks passed');
+
+const policy = readFileSync(new URL('../src/app/api/chat/generate.js', import.meta.url), 'utf8');
+assert(source.includes('Viết prompt bằng tiếng Việt'));
+assert(policy.includes('Write exported prompt headings, role, instructions, lesson explanations, grading rules and feedback guidance in Vietnamese'));
+assert(policy.includes('Only English examples and exercise content remain in English'));
