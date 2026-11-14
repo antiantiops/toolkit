@@ -98,6 +98,24 @@ try {
     assert.ok(connMetrics.width >= 50, `Connector width (${connMetrics.width}) >= 50px`);
     assert.equal(connMetrics.opacity, 1, 'Connector opacity is 1');
 
+    const gapMetrics = await page.evaluate(() => {
+      const qr = document.querySelector('.join-qr-card');
+      const bridge = document.querySelector('.join-gap-connector');
+      const timeline = document.querySelector('.join-timeline');
+      const canvas = document.querySelector('.deck-canvas');
+      const scale = canvas ? (canvas.getBoundingClientRect().width / 1280) : 1;
+      const qrRect = qr.getBoundingClientRect();
+      const bridgeRect = bridge.getBoundingClientRect();
+      const timelineRect = timeline.getBoundingClientRect();
+      return {
+        qrToBridge: (bridgeRect.left - qrRect.right) / scale,
+        bridgeToTimeline: (timelineRect.left - bridgeRect.right) / scale
+      };
+    });
+    assert.ok(gapMetrics.qrToBridge >= 16 && gapMetrics.qrToBridge <= 24, `qrToBridge (${gapMetrics.qrToBridge}) in 16..24px`);
+    assert.ok(gapMetrics.bridgeToTimeline >= 16 && gapMetrics.bridgeToTimeline <= 24, `bridgeToTimeline (${gapMetrics.bridgeToTimeline}) in 16..24px`);
+    assert.ok(Math.abs(gapMetrics.qrToBridge - gapMetrics.bridgeToTimeline) <= 2, `gap diff (${Math.abs(gapMetrics.qrToBridge - gapMetrics.bridgeToTimeline)}) <= 2px`);
+
     // Safe margins assertion: main left/right content bounds >=40px horizontally and >=32px vertically from slide edges in unscaled canvas
     const insets = await page.evaluate(() => {
       const slide = document.querySelector('.join-slide');

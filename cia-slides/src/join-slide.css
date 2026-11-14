@@ -242,6 +242,7 @@
   min-width: 140px;
   width: auto;
   height: 96px;
+  margin-left: calc(196px - 320px);
   pointer-events: none;
   z-index: 1;
 }
