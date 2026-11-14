@@ -116,7 +116,7 @@ try {
     assert.ok(gapMetrics.bridgeToTimeline >= 16 && gapMetrics.bridgeToTimeline <= 24, `bridgeToTimeline (${gapMetrics.bridgeToTimeline}) in 16..24px`);
     assert.ok(Math.abs(gapMetrics.qrToBridge - gapMetrics.bridgeToTimeline) <= 2, `gap diff (${Math.abs(gapMetrics.qrToBridge - gapMetrics.bridgeToTimeline)}) <= 2px`);
 
-    // Safe margins assertion: main left/right content bounds >=40px horizontally and >=32px vertically from slide edges in unscaled canvas
+    // Safe margins assertion: main left/right content bounds centered (~120px horizontally) and >=32px vertically from slide edges in unscaled canvas
     const insets = await page.evaluate(() => {
       const slide = document.querySelector('.join-slide');
       const left = document.querySelector('.join-left');
@@ -136,8 +136,9 @@ try {
         rightInsetBottom: (sRect.bottom - rRect.bottom) / scale
       };
     });
-    assert.ok(insets.leftInsetH >= 40, `leftInsetH (${insets.leftInsetH}) >= 40`);
-    assert.ok(insets.rightInsetH >= 40, `rightInsetH (${insets.rightInsetH}) >= 40`);
+    assert.ok(insets.leftInsetH >= 118 && insets.leftInsetH <= 123, `leftInsetH (${insets.leftInsetH}) in 118..123`);
+    assert.ok(insets.rightInsetH >= 118 && insets.rightInsetH <= 123, `rightInsetH (${insets.rightInsetH}) in 118..123`);
+    assert.ok(Math.abs(insets.leftInsetH - insets.rightInsetH) <= 2, `horizontal inset diff (${Math.abs(insets.leftInsetH - insets.rightInsetH)}) <= 2`);
     assert.ok(insets.leftInsetTop >= 32, `leftInsetTop (${insets.leftInsetTop}) >= 32`);
     assert.ok(insets.leftInsetBottom >= 32, `leftInsetBottom (${insets.leftInsetBottom}) >= 32`);
     assert.ok(insets.rightInsetTop >= 32, `rightInsetTop (${insets.rightInsetTop}) >= 32`);
