@@ -317,3 +317,25 @@ html.deck-bento-morph::view-transition-new(english-app-preview){height:100%;anim
 .bento-listening .listening-model-play{transition:box-shadow .4s}
 .bento-listening .listening-model-play.is-playing{box-shadow:0 5px 0 #065c55,0 0 0 5px rgba(8,127,118,.22),0 10px 16px rgba(8,127,118,.38)}
 @media(prefers-reduced-motion:reduce){.bento-listening .listening-model-track,.bento-listening .listening-model-progress i{transition:none}}
+
+/* Bento Tile Spotlight (Slide 11) */
+.english-bento{position:relative;isolation:isolate}
+.english-bento .bento-heading{position:relative;z-index:1;transition:opacity 350ms ease}
+.english-bento.has-spotlight .bento-heading{opacity:.25;pointer-events:none}
+.bento-grid{position:static;transform:none}
+.bento-tile{cursor:pointer;position:relative;z-index:2}
+.english-bento.has-spotlight .bento-tile:not(.bento-spotlight-active):not(.bento-spotlight-closing){opacity:.25;pointer-events:none;transition:opacity 350ms ease,filter 350ms ease}
+.bento-tile.bento-spotlight-active{cursor:default;z-index:50!important;box-shadow:0 25px 65px -10px rgba(0,0,0,.65),0 0 0 2px rgba(255,255,255,.5)!important;transition:transform 380ms cubic-bezier(.16,1,.3,1),box-shadow 380ms ease,opacity 380ms ease}
+.bento-tile.bento-spotlight-closing{cursor:default;z-index:50!important;transition:transform 350ms cubic-bezier(.2,.8,.25,1),box-shadow 350ms ease,opacity 350ms ease}
+.bento-spotlight-backdrop{position:absolute;inset:-200vmax;background:rgba(11,15,29,.78);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:40;opacity:1;transition:opacity 350ms ease-out}
+.bento-spotlight-backdrop.is-closing{opacity:0;pointer-events:none}
+.bento-spotlight-btn{position:absolute;top:12px;right:12px;width:28px;height:28px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);color:inherit;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity 200ms ease,background 200ms ease,transform 200ms ease;z-index:10;padding:0}
+.bento-hero .bento-spotlight-btn,.bento-chat .bento-spotlight-btn{background:rgba(255,255,255,.2);color:#fff;border-color:rgba(255,255,255,.35)}
+.bento-listening .bento-spotlight-btn,.bento-words .bento-spotlight-btn,.bento-writing .bento-spotlight-btn,.bento-vocabulary .bento-spotlight-btn{background:rgba(15,23,42,.08);color:#1e293b;border-color:rgba(15,23,42,.15)}
+.bento-tile:hover .bento-spotlight-btn,.bento-spotlight-btn:focus-visible{opacity:1}
+.bento-spotlight-btn:hover{transform:scale(1.08)}
+.bento-spotlight-active .bento-spotlight-btn,.bento-spotlight-closing .bento-spotlight-btn{display:none!important}
+.bento-spotlight-close{position:absolute;top:12px;right:14px;width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(15,23,42,.85);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:60;box-shadow:0 4px 18px rgba(0,0,0,.45);transition:transform 200ms ease,background 200ms ease}
+.bento-spotlight-close:hover{background:rgba(30,41,59,.95);transform:scale(1.08)}
+@media(prefers-reduced-motion:reduce){.bento-tile.bento-spotlight-active,.bento-tile.bento-spotlight-closing,.bento-spotlight-backdrop{transition:none!important}}
+
