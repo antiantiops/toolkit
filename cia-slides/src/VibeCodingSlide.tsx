@@ -119,21 +119,21 @@ export function VibeCodingSlide({english=false}:{english?:boolean}){
   sched(()=>setIntroLeaving(true),6000);
   sched(()=>{ setStage('chat-human'); setStageIndex(1); },6400);
   sched(()=>{ setStage('chat-ai'); setStageIndex(2); },11400);
-  sched(()=>setChatRobotLeaving(true),13600);
+  sched(()=>setChatRobotLeaving(true),13200);
   sched(()=>{
    setStage('coding');
    setStageIndex(3);
-   CODE_LINES.forEach((l,i)=>sched(()=>setCodeLines(p=>[...p,l]),i*420+200));
-   TERMINAL_LOGS.forEach((tl,idx)=>sched(()=>setTerminalLines(p=>[...p,tl]),CODE_LINES.length*420+300+idx*400));
-  },14400);
-  sched(()=>setDeployReady(true),20000);
-  sched(()=>setShowMouse(true),20600);
+   CODE_LINES.forEach((l,i)=>sched(()=>setCodeLines(p=>[...p,l]),i*420+300));
+   TERMINAL_LOGS.forEach((tl,idx)=>sched(()=>setTerminalLines(p=>[...p,tl]),CODE_LINES.length*420+400+idx*400));
+  },15000);
+  sched(()=>setDeployReady(true),20600);
+  sched(()=>setShowMouse(true),21200);
   sched(()=>{
    setMouseClicking(true);
    setMouseRipple(true);
    setDeployClicked(true);
-  },21600);
-  sched(()=>{ setStage('result'); setStageIndex(4); },22200);
+  },22200);
+  sched(()=>{ setStage('result'); setStageIndex(4); },22800);
  };
 
  const reveal=(v:boolean)=>{
@@ -204,11 +204,11 @@ export function VibeCodingSlide({english=false}:{english?:boolean}){
           <div className="vibe-vscode-window">
            <div className="vibe-vscode-titlebar">
             <div className="vibe-window-dots" aria-hidden="true"><span className="vibe-wdot dot-red"/><span className="vibe-wdot dot-yellow"/><span className="vibe-wdot dot-green"/></div>
+            <div className="vibe-vscode-robot is-entering" aria-hidden="true" title="AI working"><RobotHead state="working" size={24} interactive={false} color="#a78bfa"/></div>
             <div className="vibe-vscode-tabs">
              <div className="vibe-vscode-tab active"><span className="tab-icon ts">TSX</span> App.tsx</div>
              <div className="vibe-vscode-tab"><span className="tab-icon css">#</span> styles.css</div>
             </div>
-            <div className="vibe-vscode-robot is-entering" aria-hidden="true" title="AI working"><RobotHead state="working" size={28} interactive={false} color="#a78bfa"/></div>
            </div>
            <div className="vibe-vscode-body">
             <div className="vibe-editor-pane">
