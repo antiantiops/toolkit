@@ -1,5 +1,7 @@
 import { writingPreferences } from "../../../lib/writing-prompt.mjs";
 import { NextResponse } from "next/server";
+import { normalizeTargetLang, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from "../../../lib/lookup/languages.mjs";
+import { languageInstruction } from "../../../lib/lessons/language.mjs";
 
 const NINEROUTER_URL = process.env.NINEROUTER_URL || "http://192.168.101.36:20128";
 const NINEROUTER_KEY = process.env.NINEROUTER_KEY || "";
@@ -7,7 +9,10 @@ const MODEL = process.env.NINEROUTER_MODEL || "ag/gemini-3.8-flash-high";
 
 export async function POST(request) {
   try {
-    const { task, draft, level = "A2", customPrompt } = await request.json();
+    const body = await request.json();
+    const { task, draft, level = "A2", customPrompt, targetLang: rawTargetLang } = body;
+    const targetLang = normalizeTargetLang(rawTargetLang);
+    if (!targetLang) return NextResponse.json({ error: "Invalid targetLang" }, { status: 400 });
     if (!["A1", "A2", "B1", "B2", "C1", "C2"].includes(level)) return NextResponse.json({ error: "Trình độ CEFR không hợp lệ" }, { status: 400 });
     let preferences;
     try { preferences = writingPreferences(customPrompt, level); } catch (e) { return NextResponse.json({ error: e.message }, { status: 400 }); }
@@ -30,7 +35,7 @@ Return ONLY valid JSON, no markdown. All explanations in Vietnamese; English onl
   "wordBankUsed": ["từ trong word bank học viên đã dùng"],
   "improved": "Bản viết lại hoàn chỉnh, giữ ý học viên, sửa lỗi, đủ yêu cầu của đề"
 }
-Max 8 issues, most important first. Be honest: do not inflate the score.`;
+Max 8 issues, most important first. Be honest: do not inflate the score.${targetLang !== DEFAULT_LANGUAGE ? languageInstruction(targetLang) : ''}`;
 
     const headers = { "Content-Type": "application/json" };
     if (NINEROUTER_KEY) headers.Authorization = `Bearer ${NINEROUTER_KEY}`;

@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { normalizeTargetLang, DEFAULT_LANGUAGE } from "../../../lib/lookup/languages.mjs";
+import { languageInstruction } from "../../../lib/lessons/language.mjs";
 
 const URL = process.env.NINEROUTER_URL || "http://192.168.101.36:20128";
 const KEY = process.env.NINEROUTER_KEY || "";
@@ -6,11 +8,13 @@ const MODEL = process.env.NINEROUTER_MODEL || "ag/gemini-3.8-flash-high";
 
 export async function POST(request) {
   try {
-    const { grammar } = await request.json();
+    const { grammar, targetLang: rawTargetLang } = await request.json();
+    const targetLang = normalizeTargetLang(rawTargetLang);
+    if (!targetLang) return NextResponse.json({ error: "Invalid targetLang" }, { status: 400 });
     if (!grammar?.rules?.length) return NextResponse.json({ error: "Cần grammar data" }, { status: 400 });
     const headers = { "Content-Type": "application/json" };
     if (KEY) headers.Authorization = "Bearer " + KEY;
-    const prompt = `Create a grammar practice test based on this grammar topic:
+    const basePrompt = `Create a grammar practice test based on this grammar topic:
 Title: ${grammar.title}
 Rules: ${JSON.stringify(grammar.rules.map(r => ({ rule: r.rule, ruleVietnamese: r.ruleVietnamese })))}
 
@@ -21,6 +25,10 @@ Create exactly 2 exercise types:
 Return ONLY JSON:
 {"rewrite":[{"input":"It rains. I stay home.","instruction":"Viết lại câu dùng If...will...","answer":"If it rains, I will stay home."}],"choose":[{"sentence":"If she ____ hard, she will pass the exam.","options":["A. study","B. studies","C. studied","D. will study"],"answer":"B","explanation":"Mệnh đề If dùng present simple → studies."}]}
 No markdown.`;
+    const prompt = targetLang === DEFAULT_LANGUAGE
+      ? basePrompt
+      : `${basePrompt}${languageInstruction(targetLang)}
+- Ensure exercise sentences, options, and answers remain in English; explanations and instructions can be in the target language.`;
     const res = await fetch(`${URL}/v1/chat/completions`, { method: "POST", headers, body: JSON.stringify({ model: MODEL, stream: false, temperature: 0.35, max_tokens: 2000, messages: [{ role: "user", content: prompt }] }) });
     if (!res.ok) return NextResponse.json({ error: `9router error: ${res.status}` }, { status: 502 });
     const data = await res.json();

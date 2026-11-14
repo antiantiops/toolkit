@@ -6,6 +6,7 @@ import { getUploadedFile } from '../upload/storage';
 import { callJsonArray } from '../../../lib/vocabulary/ai';
 import { runPipeline, progress } from '../../../lib/vocabulary/pipeline';
 import { pronunciation } from '../../../lib/lookup/pronunciation';
+import { normalizeTargetLang, DEFAULT_LANGUAGE } from '../../../lib/lookup/languages.mjs';
 
 // ponytail: process-local jobs, single standalone server. Durable queue required before replicas/restart recovery.
 const jobs = globalThis.vocabAnalysisJobs ||= new Map();
@@ -25,7 +26,13 @@ function schedule(job) {
     const item = getUploadedFile(job.imageId);
     if (!item) { job.status = 'failed'; job.error = 'Ảnh đã hết hạn trên server'; return; }
     const image = `data:${item.mime};base64,${item.buffer.toString('base64')}`;
-    await runPipeline(job, { call: callJsonArray, image, persist: words => saveSession(job.owner, { words: enrichWords(words), preview: image }) });
+    const targetLang = job.targetLang || DEFAULT_LANGUAGE;
+    const sessionPayload = {
+      words: enrichWords(job.words),
+      preview: image,
+      wordsTargetLang: targetLang
+    };
+    await runPipeline(job, { call: callJsonArray, image, persist: words => saveSession(job.owner, { ...sessionPayload, words: enrichWords(words) }) });
     console.info('[vocab-job]', JSON.stringify({ jobId: job.id, status: job.status, ...progress(job) }));
   });
 }
@@ -39,14 +46,22 @@ export async function POST(request) {
   if (body.retry === true) {
     job = jobs.get(body.jobId);
     if (!job || job.owner !== owner) return response({ error: 'Tác vụ không tồn tại' }, 404);
+    if (body.targetLang !== undefined) {
+      const requestedLang = normalizeTargetLang(body.targetLang);
+      if (!requestedLang || requestedLang !== (job.targetLang || DEFAULT_LANGUAGE)) {
+        return response({ error: 'Invalid or differing targetLang for retry' }, 400);
+      }
+    }
     if (job.status !== 'running' && job.status !== 'completed') schedule(job);
   } else {
+    const targetLang = normalizeTargetLang(body.targetLang);
+    if (!targetLang) return response({ error: 'Invalid targetLang' }, 400);
     if (typeof body.imageId !== 'string' || !/^[a-f0-9-]{36}\.[a-z0-9]{1,10}$/.test(body.imageId)) return response({ error: 'Invalid imageId' }, 400);
-    job = [...jobs.values()].find(j => j.owner === owner && j.imageId === body.imageId);
+    job = [...jobs.values()].find(j => j.owner === owner && j.imageId === body.imageId && (j.targetLang || DEFAULT_LANGUAGE) === targetLang);
     if (!job) {
       if ([...jobs.values()].some(j => j.status === 'running')) return response({ error: 'AI đang xử lý bài khác. Thử lại khi bài đó hoàn tất.' }, 429);
       if (!getUploadedFile(body.imageId)) return response({ error: 'Ảnh không tồn tại hoặc hết hạn' }, 400);
-      job = { id: randomUUID(), owner, imageId: body.imageId, status: 'running', stage: 'extract', createdAt: Date.now(), entries: [], words: [], batches: [] };
+      job = { id: randomUUID(), owner, imageId: body.imageId, targetLang, status: 'running', stage: 'extract', createdAt: Date.now(), entries: [], words: [], batches: [] };
       jobs.set(job.id, job);
       schedule(job);
     }

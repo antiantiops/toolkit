@@ -2,16 +2,24 @@ import { cacheOwner } from './owner';
 import { NextResponse } from "next/server";
 import { loadSession, deleteSession } from "./storage";
 import { pronunciation } from '../../../lib/lookup/pronunciation';
+import { normalizeTargetLang } from '../../../lib/lookup/languages.mjs';
+
+const VALID_DELETE_TYPES = new Set(['vocab', 'grammar', 'writing', 'listening']);
 
 export async function GET(request) {
- if (!cacheOwner(request)) return NextResponse.json({error:"Cần đăng nhập qua Kong"},{status:401});
+  const headers = { 'Cache-Control': 'private, no-store' };
+  if (!cacheOwner(request)) return NextResponse.json({ error: "Cần đăng nhập qua Kong" }, { status: 401, headers });
   const sid = cacheOwner(request);
-  if (!sid) return NextResponse.json({ session: null });
-  const data = loadSession(sid);
+  if (!sid) return NextResponse.json({ session: null }, { headers });
+
   const query = new URL(request.url).searchParams;
+  const rawTargetLang = query.get('targetLang');
+  const targetLang = normalizeTargetLang(rawTargetLang);
+  if (!targetLang) return NextResponse.json({ error: 'Invalid targetLang' }, { status: 400, headers });
+
+  const data = loadSession(sid, targetLang);
   const type = query.get('type');
   const fields = { vocab: ['words'], grammar: ['grammar'], writing: ['writing', 'modelDraft'], listening: ['listening'], previews: ['preview', 'gPreview', 'wPreview1', 'wPreview2', 'lPreview'] };
-  const headers = { 'Cache-Control': 'private, no-store' };
   if (type === 'manifest') return NextResponse.json({ available: { vocab: !!data?.words?.length, grammar: !!data?.grammar, writing: !!data?.writing, listening: !!data?.listening } }, { headers });
   if (type && !fields[type]) return NextResponse.json({ error: 'Invalid session type' }, { status: 400, headers });
   const enrichWords = words => (words || []).map(w => {
@@ -31,11 +39,21 @@ export async function GET(request) {
 }
 
 export async function DELETE(request) {
- if (!cacheOwner(request)) return NextResponse.json({error:"Cần đăng nhập qua Kong"},{status:401});
+  if (!cacheOwner(request)) return NextResponse.json({ error: "Cần đăng nhập qua Kong" }, { status: 401 });
   const sid = cacheOwner(request);
-  const type = new URL(request.url).searchParams.get("type");
-  if (sid) deleteSession(sid, type);
+  const query = new URL(request.url).searchParams;
+  const rawTargetLang = query.get('targetLang');
+  const targetLang = normalizeTargetLang(rawTargetLang);
+  if (!targetLang) return NextResponse.json({ error: 'Invalid targetLang' }, { status: 400 });
+
+  const type = query.get("type");
+  if (type !== null && type !== '' && !VALID_DELETE_TYPES.has(type)) {
+    return NextResponse.json({ error: 'Invalid session type' }, { status: 400 });
+  }
+
+  const effectiveType = type || undefined;
+  if (sid) deleteSession(sid, effectiveType, targetLang);
   const res = NextResponse.json({ ok: true });
-  if (!type) res.cookies.delete("vocab_sid");
+  if (!effectiveType) res.cookies.delete("vocab_sid");
   return res;
 }

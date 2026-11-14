@@ -3,7 +3,13 @@ import { NextResponse } from "next/server";
 
 const URL_ = process.env.NINEROUTER_URL || "http://192.168.101.36:20128";
 const KEY = process.env.NINEROUTER_KEY || "";
-const VOICES = { "en-US": "en-US-SaraNeural", "vi-VN": "vi-VN-HoaiMyNeural" };
+const VOICES = {
+  "en-US": "en-US-SaraNeural",
+  "vi-VN": "vi-VN-HoaiMyNeural",
+  "ja-JP": "ja-JP-NanamiNeural",
+  "ko-KR": "ko-KR-SunHiNeural",
+  "zh-TW": "zh-TW-HsiaoChenNeural",
+};
 
 export async function POST(request) {
   const requestId = randomUUID();
@@ -15,7 +21,11 @@ export async function POST(request) {
       log("invalid-input", { type: typeof text, array: Array.isArray(text) });
       return NextResponse.json({ error: "Nội dung giọng đọc phải là văn bản, tối đa 1000 ký tự", requestId }, { status: 400 });
     }
-    const voice = VOICES[lang] || VOICES["en-US"];
+    const voice = VOICES[lang];
+    if (!voice) {
+      log("unknown-language", { lang });
+      return NextResponse.json({ error: `Ngôn ngữ không được hỗ trợ: ${lang}`, requestId }, { status: 400 });
+    }
     const headers = { "Content-Type": "application/json" };
     if (KEY) headers.Authorization = `Bearer ${KEY}`;
     const res = await fetch(`${URL_}/v1/audio/speech`, {

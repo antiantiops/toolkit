@@ -2,6 +2,8 @@ import { writingPreferences } from "../../../lib/writing-prompt.mjs";
 import { cacheOwner } from '../session/owner';
 import { NextResponse } from "next/server";
 import { saveSession } from "../session/storage";
+import { normalizeTargetLang, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from "../../../lib/lookup/languages.mjs";
+import { languageInstruction } from "../../../lib/lessons/language.mjs";
 
 const NINEROUTER_URL = process.env.NINEROUTER_URL || "http://192.168.101.36:20128";
 const NINEROUTER_KEY = process.env.NINEROUTER_KEY || "";
@@ -10,7 +12,10 @@ const MODEL = process.env.NINEROUTER_MODEL || "ag/gemini-3.8-flash-high";
 export async function POST(request) {
  if (!cacheOwner(request)) return NextResponse.json({error:"Cần đăng nhập qua Kong"},{status:401});
   try {
-    const { task, title, level = "A2", customPrompt } = await request.json();
+    const body = await request.json();
+    const { task, title, level = "A2", customPrompt, targetLang: rawTargetLang } = body;
+    const targetLang = normalizeTargetLang(rawTargetLang);
+    if (!targetLang) return NextResponse.json({ error: "Invalid targetLang" }, { status: 400 });
     if (!["A1", "A2", "B1", "B2", "C1", "C2"].includes(level)) return NextResponse.json({ error: "Trình độ CEFR không hợp lệ" }, { status: 400 });
     let preferences;
     try { preferences = writingPreferences(customPrompt, level); } catch (e) { return NextResponse.json({ error: e.message }, { status: 400 }); }
@@ -84,7 +89,7 @@ Return ONLY valid JSON matching this exact structure:
       ]
     }
   ]
-}`;
+}${targetLang !== DEFAULT_LANGUAGE ? languageInstruction(targetLang) : ''}`;
 
     const res = await fetch(`${NINEROUTER_URL}/v1/chat/completions`, {
       method: "POST",
@@ -112,7 +117,7 @@ Return ONLY valid JSON matching this exact structure:
     }
 
     const modelDraft = JSON.parse(match[0]);
-    if (sid) saveSession(sid, { modelDraft });
+    if (sid) saveSession(sid, { modelDraft, modelDraftTargetLang: targetLang });
     return NextResponse.json({ modelDraft });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

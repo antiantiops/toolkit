@@ -2,11 +2,20 @@ import { NextResponse } from 'next/server';
 import { cacheOwner } from '../session/owner';
 import { callJson } from '../../../lib/lessons/ai';
 import { cachedLookup, cacheLookup } from '../../../lib/lookup/cache';
+import { normalizeTargetLang, DEFAULT_LANGUAGE } from '../../../lib/lookup/languages.mjs';
+import { languageInstruction } from '../../../lib/lessons/language.mjs';
 
 const memCache = new Map();
 
-function practiceKey(word) {
-  return JSON.stringify(['pron-practice-v1', word.trim().toLowerCase()]);
+function practiceKey(word, targetLang = DEFAULT_LANGUAGE) {
+  if (targetLang === DEFAULT_LANGUAGE) {
+    return JSON.stringify(['pron-practice-v1', word.trim().toLowerCase()]);
+  }
+  return JSON.stringify(['pron-practice-i18n-v1', targetLang, word.trim().toLowerCase()]);
+}
+
+function memCacheKey(owner, targetLang, word) {
+  return `${owner}:${targetLang}:${word.trim().toLowerCase()}`;
 }
 
 export async function GET(request) {
@@ -14,17 +23,23 @@ export async function GET(request) {
   if (!owner) return NextResponse.json({ error: 'Cần đăng nhập qua Kong' }, { status: 401 });
 
   const url = new URL(request.url);
+  const targetLang = normalizeTargetLang(url.searchParams.get('targetLang'));
+  if (!targetLang) {
+    return NextResponse.json({ error: 'Ngôn ngữ không được hỗ trợ' }, { status: 400 });
+  }
+
   const word = (url.searchParams.get('word') || '').trim();
   if (!word || word.length > 160 || /[\x00-\x1f]/.test(word)) {
     return NextResponse.json({ error: 'Từ không hợp lệ' }, { status: 400 });
   }
 
   const normalized = word.toLowerCase();
-  const cKey = practiceKey(normalized);
+  const mKey = memCacheKey(owner, targetLang, normalized);
+  const cKey = practiceKey(normalized, targetLang);
 
   // 1. Memory cache check
-  if (memCache.has(normalized)) {
-    return NextResponse.json(memCache.get(normalized), {
+  if (memCache.has(mKey)) {
+    return NextResponse.json(memCache.get(mKey), {
       headers: { 'Cache-Control': 'private, no-store', 'X-Practice-Cache': 'MEM' },
     });
   }
@@ -33,7 +48,7 @@ export async function GET(request) {
   try {
     const cached = cachedLookup(owner, cKey);
     if (cached && cached.collocation?.phrase && cached.sentence?.text) {
-      memCache.set(normalized, cached);
+      memCache.set(mKey, cached);
       return NextResponse.json(cached, {
         headers: { 'Cache-Control': 'private, no-store', 'X-Practice-Cache': 'SQLITE' },
       });
@@ -42,7 +57,7 @@ export async function GET(request) {
 
   // 3. AI call via callJson
   try {
-    const prompt = `Create one natural, common English collocation and one natural sentence for the word ${JSON.stringify(word)}.
+    const viPrompt = `Create one natural, common English collocation and one natural sentence for the word ${JSON.stringify(word)}.
 The sentence MUST contain both the word and the collocation.
 Provide Vietnamese meanings.
 Return ONLY JSON with this shape:
@@ -58,6 +73,11 @@ Return ONLY JSON with this shape:
   }
 }
 No markdown.`;
+
+    const prompt = targetLang === DEFAULT_LANGUAGE
+      ? viPrompt
+      : `${viPrompt}${languageInstruction(targetLang)}
+- Ensure collocation.meaning and sentence.meaning are translated into the target language; keep English source (word, collocation.phrase, sentence.text) in English untouched.`;
 
     const result = await callJson(
       [{ type: 'text', text: prompt }],
@@ -90,7 +110,7 @@ No markdown.`;
       },
     };
 
-    memCache.set(normalized, payload);
+    memCache.set(mKey, payload);
     try {
       cacheLookup(owner, cKey, payload);
     } catch {}

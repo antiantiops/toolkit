@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { normalizeTargetLang, DEFAULT_LANGUAGE } from "../../../lib/lookup/languages.mjs";
+import { languageInstruction } from "../../../lib/lessons/language.mjs";
 
 const URL = process.env.NINEROUTER_URL || "http://192.168.101.36:20128";
 const KEY = process.env.NINEROUTER_KEY || "";
@@ -6,12 +8,14 @@ const MODEL = process.env.NINEROUTER_MODEL || "ag/gemini-3.8-flash-high";
 
 export async function POST(request) {
   try {
-    const { words } = await request.json();
+    const { words, targetLang: rawTargetLang } = await request.json();
+    const targetLang = normalizeTargetLang(rawTargetLang);
+    if (!targetLang) return NextResponse.json({ error: "Invalid targetLang" }, { status: 400 });
     const items = (words || []).slice(0, 12).map((w) => ({ word: w.word, meaning: w.meaning, example: w.example }));
     if (items.length < 4) return NextResponse.json({ error: "Cần ít nhất 4 từ để tạo bài" }, { status: 400 });
     const headers = { "Content-Type": "application/json" };
     if (KEY) headers.Authorization = "Bearer " + KEY;
-    const prompt = `Create one intermediate school practice test from vocabulary: ${JSON.stringify(items)}.
+    const basePrompt = `Create one intermediate school practice test from vocabulary: ${JSON.stringify(items)}.
 Return ONLY JSON with exactly this shape:
 {"groups":[{"words":["often","frequently","regularly","rarely"],"answer":"rarely","explanation":"Rarely means not often; three others describe frequent occurrence."}],"fills":[{"word":"refuse","sentence":"They ____ to accept the truth."}]}
 Rules:
@@ -20,6 +24,10 @@ Rules:
 - Every fill sentence MUST be a completely new sentence you invent. NEVER reuse, paraphrase closely, or blank out a supplied example sentence. Create a different setting, subject, verb, and context from its card example.
 - Make each new sentence give enough context to infer answer. Do not use hints such as "the word means...".
 No markdown.`;
+    const prompt = targetLang === DEFAULT_LANGUAGE
+      ? basePrompt
+      : `${basePrompt}${languageInstruction(targetLang)}
+- Ensure exercise sentences, options, answers, and vocabulary words remain in English; only explanations and instructions should be in the target language.`;
     const res = await fetch(`${URL}/v1/chat/completions`, { method: "POST", headers, body: JSON.stringify({ model: MODEL, stream: false, temperature: 0.35, max_tokens: 1800, messages: [{ role: "user", content: prompt }] }) });
     if (!res.ok) return NextResponse.json({ error: `9router error: ${res.status}` }, { status: 502 });
     const data = await res.json();

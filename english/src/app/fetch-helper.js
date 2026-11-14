@@ -53,21 +53,38 @@ export function formatErrorMessage(e) {
     : "");
 }
 
+const SUPPORTED_LANG_CODES = ['vi', 'en', 'ja', 'ko', 'zh-TW'];
+function validateLocale(raw) {
+  if (raw === undefined || raw === null || raw === '') return 'vi';
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return 'vi';
+  const lower = trimmed.toLowerCase();
+  for (const code of SUPPORTED_LANG_CODES) {
+    if (code.toLowerCase() === lower) return code;
+  }
+  return null;
+}
+
 // Shared short-request polling; failed parts retain their job ID for explicit retry.
-export async function pollLesson(mode, payload, onProgress) {
-  const key = `${mode}-pending-job`;
+export async function pollLesson(mode, payload = {}, onProgress = () => {}) {
+  const targetLang = validateLocale(payload.targetLang);
+  if (!targetLang) throw new Error(`Invalid targetLang: ${payload.targetLang}`);
+  const key = targetLang === 'vi' ? `${mode}-pending-job` : `${mode}-pending-job-${targetLang}`;
+  const requestPayload = { ...payload, targetLang };
   let jobId = sessionStorage.getItem(key);
   if (!jobId) {
-    const started = await parseApiResponse(await fetchWithRetry(`/api/${mode}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), timeout: 15000 }, 0));
+    const started = await parseApiResponse(await fetchWithRetry(`/api/${mode}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestPayload), timeout: 15000 }, 0));
     jobId = started.jobId;
     if (!jobId) throw new Error('Missing jobId');
     sessionStorage.setItem(key, jobId);
   }
   const deadline = Date.now() + (mode === "writing" ? 20 : 10) * 60 * 1000;
+  const pollUrl = `/api/${mode}?jobId=${encodeURIComponent(jobId)}&targetLang=${encodeURIComponent(targetLang)}`;
   while (Date.now() < deadline) {
     let res;
     try {
-      res = await fetchWithRetry(`/api/${mode}?jobId=${encodeURIComponent(jobId)}`, { timeout: 15000, cache: 'no-store' }, 2);
+      res = await fetchWithRetry(pollUrl, { timeout: 15000, cache: 'no-store' }, 2);
     } catch (e) {
       // ponytail: retain pending job through mobile disconnects; total deadline bounds recovery.
       onProgress({ stage: 'reconnecting', jobId });

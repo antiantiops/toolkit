@@ -1,4 +1,5 @@
 import "./globals.css";
+import { LanguageProvider } from "./LanguageContext";
 
 export const metadata = {
   title: "Vocab Learner - Học từ vựng qua ảnh",
@@ -10,7 +11,9 @@ export default function RootLayout({ children }) {
     <html lang="vi" suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: `try{document.documentElement.dataset.theme=localStorage.getItem("english-theme")==="light"?"light":"dark"}catch{}` }} /></head>
       <body className="bg-slate-950 text-slate-200 min-h-screen antialiased">
-        {children}
+        <LanguageProvider>
+          {children}
+        </LanguageProvider>
       </body>
     </html>
   );
