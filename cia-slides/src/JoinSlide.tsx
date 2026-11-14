@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { QrCode, Globe, ExternalLink, RotateCcw, Lock, MousePointer } from 'lucide-react';
+import { QrCode, Globe, ExternalLink, RotateCcw, Lock, MousePointer, Check } from 'lucide-react';
 import './join-slide.css';
 
 interface JoinSlideProps {
@@ -12,50 +12,54 @@ const copy = {
     kicker: 'THAM GIA',
     title: 'Mở CIA',
     subtitle: 'Quét mã QR bằng điện thoại để mở website và đăng nhập bằng Google.',
-    scanTitle: '1. Quét mã QR',
-    scanDesc: 'Mở ứng dụng Máy ảnh trên điện thoại để quét mã bên trái.',
-    openTitle: '2. Mở đường dẫn',
-    openDesc: 'Nhấn vào liên kết thông báo chuyển đến cia.nimtechnology.com.',
-    loginTitle: '3. Tiếp tục với Google',
-    loginDesc: 'Nhấn chọn "Continue with Google" để tham gia tương tác.',
-    directLink: 'Hoặc truy cập trực tiếp:',
-    replay: 'Phát lại minh hoạ',
-    simBadge: 'Minh hoạ thao tác điện thoại',
+    scanTitle: 'Quét mã QR',
+    scanDesc: 'Mở Máy ảnh trên điện thoại và hướng vào mã QR.',
+    openTitle: 'Mở đường dẫn',
+    openDesc: 'Chạm thông báo để truy cập cia.nimtechnology.com.',
+    loginTitle: 'Tiếp tục với Google',
+    loginDesc: 'Chọn "Continue with Google" để tham gia tương tác.',
+    directLink: 'Truy cập trực tiếp:',
+    replay: 'Phát lại',
+    simBadge: 'Minh hoạ thao tác',
     simCam: 'Máy ảnh',
     simDetected: 'Tìm thấy cia.nimtechnology.com',
     browserPageTitle: 'Nền tảng CIA',
-    browserPageSub: 'cia.nimtechnology.com',
+    browserPageSub: 'Trợ lý AI tương tác thời gian thực',
+    browserStatus: 'Sẵn sàng kết nối',
     simAuthTitle: 'Đăng nhập vào CIA',
-    simAuthSub: 'Chọn phương thức xác thực nhanh:',
+    simAuthSub: 'Xác thực nhanh bằng tài khoản Google',
     googleBtn: 'Continue with Google',
+    simSuccess: 'Đã xác thực thành công',
     simDisclaimer: 'Minh hoạ luồng tham gia, không yêu cầu mật khẩu.',
   },
   en: {
     kicker: 'JOIN',
     title: 'Open CIA',
-    subtitle: 'Scan QR code with phone camera to open website, then sign in with Google.',
-    scanTitle: '1. Scan QR Code',
-    scanDesc: 'Open camera app on your phone and point at the QR code.',
-    openTitle: '2. Open Website',
-    openDesc: 'Tap notification banner to open cia.nimtechnology.com.',
-    loginTitle: '3. Continue with Google',
-    loginDesc: 'Select "Continue with Google" to participate interactively.',
-    directLink: 'Or access directly:',
-    replay: 'Replay animation',
-    simBadge: 'Phone walkthrough illustration',
+    subtitle: 'Scan the QR code with your phone to open the site and sign in with Google.',
+    scanTitle: 'Scan QR Code',
+    scanDesc: 'Open phone camera and point at the QR code.',
+    openTitle: 'Open Website',
+    openDesc: 'Tap the banner to open cia.nimtechnology.com.',
+    loginTitle: 'Continue with Google',
+    loginDesc: 'Select "Continue with Google" to join interactively.',
+    directLink: 'Direct access:',
+    replay: 'Replay',
+    simBadge: 'Phone simulation',
     simCam: 'Camera',
     simDetected: 'Detected: cia.nimtechnology.com',
     browserPageTitle: 'CIA Platform',
-    browserPageSub: 'cia.nimtechnology.com',
+    browserPageSub: 'Real-time interactive AI workspace',
+    browserStatus: 'Connected',
     simAuthTitle: 'Sign in to CIA',
-    simAuthSub: 'Fast & secure authentication:',
+    simAuthSub: 'Fast authentication with Google',
     googleBtn: 'Continue with Google',
-    simDisclaimer: 'Demonstration illustration, no credentials needed here.',
+    simSuccess: 'Signed in successfully',
+    simDisclaimer: 'Flow preview only, no credentials needed here.',
   },
 };
 
 export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
-  // stage: 0 = camera scan, 1 = open website browser, 2 = select Google button
+  // stage: 0 = camera scan, 1 = browser load, 2 = google sign-in sheet
   const [stage, setStage] = useState<number>(0);
   const [replayKey, setReplayKey] = useState<number>(0);
 
@@ -85,9 +89,17 @@ export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
     setReplayKey((prev) => prev + 1);
   };
 
+  const steps = [
+    { num: 1, title: t.scanTitle, desc: t.scanDesc },
+    { num: 2, title: t.openTitle, desc: t.openDesc },
+    { num: 3, title: t.loginTitle, desc: t.loginDesc },
+  ];
+
   return (
     <main className="join-slide" aria-label="Join CIA Workshop">
-      {/* Left Column: Clear static QR + Instructions */}
+      <div className="join-grid-bg" aria-hidden="true" />
+
+      {/* Left Column: Title + Glowing QR Card + Direct URL */}
       <section className="join-left">
         <header className="join-header">
           <p className="join-kicker">{t.kicker}</p>
@@ -95,57 +107,28 @@ export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
           <p className="join-subtitle">{t.subtitle}</p>
         </header>
 
-        <div className="join-main-content">
-          {/* Static scannable QR card */}
-          <div className="join-qr-wrapper">
-            <div className="join-qr-card">
-              <img
-                src="/qr-cia.svg"
-                alt="QR Code to cia.nimtechnology.com"
-                className="join-qr-img"
-                width={200}
-                height={200}
-              />
-            </div>
-            <div className="join-direct-link-box">
-              <span className="join-direct-label">{t.directLink}</span>
-              <a
-                href={targetUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="join-url-link"
-              >
-                <span>cia.nimtechnology.com</span>
-                <ExternalLink size={13} aria-hidden="true" />
-              </a>
-            </div>
+        <div className="join-qr-zone">
+          <div className="join-qr-card">
+            <img
+              src="/qr-cia.svg"
+              alt="QR Code to cia.nimtechnology.com"
+              className="join-qr-img"
+              width={200}
+              height={200}
+            />
           </div>
 
-          {/* Sequential Step List */}
-          <div className="join-steps-list">
-            <div className={`join-step-item ${stage === 0 ? 'active' : ''}`}>
-              <div className="join-step-num">1</div>
-              <div className="join-step-body">
-                <h2 className="join-step-title">{t.scanTitle}</h2>
-                <p className="join-step-desc">{t.scanDesc}</p>
-              </div>
-            </div>
-
-            <div className={`join-step-item ${stage === 1 ? 'active' : ''}`}>
-              <div className="join-step-num">2</div>
-              <div className="join-step-body">
-                <h2 className="join-step-title">{t.openTitle}</h2>
-                <p className="join-step-desc">{t.openDesc}</p>
-              </div>
-            </div>
-
-            <div className={`join-step-item ${stage === 2 ? 'active' : ''}`}>
-              <div className="join-step-num">3</div>
-              <div className="join-step-body">
-                <h2 className="join-step-title">{t.loginTitle}</h2>
-                <p className="join-step-desc">{t.loginDesc}</p>
-              </div>
-            </div>
+          <div className="join-direct-link-box">
+            <span className="join-direct-label">{t.directLink}</span>
+            <a
+              href={targetUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="join-url-link"
+            >
+              <span>cia.nimtechnology.com</span>
+              <ExternalLink size={14} aria-hidden="true" />
+            </a>
           </div>
         </div>
 
@@ -163,45 +146,77 @@ export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
         </footer>
       </section>
 
-      {/* Right Column: Animated Phone Illustration */}
+      {/* CSS-only curved particle data stream from QR to Phone */}
+      <div className="join-data-stream" aria-hidden="true">
+        <span className="join-particle join-p1" />
+        <span className="join-particle join-p2" />
+        <span className="join-particle join-p3" />
+        <span className="join-particle join-p4" />
+        <span className="join-particle join-p5" />
+      </div>
+
+      {/* Right Column: Vertical Neon Timeline + Slim 9:19.5 Phone */}
       <section className="join-right" aria-label={t.simBadge}>
-        <div className="phone-mockup">
-          <div className="phone-island">
-            <div className="phone-camera-lens" />
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#0284c7' }} />
+        {/* Vertical Timeline Steps */}
+        <ol className="join-timeline">
+          <div className="join-timeline-track" aria-hidden="true">
+            <div className={`join-timeline-fill stage-${stage}`} />
           </div>
+          {steps.map((s, idx) => {
+            const isDone = stage > idx;
+            const isActive = stage === idx;
+            return (
+              <li
+                key={s.num}
+                className={`join-step-node ${isActive ? 'is-active' : ''} ${isDone ? 'is-done' : ''}`}
+              >
+                <div className="join-step-dot" aria-hidden="true">
+                  {isDone ? <Check size={12} strokeWidth={3} /> : <span>{s.num}</span>}
+                </div>
+                <div className="join-step-text">
+                  <h2 className="join-step-title">{s.title}</h2>
+                  <p className="join-step-desc">{s.desc}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
 
-          <div className="phone-screen">
-            <div className="phone-sim-tag">{t.simBadge}</div>
+        {/* Slim Phone Mockup (max-width 220px, max-height 420px, ~9:19.5) */}
+        <div className="join-phone-wrap" key={replayKey}>
+          <div className="phone-mockup">
+            <div className="phone-island">
+              <span className="phone-camera-lens" />
+              <span className="phone-sensor-dot" />
+            </div>
 
-            <div className="phone-inner-stage">
-              {/* Stage 0: Camera Scanning */}
+            <div className="phone-screen">
+              {/* Stage 0: Dark Camera Viewfinder */}
               {stage === 0 && (
                 <div className="stage-camera">
                   <div className="camera-top-bar">
                     <span>{t.simCam}</span>
-                    <QrCode size={14} />
+                    <QrCode size={13} />
                   </div>
 
                   <div className="camera-viewfinder">
-                    <div className="viewfinder-reticle" />
                     <div className="viewfinder-corners">
-                      <div className="corner corner-tl" />
-                      <div className="corner corner-tr" />
-                      <div className="corner corner-bl" />
-                      <div className="corner corner-br" />
+                      <span className="corner corner-tl" />
+                      <span className="corner corner-tr" />
+                      <span className="corner corner-bl" />
+                      <span className="corner corner-br" />
                     </div>
-                    <div className="viewfinder-scan-beam" />
                     <img
                       src="/qr-cia.svg"
                       alt=""
                       className="mock-qr-preview"
                       aria-hidden="true"
                     />
+                    <div className="viewfinder-scan-beam" />
                   </div>
 
                   <div className="camera-toast-detected">
-                    <Globe size={13} color="#60a5fa" />
+                    <Globe size={12} />
                     <span>{t.simDetected}</span>
                   </div>
 
@@ -218,26 +233,39 @@ export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
                 <div className="stage-browser">
                   <div className="browser-bar">
                     <div className="browser-url-pill">
-                      <Lock size={10} color="#16a34a" />
+                      <Lock size={10} />
                       <span>cia.nimtechnology.com</span>
                     </div>
                   </div>
-                  <div className="browser-progress-bar" />
+                  <div className="browser-progress-track">
+                    <div className="browser-progress-bar" />
+                  </div>
 
                   <div className="browser-page-body">
-                    <div className="browser-hero-icon">
-                      <Globe size={26} />
+                    <div className="browser-hero-card">
+                      <div className="browser-hero-icon">
+                        <Globe size={22} />
+                      </div>
+                      <h3 className="browser-page-title">{t.browserPageTitle}</h3>
+                      <p className="browser-page-sub">{t.browserPageSub}</p>
+                      <div className="browser-status-pill">
+                        <span className="browser-status-dot" />
+                        <span>{t.browserStatus}</span>
+                      </div>
                     </div>
-                    <h3 className="browser-page-title">{t.browserPageTitle}</h3>
-                    <p className="browser-page-sub">{t.browserPageSub}</p>
                   </div>
                 </div>
               )}
 
-              {/* Stage 2: Selecting Continue with Google */}
+              {/* Stage 2: iOS Bottom Auth Sheet + Google Button + Tap + Success */}
               {stage === 2 && (
                 <div className="stage-auth">
-                  <div className="auth-modal-card">
+                  <div className="auth-backdrop-content">
+                    <div className="auth-mini-logo">CIA</div>
+                  </div>
+
+                  <div className="auth-sheet">
+                    <div className="auth-sheet-handle" />
                     <div className="auth-brand-logo">CIA</div>
                     <h3 className="auth-headline">{t.simAuthTitle}</h3>
                     <p className="auth-instructions">{t.simAuthSub}</p>
@@ -263,10 +291,16 @@ export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
                       </svg>
                       <span>{t.googleBtn}</span>
 
-                      {/* Animated hand pointer to show selecting */}
-                      <div className="sim-tap-cursor">
-                        <MousePointer size={18} color="#2563eb" fill="#bfdbfe" />
+                      <div className="sim-tap-cursor" aria-hidden="true">
+                        <MousePointer size={16} color="#020617" fill="#67e8f9" />
                       </div>
+                    </div>
+
+                    <div className="auth-success-toast">
+                      <span className="auth-success-icon">
+                        <Check size={12} strokeWidth={3} />
+                      </span>
+                      <span>{t.simSuccess}</span>
                     </div>
 
                     <p className="sim-auth-disclaimer">{t.simDisclaimer}</p>
