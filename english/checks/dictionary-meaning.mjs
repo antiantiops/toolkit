@@ -114,7 +114,7 @@ assert(!page.includes('if (isDictionary)'));
     };
   };
 
-  // Case 1: quick arrives before detail -> quick meaning preserved
+  // Case 1: quick arrives before detail -> quick shown while detailLoading, then replaced by detail
   {
     const h = createHarness();
     const p = h.lookupWord('test');
@@ -128,14 +128,15 @@ assert(!page.includes('if (isDictionary)'));
 
     h.resolveDetail({ word: { word: 'test', meaning: 'nghĩa chi tiết', examples: ['ex1'] } });
     await p;
-    assert.equal(h.state.meaning, 'nghĩa nhanh');
+    assert.equal(h.state.meaning, 'nghĩa chi tiết');
     assert.equal(h.state.loading, false);
     assert.equal(h.state.detailLoading, false);
+    assert.equal(h.state.quick, undefined);
     assert.deepEqual(h.state.examples, ['ex1']);
-    assert.equal(h.lookupCache.current.get(JSON.stringify(['test', '', 'vi'])).meaning, 'nghĩa nhanh');
+    assert.equal(h.lookupCache.current.get(JSON.stringify(['test', '', 'vi'])).meaning, 'nghĩa chi tiết');
   }
 
-  // Case 2: detail arrives before quick -> late quick updates state and cache
+  // Case 2: detail arrives before quick -> late quick never overwrites state or cache
   {
     const h = createHarness();
     const p = h.lookupWord('test');
@@ -149,9 +150,10 @@ assert(!page.includes('if (isDictionary)'));
     h.resolveQuick({ meaning: 'nghĩa nhanh' });
     await new Promise(r => setTimeout(r, 0));
     await p;
-    assert.equal(h.state.meaning, 'nghĩa nhanh');
+    assert.equal(h.state.meaning, 'nghĩa chi tiết');
     assert.equal(h.state.loading, false);
-    assert.equal(h.lookupCache.current.get(JSON.stringify(['test', '', 'vi'])).meaning, 'nghĩa nhanh');
+    assert.equal(h.state.detailLoading, false);
+    assert.equal(h.lookupCache.current.get(JSON.stringify(['test', '', 'vi'])).meaning, 'nghĩa chi tiết');
   }
 
   // Case 3: canonical different case (Banned -> banned) & late quick arrival
@@ -169,10 +171,10 @@ assert(!page.includes('if (isDictionary)'));
     h.resolveQuick({ meaning: 'nghĩa nhanh banned' });
     await new Promise(r => setTimeout(r, 0));
     await p;
-    // Word was canonicalized to "banned", late quick still applies because current is non-null
+    // Word was canonicalized to "banned", late quick is ignored because detailLoading is false
     assert.equal(h.state.word, 'banned');
-    assert.equal(h.state.meaning, 'nghĩa nhanh banned');
-    assert.equal(h.lookupCache.current.get(JSON.stringify(['banned', '', 'vi'])).meaning, 'nghĩa nhanh banned');
+    assert.equal(h.state.meaning, 'bị cấm');
+    assert.equal(h.lookupCache.current.get(JSON.stringify(['banned', '', 'vi'])).meaning, 'bị cấm');
 
     // Also verify closed popup (null guard preserved)
     h.state = null;
@@ -233,6 +235,20 @@ assert(!page.includes('if (isDictionary)'));
     await p;
     assert.equal(h.state.meaning, 'nghĩa AI chi tiết');
     assert.equal(h.lookupCache.current.get(JSON.stringify(['test', '', 'vi'])).meaning, 'nghĩa AI chi tiết');
+  }
+
+  // Case 7: detail failure with quick resolving -> retains quick meaning
+  {
+    const h = createHarness();
+    const p = h.lookupWord('test');
+    await new Promise(r => setTimeout(r, 0));
+    h.rejectDetail(new Error('detail network error'));
+    await new Promise(r => setTimeout(r, 0));
+    h.resolveQuick({ meaning: 'nghĩa nhanh' });
+    await p;
+    assert.equal(h.state.meaning, 'nghĩa nhanh');
+    assert.equal(h.state.loading, false);
+    assert.equal(h.state.detailLoading, false);
   }
 }
 

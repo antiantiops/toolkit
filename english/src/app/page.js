@@ -634,17 +634,13 @@ export default function Home() {
     };
     setLookup({ word, pronunciation: knownPronunciation, loading: true, detailLoading: true });
     loadMeta(word);
-    let quickMeaning = "";
     const quickBody = JSON.stringify({ word, context, targetLang, definition: words.find(item => item.word?.toLowerCase() === word.toLowerCase())?.definition || "" });
     const quick = fetch("/api/quick-word", { method: "POST", headers: { "Content-Type": "application/json" }, body: quickBody })
       .then(parseApiResponse)
       .then(data => {
         if (!data?.meaning) return;
-        quickMeaning = data.meaning;
-        const cached = lookupCache.current.get(key);
-        if (cached) lookupCache.current.set(key, { ...cached, meaning: data.meaning });
         if (requestId === lookupRequest.current) {
-          setLookup(current => (current ? { ...current, meaning: data.meaning, ipa: data.ipa || current.ipa, loading: false, quick: true } : current));
+          setLookup(current => (current && current.detailLoading ? { ...current, meaning: data.meaning, ipa: data.ipa || current.ipa, loading: false, quick: true } : current));
         }
       })
       .catch(() => {});
@@ -654,12 +650,11 @@ export default function Home() {
       const data = await parseApiResponse(res);
       const canonical = data.word.word || word;
       if (save) rememberEnglish(canonical).catch(() => setSaveError("Không lưu được từ đã tra. Thử tra lại."));
-      const mergedWord = { ...data.word, ...(quickMeaning ? { meaning: quickMeaning } : {}) };
       if (lookupCache.current.size >= 100) lookupCache.current.delete(lookupCache.current.keys().next().value);
-      lookupCache.current.set(key, mergedWord);
+      lookupCache.current.set(key, data.word);
       if (requestId === lookupRequest.current) {
         const canonicalPron = pronunciationCache.current.get(canonical.toLowerCase());
-        setLookup(current => current ? { ...mergedWord, practice: current.practice, pronunciation: canonical.toLowerCase() === pronunciationKey ? current.pronunciation : canonicalPron, dictionaryParts: canonical.toLowerCase() === pronunciationKey ? current.dictionaryParts : undefined, loading: false, detailLoading: false } : null);
+        setLookup(current => current ? { ...data.word, practice: current.practice, pronunciation: canonical.toLowerCase() === pronunciationKey ? current.pronunciation : canonicalPron, dictionaryParts: canonical.toLowerCase() === pronunciationKey ? current.dictionaryParts : undefined, loading: false, detailLoading: false } : null);
         if (canonical.toLowerCase() !== pronunciationKey) loadMeta(canonical);
       }
     } catch (e) {
@@ -1704,7 +1699,7 @@ export default function Home() {
             {lookup.practice && <div id="word-pronunciation-practice"><PronunciationRecorder key={lookup.word} word={lookup.word} ipa={lookup.pronunciation?.us || lookup.pronunciation?.uk || lookup.ipa || ""} lookup={lookup} /></div>}
             {lookup.loading && !lookup.meaning ? <div className="mt-5 text-slate-400">{ptext("Đang tra nghĩa…")}</div> : lookup.error ? <div className="mt-4 text-red-300">{lookup.error}</div> : <>
               {lookup.easyReading && <div className="mt-4 rounded-xl border border-sky-900 bg-sky-950/50 p-3 text-sm leading-relaxed text-sky-100"><span className="font-semibold text-sky-300">Dễ đọc: </span>{lookup.easyReading}</div>}
-              <div data-testid="lookup-meaning" className="mt-4 text-lg font-medium text-white">{lookup.meaning}</div>
+              <div data-testid="lookup-meaning" className="mt-4 whitespace-pre-line text-lg font-medium text-white">{lookup.meaning}</div>
               {lookup.detailLoading && <div data-testid="lookup-detail-loading" className="mt-2 flex items-center gap-2 text-xs text-slate-400"><span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-slate-600 border-t-sky-300" />Đang bổ sung giải thích, ví dụ…</div>}
               {lookup.usage && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Cách dùng: </span>{lookup.usage}</div>}
               {lookup.synonyms && !lookup.contrastTip && <div className="mt-3 text-sm leading-relaxed text-slate-200"><span className="font-semibold text-sky-300">Đồng nghĩa: </span><AiTag /> {renderAnnotatedWords(lookup.synonyms)}</div>}
