@@ -37,6 +37,17 @@
   mask-image: radial-gradient(circle at center, black 45%, transparent 95%);
 }
 
+.join-slide .join-stripe {
+  position: absolute;
+  left: 58%;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background: #ffffff;
+  pointer-events: none;
+  z-index: 5;
+}
+
 /* Left Column: Header + QR + Controls (compact explicit ~280px column) */
 .join-slide .join-left {
   flex: 0 0 320px;

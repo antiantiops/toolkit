@@ -330,6 +330,7 @@ export function JoinSlide({ active = true, lang = 'vi' }: JoinSlideProps) {
   return (
     <main className="join-slide" aria-label="Join Presentation">
       <div className="join-grid-bg" aria-hidden="true" />
+      <div className="join-stripe" aria-hidden="true" />
 
       {/* Left Column: Header + QR + Controls */}
       <section className="join-left">

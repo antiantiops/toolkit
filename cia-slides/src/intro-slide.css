@@ -98,3 +98,15 @@
 @media(prefers-reduced-motion:reduce){.nim-about-track,.intro-name-ready>.nim-chrome,.intro-name-ready>.nim-intro-robots,.intro-name-ready>.nim-intro-bottom{animation-duration:1ms!important}}
 
 .intro-name-ready>.nim-chrome-star{animation-delay:100ms}.intro-name-ready>.nim-intro-robots{animation-delay:180ms}.intro-name-ready>.nim-intro-bottom{animation-delay:260ms}
+
+.deck-join-intro-morph .join-slide,.deck-join-intro-morph .nim-intro:not(.nim-company){view-transition-name:join-intro-backdrop}
+.deck-join-intro-morph .join-stripe,.deck-join-intro-morph .nim-intro-column{view-transition-name:join-intro-pillar}
+html.deck-join-intro-morph::view-transition-group(*){animation-duration:650ms;animation-timing-function:cubic-bezier(.22,1,.36,1)}
+html.deck-join-intro-morph::view-transition-image-pair(*){isolation:isolate}
+html.deck-join-intro-morph::view-transition-group(join-intro-pillar){z-index:20;animation-duration:650ms;animation-timing-function:cubic-bezier(.22,1,.36,1)}
+html.deck-join-intro-morph::view-transition-old(join-intro-pillar),html.deck-join-intro-morph::view-transition-new(join-intro-pillar){animation:none;mix-blend-mode:normal;height:100%}
+html.deck-join-intro-morph::view-transition-group(join-intro-backdrop){animation-duration:650ms}
+html.deck-join-intro-morph::view-transition-old(join-intro-backdrop){animation:join-backdrop-out 320ms cubic-bezier(.4,0,1,1) both}
+html.deck-join-intro-morph::view-transition-new(join-intro-backdrop){animation:join-backdrop-in 650ms 120ms cubic-bezier(0,0,.2,1) both}
+@keyframes join-backdrop-out{to{opacity:0;filter:blur(8px);transform:scale(.97)}}
+@keyframes join-backdrop-in{from{opacity:0;filter:blur(8px);transform:scale(1.02)}to{opacity:1;filter:blur(0);transform:none}}
