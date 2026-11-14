@@ -283,16 +283,22 @@
 
 /* Match semantic objects, not the entire page: idea demo becomes its product. */
 .deck-bento-morph .vibe-heading,.deck-bento-morph .bento-heading{view-transition-name:bento-heading}
-.deck-bento-morph .vibe-cinema,.deck-bento-morph .bento-hero{view-transition-name:bento-product}
-.deck-bento-morph .vibe-explanation,.deck-bento-morph .bento-writing{view-transition-name:bento-coach}
+.deck-bento-morph .vibe-result-frame img,.deck-bento-morph .bento-real-home{view-transition-name:english-app-preview}
+.deck-bento-morph .bento-tile{opacity:1;transform:none;transition:none}
+.deck-bento-morph .vibe-browser-window{animation:none}
 html.deck-bento-morph::view-transition{background:#0F172A}
 html.deck-bento-morph::view-transition-group(*){animation-duration:850ms;animation-timing-function:cubic-bezier(.22,.7,.25,1)}
 html.deck-bento-morph::view-transition-image-pair(*){isolation:isolate}
 html.deck-bento-morph::view-transition-old(*),html.deck-bento-morph::view-transition-new(*){mix-blend-mode:normal}
-html.deck-bento-morph::view-transition-new(root){animation: bento-arrive 850ms ease both}
+html.deck-bento-morph::view-transition-old(root){animation:bento-depart 200ms ease-out both}
+html.deck-bento-morph::view-transition-new(root){animation:bento-arrive 850ms ease both}
 @keyframes bento-arrive{0%,25%{opacity:0}100%{opacity:1}}
-html.deck-bento-morph::view-transition-old(bento-heading),html.deck-bento-morph::view-transition-old(bento-product),html.deck-bento-morph::view-transition-old(bento-coach){animation:bento-depart 500ms ease-out both}
-html.deck-bento-morph::view-transition-new(bento-heading),html.deck-bento-morph::view-transition-new(bento-product),html.deck-bento-morph::view-transition-new(bento-coach){animation:bento-replace 850ms ease both}
+html.deck-bento-morph::view-transition-old(bento-heading){animation:bento-depart 180ms ease-out both}
+html.deck-bento-morph::view-transition-new(bento-heading){animation:bento-replace 850ms ease both}
+html.deck-bento-morph::view-transition-group(english-app-preview){z-index:10;animation-duration:850ms}
+html.deck-bento-morph::view-transition-old(english-app-preview){height:100%;animation:bento-depart 850ms ease both}
+html.deck-bento-morph::view-transition-new(english-app-preview){height:100%;animation:bento-app-arrive 850ms ease both}
+@keyframes bento-app-arrive{from{opacity:0}to{opacity:1}}
 @keyframes bento-depart{to{opacity:0}}
 @keyframes bento-replace{0%{opacity:0}55%,100%{opacity:1}}
 
