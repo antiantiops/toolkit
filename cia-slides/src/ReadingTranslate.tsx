@@ -6,10 +6,10 @@ const exampleVi='Các chỉ số kinh tế hiện tại cho thấy mức tăng t
 export function ReadingTranslate({active,reset,step}:{active:boolean;reset:number;step:number}){
  const root=useRef<HTMLDivElement>(null),speaker=useRef<HTMLSpanElement>(null);
  const [aim,setAim]=useState({x:0,y:0}),[approach,setApproach]=useState(false);
- useEffect(()=>{setApproach(false);if(!active)return;const timer=setTimeout(()=>setApproach(true),13700);return()=>clearTimeout(timer)},[active,reset]);
+ useEffect(()=>{setApproach(false);if(!active)return;const timer=setTimeout(()=>setApproach(true),27200);return()=>clearTimeout(timer)},[active,reset]);
  useEffect(()=>{if(!approach||!root.current||!speaker.current)return;let x=0,y=0,node:HTMLElement|null=speaker.current;while(node&&node!==root.current){x+=node.offsetLeft;y+=node.offsetTop;node=node.offsetParent as HTMLElement|null;}setAim({x:x+speaker.current.offsetWidth/2,y:y+speaker.current.offsetHeight/2});},[approach]);
  const [stage,setStage]=useState(0),[typed,setTyped]=useState('');
- useEffect(()=>{setStage(0);setTyped('');if(!active)return;const timers=[7400,8500,9700,10400].map((ms,i)=>setTimeout(()=>setStage(i+1),ms));return()=>timers.forEach(clearTimeout);},[active,reset]);
+ useEffect(()=>{setStage(0);setTyped('');if(!active)return;const timers=[20000,21100,22300,23000].map((ms,i)=>setTimeout(()=>setStage(i+1),ms));return()=>timers.forEach(clearTimeout);},[active,reset]);
  useEffect(()=>{if(stage!==4)return;let n=0;const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;if(reduced){setTyped('Indicator');return;}const timer=setInterval(()=>{setTyped('Indicator'.slice(0,++n));if(n===9)clearInterval(timer);},130);return()=>clearInterval(timer);},[stage]);
  const [examplePhase,setExamplePhase]=useState(0),[sentence,setSentence]=useState('');
  useEffect(()=>{

@@ -10,12 +10,13 @@ export function ReadingSlide({english=false,active=true,depth=false}:{english?:b
  const [day,setDay]=useState(0),[step,setStep]=useState(-1),[replay,setReplay]=useState(0);
  useEffect(()=>{
   setStep(-1);if(!active)return;
-  const timers=[7400,14500,18500,33500,40200].map((ms,i)=>setTimeout(()=>setStep(i),ms));
+  // Pacing: 20s opening + audience pause, then holds for meaning, pronunciation, example, and practice writing
+  const timers=[20000,28000,34000,55000,69000].map((ms,i)=>setTimeout(()=>setStep(i),ms));
   return()=>timers.forEach(clearTimeout);
  },[active,replay]);
  useEffect(()=>{
   if(step!==5||!active)return;
-  const timer=setTimeout(()=>setStep(6),12500);
+  const timer=setTimeout(()=>setStep(6),18000);
   return()=>clearTimeout(timer);
  },[step,active,replay]);
  useEffect(()=>{
@@ -56,16 +57,16 @@ export function ReadingSlide({english=false,active=true,depth=false}:{english?:b
   const start=performance.now();let raf=0;
   const paint=()=>{
    const elapsed=(performance.now()-start)/1000;
-   const line=Math.min(rows.length-1,Math.max(0,Math.floor((elapsed-.4)/.55)));
+   const line=Math.min(rows.length-1,Math.max(0,Math.floor((elapsed-.4)/1.1)));
    rows.forEach((row,i)=>{
-    const progress=reduced?1:Math.max(0,Math.min(1,(elapsed-.4-i*.55)/.45));
+    const progress=reduced?1:Math.max(0,Math.min(1,(elapsed-.4-i*1.1)/.8));
     row.style.clipPath=`inset(0 ${100-progress*100}% 0 0)`;
    });
-   const row=rows[line],progress=Math.max(0,Math.min(1,(elapsed-.4-line*.55)/.45));
+   const row=rows[line],progress=Math.max(0,Math.min(1,(elapsed-.4-line*1.1)/.8));
    const width=(row.firstElementChild as HTMLElement).offsetWidth;
    pen.style.left=(row.offsetLeft+width*progress)+'px';
    pen.style.top=(row.offsetTop+23)+'px';
-   if(elapsed<5.5&&!reduced)raf=requestAnimationFrame(paint);
+   if(elapsed<10.5&&!reduced)raf=requestAnimationFrame(paint);
   };raf=requestAnimationFrame(paint);return()=>cancelAnimationFrame(raf);
  },[step,active,replay]);
  useEffect(()=>{
