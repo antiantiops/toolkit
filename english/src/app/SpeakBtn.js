@@ -4,14 +4,35 @@ import {joinSpeech,hasSpeech} from '../lib/join-speech.mjs';
 import {validSegments} from '../lib/speech-segments.mjs';
 const tts = { audio: null, cache: new Map(), segments: new Map(), joined: new Map(), run: 0, cancel: null };
 function stop(){tts.run++;tts.cancel?.();tts.cancel=null;tts.audio?.pause();globalThis.speechSynthesis?.cancel();return tts.run;}
-async function audioUrl(text,lang){
+const OXFORD_WORD = /^[A-Za-z][A-Za-z'-]{0,63}$/;
+function oxfordUrl(raw){
+ if(typeof raw!=='string'||!raw)return '';
+ try{const u=new URL(raw);return u.protocol==='https:'&&(u.hostname==='www.oxfordlearnersdictionaries.com'||u.hostname==='oxfordlearnersdictionaries.com')?u.href:'';}catch{return '';}
+}
+function cacheSet(k,url){
+ if(tts.cache.size>=200){const old=tts.cache.keys().next().value,prev=tts.cache.get(old);if(prev?.startsWith('blob:'))URL.revokeObjectURL(prev);tts.cache.delete(old);}
+ tts.cache.set(k,url);return url;
+}
+async function audioUrl(text,lang,allowOxford=true){
+ const trimmed=String(text??'').trim();
+ if(allowOxford&&(lang==='en-US'||lang==='en-GB')&&OXFORD_WORD.test(trimmed)){
+  const word=trimmed.toLowerCase(),k='ox|'+lang+'|'+word;
+  if(tts.cache.has(k))return tts.cache.get(k);
+  const res=await fetch(`/api/pronunciation?word=${encodeURIComponent(word)}`).catch(()=>{throw Error('Không kết nối được phát âm Oxford. Bấm loa để thử lại.');});
+  if(!res.ok)throw Error(`Không tải được phát âm Oxford (HTTP ${res.status}). Bấm loa để thử lại.`);
+  const p=(await res.json().catch(()=>null))?.pronunciation;
+  if(!p||p.source!=='Oxford')throw Error(`Không tìm thấy phát âm Oxford cho "${trimmed}". Bấm loa để thử lại.`);
+  const raw=lang==='en-GB'?(p.audioUk||p.audioUs):(p.audioUs||p.audioUk);
+  if(!raw)throw Error(`Không có file âm thanh Oxford cho "${trimmed}". Bấm loa để thử lại.`);
+  const url=oxfordUrl(raw);
+  if(!url)throw Error('URL phát âm Oxford không hợp lệ. Bấm loa để thử lại.');
+  return cacheSet(k,url);
+ }
  const k=lang+'|'+text;
  if(tts.cache.has(k))return tts.cache.get(k);
  const res=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,lang})});
  if(!res.ok){const detail=await res.json().catch(()=>({}));throw Error(`Không tải được giọng đọc (HTTP ${res.status}${detail.requestId ? ` · ${detail.requestId}` : ''}). ${detail.error || 'Bấm loa để thử lại.'}`);}
- const url=URL.createObjectURL(await res.blob());
- if(tts.cache.size>=200){const old=tts.cache.keys().next().value;URL.revokeObjectURL(tts.cache.get(old));tts.cache.delete(old);}
- tts.cache.set(k,url);return url;
+ return cacheSet(k,URL.createObjectURL(await res.blob()));
 }
 async function speak(text,lang,ready){
  const run=stop();tts.audio ||= new Audio();
@@ -41,7 +62,7 @@ async function speak(text,lang,ready){
     const audible=segments.filter(s=>hasSpeech(s.text));
     for(let i=0;i<audible.length;i+=2){
      const batch=await Promise.all(audible.slice(i,i+2).map(async segment=>{
-      const source=await audioUrl(segment.text,segment.lang);
+      const source=await audioUrl(segment.text,segment.lang,false);
       const response=await fetch(source);if(!response.ok)throw Error('Không tải được âm thanh');
       const buffer=await context.decodeAudioData(await response.arrayBuffer());
       return buffer.getChannelData(0);
@@ -59,7 +80,8 @@ async function speak(text,lang,ready){
  await new Promise((resolve,reject)=>{
   const finish=error=>{if(tts.cancel===cancel)tts.cancel=null;error?reject(error):resolve();};
   const cancel=()=>finish();tts.cancel=cancel;
-  const audio=tts.audio;audio.src=url;audio.playbackRate=lang==='en-US'?0.85:1;
+  const isOxford=(lang==='en-US'||lang==='en-GB')&&OXFORD_WORD.test(String(text??'').trim());
+  const audio=tts.audio;audio.src=url;audio.playbackRate=!isOxford&&lang==='en-US'?0.85:1;
   audio.onended=()=>finish();audio.onerror=()=>finish(Error('Không phát được âm thanh. Bấm loa để thử lại.'));
   audio.play().then(ready).catch(()=>finish(Error('Trình duyệt chặn phát âm thanh. Bấm loa để thử lại.')));
  });
