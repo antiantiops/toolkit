@@ -17,7 +17,7 @@ function load(word) {
   }
   return cache.get(word);
 }
-export default function OxfordPronunciation({ word, pronunciation, ipa }) {
+export default function OxfordPronunciation({ word, pronunciation, ipa, onLoaded }) {
   const key = (word || '').trim().toLowerCase();
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
@@ -26,6 +26,8 @@ export default function OxfordPronunciation({ word, pronunciation, ipa }) {
   const audio = useRef(null);
   const busyRef = useRef(false);
   const runRef = useRef(0);
+  const onLoadedRef = useRef(onLoaded);
+  onLoadedRef.current = onLoaded;
   const supplied = pronunciation?.source === 'Oxford' ? pronunciation : null;
 
   const reset = () => {
@@ -53,6 +55,12 @@ export default function OxfordPronunciation({ word, pronunciation, ipa }) {
       audio.current?.pause();
     };
   }, [key, supplied, retry]);
+
+  useEffect(() => {
+    if (result?.key === key && result.value) {
+      onLoadedRef.current?.(key, result.value);
+    }
+  }, [key, result]);
 
   const value = result?.key === key ? result.value : null;
 

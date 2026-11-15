@@ -303,7 +303,7 @@ function PronunciationRecorderPanel({ word, ipa, lookup }) {
         )}
 
         {activeTargetIpa && (
-          <div className="mt-2 font-mono text-sm tracking-wide text-slate-400">
+          <div data-testid="pronunciation-target-ipa" className="mt-2 font-mono text-sm tracking-wide text-slate-400">
             {activeTargetIpa}
           </div>
         )}

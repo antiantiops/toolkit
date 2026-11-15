@@ -1695,8 +1695,8 @@ export default function Home() {
               </div>
             )}
             {(lookup.partOfSpeech || lookup.dictionaryParts?.length > 0) && <div data-testid="lookup-word-class" className="mt-2 text-sm font-semibold text-amber-200">{lookup.partOfSpeech || lookup.dictionaryParts.join(' · ')}{!lookup.partOfSpeech && <small className="ml-2 font-normal text-slate-400">Từ loại trong từ điển</small>}</div>}
-            <OxfordPronunciation key={lookup.word} word={lookup.word} pronunciation={lookup.pronunciation} ipa={lookup.ipa} />
-            {lookup.practice && <div id="word-pronunciation-practice"><PronunciationRecorder key={lookup.word} word={lookup.word} ipa={lookup.pronunciation?.us || lookup.pronunciation?.uk || lookup.ipa || ""} lookup={lookup} /></div>}
+            <OxfordPronunciation key={lookup.word} word={lookup.word} pronunciation={lookup.pronunciation} ipa={lookup.ipa} onLoaded={(wordKey, value) => setLookup(current => current && (current.word || "").trim().toLowerCase() === wordKey && current.pronunciation !== value ? { ...current, pronunciation: value } : current)} />
+            {lookup.practice && <div id="word-pronunciation-practice"><PronunciationRecorder key={lookup.word} word={lookup.word} ipa={/^[A-Za-z][A-Za-z'-]{0,63}$/.test((lookup.word || "").trim()) ? (lookup.pronunciation?.source === "Oxford" ? [lookup.pronunciation.uk && `UK: ${lookup.pronunciation.uk}`, lookup.pronunciation.us && `US: ${lookup.pronunciation.us}`].filter(Boolean).join(" · ") : "") : (lookup.ipa || "")} lookup={lookup} /></div>}
             {lookup.loading && !lookup.meaning ? <div className="mt-5 text-slate-400">{ptext("Đang tra nghĩa…")}</div> : lookup.error ? <div className="mt-4 text-red-300">{lookup.error}</div> : <>
               {lookup.easyReading && <div className="mt-4 rounded-xl border border-sky-900 bg-sky-950/50 p-3 text-sm leading-relaxed text-sky-100"><span className="font-semibold text-sky-300">Dễ đọc: </span>{lookup.easyReading}</div>}
               <div data-testid="lookup-meaning" className="mt-4 whitespace-pre-line text-lg font-medium text-white">{lookup.meaning}</div>
