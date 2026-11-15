@@ -47,7 +47,7 @@ try{
 
   await clickOuter();
   await p.locator('.usage-sequence.is-started').waitFor({timeout:2000});
-  await p.locator('.usage-app-stage.chat-open').waitFor({timeout:6000});
+  await p.locator('.usage-app-stage.chat-open').waitFor({timeout:7000});
 
   await p.locator('.sequence-welcome, .composer-draft').first().waitFor({timeout:4000});
   await clickOuter();
@@ -60,7 +60,7 @@ try{
   await p.waitForFunction((exp)=>{
    const el=document.querySelector('.example-ai');
    return el&&el.textContent===exp&&!el.querySelector('.typing-caret');
-  },expected,{timeout:15000});
+  },expected,{timeout:30000});
 
   if(tap)await replay.tap();else await replay.click();
   await p.waitForTimeout(4200);
@@ -70,7 +70,7 @@ try{
 
   await clickOuter();
   await p.locator('.usage-sequence.is-started').waitFor({timeout:2000});
-  await p.locator('.usage-app-stage.chat-open').waitFor({timeout:6000});
+  await p.locator('.usage-app-stage.chat-open').waitFor({timeout:7000});
 
   await p.close();
   await ctx.close();

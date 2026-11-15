@@ -179,8 +179,8 @@
 .usage-app-picker button>img{width:38px;height:38px}
 .demo-mouse{position:absolute;width:34px;height:42px;left:55%;top:57%;filter:drop-shadow(0 2px 2px #0003);opacity:0;animation:none}
 .opening-chatgpt{animation:none}
-.usage-sequence.is-started .demo-mouse{opacity:1;animation:appPointer 3.8s both}
-.usage-sequence.is-started .opening-chatgpt{animation:appClick 3.8s both}
+.usage-sequence.is-started .demo-mouse{opacity:1;animation:appPointer 4.2s both}
+.usage-sequence.is-started .opening-chatgpt{animation:appClick 4.2s both}
 @keyframes appPointer{0%{transform:translate(180px,180px);opacity:0}15%{opacity:1}65%,85%{transform:translate(0,0)}90%{transform:scale(.85)}100%{transform:scale(1)}}
 @keyframes appClick{0%,86%{background:#ffffff80}92%,100%{background:#d1fae5;border-color:#10a37f;box-shadow:0 0 0 8px #10a37f22}}
 @media(prefers-reduced-motion:reduce){.usage-sequence.is-started .demo-mouse,.usage-sequence.is-started .opening-chatgpt{animation:none}}
