@@ -4,13 +4,13 @@ import assert from 'node:assert/strict';
 const baseUrl=process.env.BASE_URL||'http://127.0.0.1:8283';
 // Boundary steps: [ms, required classes, absent classes]
 const steps=[
- [7800,[],['connected']],
+ [6300,[],['connected']],
  [400,['connected'],['model-picker-open']],
- [3900,['model-picker-open'],['linked']],
- [3000,['linked'],['scene-1']],
- [11000,['scene-1'],['scene-3']],
- [8000,['scene-3'],['scene-2']],
- [1600,['scene-2'],['scene-4']],
+ [3000,['model-picker-open'],['linked']],
+ [2500,['linked'],['scene-1']],
+ [6000,['scene-1'],['scene-3']],
+ [2500,['scene-3'],['scene-2']],
+ [1300,['scene-2'],['scene-4']],
  [12500,['scene-4','scene-2'],['branded']],
  [5000,['branded'],['agent-step-1']],
  [17000,['agent-step-1'],['agent-step-2']],
