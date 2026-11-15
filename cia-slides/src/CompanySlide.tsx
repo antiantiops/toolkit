@@ -4,7 +4,7 @@ import './intro-slide.css';
 const systems=[{name:'Servers',Icon:Server,x:65,y:95},{name:'Cloud',Icon:Cloud,x:255,y:70},{name:'Database',Icon:Database,x:445,y:95},{name:'Kubernetes',Icon:Boxes,x:350,y:240},{name:'Network',Icon:Network,x:150,y:240}];
 export function CompanySlide({active=true}:{active?:boolean}){
  const[progress,setProgress]=useState(-1);
- useEffect(()=>{setProgress(-1);if(!active)return;if(matchMedia('(prefers-reduced-motion: reduce)').matches){setProgress(5);return;}let frame=0;const start=performance.now()+6500;const tick=(now:number)=>{const p=Math.min(5,(now-start)/4000);setProgress(Math.max(-1,p));if(p<5)frame=requestAnimationFrame(tick);};frame=requestAnimationFrame(tick);return()=>cancelAnimationFrame(frame);},[active]);
+ useEffect(()=>{setProgress(-1);if(!active)return;if(matchMedia('(prefers-reduced-motion: reduce)').matches){setProgress(5);return;}let frame=0;const start=performance.now()+6500;const tick=(now:number)=>{const p=Math.min(5,(now-start)/2500);setProgress(Math.max(-1,p));if(p<5)frame=requestAnimationFrame(tick);};frame=requestAnimationFrame(tick);return()=>cancelAnimationFrame(frame);},[active]);
  const stage=progress<0?0:progress>=5?7:Math.floor(progress)+2;
  const points=[...systems,systems[0]];
  const segment=Math.max(0,Math.min(4,Math.floor(progress)));

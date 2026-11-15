@@ -18,12 +18,12 @@ try{
    assert.equal(await p.locator('.infra-protected').count(),5);
    assert.equal(await p.locator('.company-protected.is-protected').count(),1);
   }else{
-   for(const [dt,halos] of [[6250,0],[350,1],[4000,2],[4000,3],[4000,4],[4000,5]]){
+   for(const [dt,halos] of [[6250,0],[350,1],[2500,2],[2500,3],[2500,4],[2500,5]]){
     await p.clock.runFor(dt);
     await p.waitForFunction(n=>document.querySelectorAll('.infra-protected').length===n,halos,{timeout:2000});
     assert.equal(await p.locator('.company-protected.is-protected').count(),0);
    }
-   await p.clock.runFor(4000);
+   await p.clock.runFor(2500);
    await p.locator('.company-phase-7').waitFor({timeout:2000});
    assert.equal(await p.locator('.infra-protected').count(),5);
    assert.equal(await p.locator('.company-protected.is-protected').count(),1);
