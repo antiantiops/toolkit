@@ -209,7 +209,8 @@ html[data-theme="light"] [data-transcript-line][aria-current="true"]>span:last-c
   pointer-events: none;
 }
 .vocab-word-list--compact .vocab-secondary-inline,
-.vocab-word-list--compact .vocab-practice-btn {
+.vocab-word-list--compact .vocab-practice-btn,
+.vocab-word-list--compact [data-testid="oxford-pronunciation"] > a {
   display: none;
 }
 @media (prefers-reduced-motion: reduce) {

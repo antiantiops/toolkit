@@ -122,6 +122,7 @@ try {
     assert.equal(await page.getByText('English definition').first().isVisible(), true);
     assert.equal(await page.getByText('Xem ví dụ, mẹo dùng').first().isVisible(), true);
     assert.equal(await page.locator('[aria-label="Luyện nói Encompass"]').isVisible(), true);
+    assert.equal(await page.getByText('Nguồn: Oxford').first().isVisible(), true);
 
     const beforeHeight = (await list.boundingBox()).height;
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, `${label} full mode horizontal overflow`);
@@ -164,6 +165,7 @@ try {
     assert.equal(await page.locator('.vocab-collapse').first().evaluate(el => el.getBoundingClientRect().height < 2), true);
     assert.equal(await page.locator('.vocab-secondary-inline').first().isVisible(), false);
     assert.equal(await page.locator('.vocab-practice-btn').first().isVisible(), false);
+    assert.equal(await page.getByText('Nguồn: Oxford').first().isVisible(), false);
 
     // Total height significantly reduced & single-column dense rows
     const compactHeight = (await list.boundingBox()).height;
@@ -188,6 +190,7 @@ try {
     assert.equal(await toggle.getAttribute('aria-expanded'), 'true');
     assert.equal(await page.getByText('English definition').first().isVisible(), true);
     assert.equal(await page.locator('.vocab-practice-btn').first().isVisible(), true);
+    assert.equal(await page.getByText('Nguồn: Oxford').first().isVisible(), true);
     const restoredHeight = (await list.boundingBox()).height;
     assert(Math.abs(restoredHeight - beforeHeight) < 5, `Restored height (${restoredHeight}) matches original (${beforeHeight})`);
 
