@@ -177,11 +177,13 @@
 .usage-app-picker{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;width:min(620px,90vw);margin:20px auto}
 .usage-app-picker button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;aspect-ratio:1;border:1px solid #94a3b8;border-radius:50%;background:#ffffff80;color:#0f172a;font-size:12px}
 .usage-app-picker button>img{width:38px;height:38px}
-.demo-mouse{position:absolute;width:34px;height:42px;left:55%;top:57%;filter:drop-shadow(0 2px 2px #0003);animation:appPointer 3.8s both}
-.opening-chatgpt{animation:appClick 3.8s both}
+.demo-mouse{position:absolute;width:34px;height:42px;left:55%;top:57%;filter:drop-shadow(0 2px 2px #0003);opacity:0;animation:none}
+.opening-chatgpt{animation:none}
+.usage-sequence.is-started .demo-mouse{opacity:1;animation:appPointer 3.8s both}
+.usage-sequence.is-started .opening-chatgpt{animation:appClick 3.8s both}
 @keyframes appPointer{0%{transform:translate(180px,180px);opacity:0}15%{opacity:1}65%,85%{transform:translate(0,0)}90%{transform:scale(.85)}100%{transform:scale(1)}}
 @keyframes appClick{0%,86%{background:#ffffff80}92%,100%{background:#d1fae5;border-color:#10a37f;box-shadow:0 0 0 8px #10a37f22}}
-@media(prefers-reduced-motion:reduce){.demo-mouse,.opening-chatgpt{animation:none}}
+@media(prefers-reduced-motion:reduce){.usage-sequence.is-started .demo-mouse,.usage-sequence.is-started .opening-chatgpt{animation:none}}
 /* Expand chat from ChatGPT tile while app grid remains behind it. */
 .usage-app-stage{position:relative;width:min(680px,100%);isolation:isolate;min-height:350px;display:grid;align-items:center}
 .usage-app-stage .usage-app-picker{position:absolute;inset:0;align-content:center;grid-area:1/1;width:90%;margin:0 auto;transition:opacity .9s .25s,filter .9s;}
