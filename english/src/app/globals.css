@@ -166,3 +166,56 @@ html[data-theme="light"] [data-transcript-line]{transition:color .3s ease,text-s
 html[data-theme="light"] [data-transcript-line][aria-current="true"]{background:transparent;color:#0f766e;box-shadow:none;text-shadow:0 0 18px rgb(20 184 166 / .28)}
 html[data-theme="light"] [data-transcript-line][aria-current="true"]>span:last-child{color:#115e59}
 @media(prefers-reduced-motion:reduce){html[data-theme="light"] [data-transcript-line]{transition:none}}
+
+/* Smooth vocab compact-review collapse using native grid-template-rows */
+.vocab-word-list .vocab-card {
+  transition: padding 260ms cubic-bezier(.22, 1, .36, 1), border-radius 260ms cubic-bezier(.22, 1, .36, 1), border-color 150ms ease, box-shadow 150ms ease;
+}
+.vocab-word-list--compact .vocab-card {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+}
+.vocab-word-list--compact .vocab-word-title {
+  font-size: 1rem;
+  line-height: 1.375;
+}
+.vocab-word-list--compact .vocab-pron-wrap {
+  margin-top: 0.125rem;
+}
+.vocab-word-list--compact [data-testid="oxford-pronunciation"] {
+  margin-top: 0;
+}
+.vocab-word-list .vocab-meaning {
+  transition: margin-top 260ms cubic-bezier(.22, 1, .36, 1);
+}
+.vocab-word-list--compact .vocab-meaning {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.375;
+}
+.vocab-word-list .vocab-collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition: grid-template-rows 260ms cubic-bezier(.22, 1, .36, 1), opacity 200ms ease;
+}
+.vocab-word-list .vocab-collapse-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+.vocab-word-list--compact .vocab-collapse {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+}
+.vocab-word-list--compact .vocab-secondary-inline,
+.vocab-word-list--compact .vocab-practice-btn {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .vocab-word-list .vocab-card,
+  .vocab-word-list .vocab-meaning,
+  .vocab-word-list .vocab-collapse {
+    transition: none !important;
+  }
+}

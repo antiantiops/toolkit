@@ -122,6 +122,7 @@ export default function Home() {
   const [quickResult, setQuickResult] = useState(null);
   const [quickLoading, setQuickLoading] = useState(false);
   const [practice, setPractice] = useState(false);
+  const [compactVocab, setCompactVocab] = useState(false);
   const [testType, setTestType] = useState("match");
   const [matchAnswers, setMatchAnswers] = useState({});
   const [fillAnswers, setFillAnswers] = useState({});
@@ -1195,22 +1196,37 @@ export default function Home() {
         {!loading && !practice && words.length >= 4 && words.every(w => !w.pending) && <div key="vocab-business-test" data-testid="vocab-business-test"><BusinessPractice key={JSON.stringify(words.map(w=>w.word))} mode="vocab" words={words} /></div>}
 
         {/* Word cards */}
-        {!practice && <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        {!practice && words.length > 0 && (
+          <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              data-vocab-compact-toggle
+              aria-expanded={!compactVocab}
+              aria-controls="vocab-word-list"
+              onClick={() => setCompactVocab(v => !v)}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-200 transition-colors hover:border-blue-400 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+            >
+              <span>{compactVocab ? "Mở rộng · Xem đầy đủ" : "Thu gọn · Ôn nhanh"}</span>
+            </button>
+          </div>
+        )}
+        {!practice && <div id="vocab-word-list" data-compact={compactVocab ? "true" : "false"} className={`vocab-word-list ${compactVocab ? "vocab-word-list--compact flex flex-col gap-1.5" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"}`}>
           {prioritizeWords(words,gameMemory).map((w, i) => (
-            <div key={i} className="bg-slate-900 border border-slate-700 rounded-xl p-4 sm:p-5 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/10 transition-all">
+            <div key={i} data-vocab-card className="vocab-card bg-slate-900 border border-slate-700 rounded-xl p-4 sm:p-5 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/10 transition-all">
               <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="flex flex-wrap items-center gap-1 text-lg sm:text-xl font-bold text-blue-400 break-words"><span>{w.word}</span><CopyBtn text={w.word} />{w.partOfSpeech && <span className="rounded-full border border-blue-800 bg-blue-950 px-2 py-0.5 text-xs font-semibold not-italic text-blue-200">{w.partOfSpeech}</span>}</div>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm italic text-purple-400">
+                <div className="min-w-0 flex-1">
+                  <div className="vocab-word-title flex flex-wrap items-center gap-1 font-bold text-blue-400 break-words text-lg sm:text-xl"><span className="break-words">{w.word}</span><span className="vocab-secondary-inline inline-flex items-center gap-1"><CopyBtn text={w.word} />{w.partOfSpeech && <span className="rounded-full border border-blue-800 bg-blue-950 px-2 py-0.5 text-xs font-semibold not-italic text-blue-200">{w.partOfSpeech}</span>}</span></div>
+                  <div className="vocab-pron-wrap mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm italic text-purple-400 break-words">
                     <OxfordPronunciation word={w.word} pronunciation={w.pronunciation} ipa={w.ipa} />
                   </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-1.5">
+                <div className="vocab-practice-btn flex shrink-0 items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => setLookup({ ...w, practice: true })}
                     title={`Luyện nói ${w.word}`}
                     aria-label={`Luyện nói ${w.word}`}
+                    tabIndex={compactVocab ? -1 : undefined}
                     className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-violet-700/60 bg-violet-950/40 text-violet-200 transition-colors hover:bg-violet-900/50 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400"
                   >
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
@@ -1221,48 +1237,53 @@ export default function Home() {
                   </button>
                 </div>
               </div>
-              <div className="mt-3 text-slate-100 font-medium">{w.meaning}</div>{gameMemory[String(w.word).toLowerCase().trim()]?.debt>0 && <span className="mt-2 inline-block rounded-full bg-amber-950 px-2 py-1 text-xs text-amber-200">Ưu tiên ôn · Hay quên</span>}
-              {w.definition && (
-                <div className="mt-3 border-l-2 border-violet-500 pl-3">
-                  <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wide text-violet-300">
-                    <span>English definition</span>
-                    <div className="flex gap-1">
-                      <CopyBtn text={w.definition} />
-                      <SpeakBtn text={w.definition} className="shrink-0 rounded-md bg-violet-800/70 px-2 py-1 normal-case text-violet-100 hover:bg-violet-700" title="Đọc định nghĩa tiếng Anh">🔊 Đọc</SpeakBtn>
-                    </div>
-                  </div>
-                  <div className="mt-1 text-sm text-slate-200 leading-relaxed">{clickableText(w.definition)}</div>
-                  {w.definitionVietnamese && <div className="mt-1 text-sm text-slate-400 leading-relaxed">{w.definitionVietnamese}</div>}
-                </div>
-              )}
-              {w.easyReading && (
-                <div className="mt-3 rounded-lg bg-sky-950/60 border border-sky-900 px-3 py-2 text-sm text-sky-100">
-                  <span className="font-semibold text-sky-300">Dễ đọc:</span> {w.easyReading}
-                </div>
-              )}
-              <details className="mt-3 group/details">
-                <summary className="cursor-pointer text-sm text-slate-400 hover:text-blue-300 select-none">Xem ví dụ, mẹo dùng</summary>
-                <div className="mt-3 border-t border-slate-700 pt-3">
-                  <div className="text-sm text-slate-300 mb-2">
-                    <span className="text-slate-500">Ví dụ:</span> {clickableText(w.example)}<CopyBtn text={w.example} /><SpeakBtn text={w.example} aria-label="Nghe ví dụ" title="Nghe ví dụ" className="ml-2 text-sm text-slate-300 hover:text-white">🔊</SpeakBtn>
-                    {w.exampleVietnamese && <div className="text-slate-400 italic mt-1">{w.exampleVietnamese}</div>}
-                  </div>
-                  {w.pending && <div className="text-sm text-blue-300">Đang bổ sung nghĩa và mẹo dùng...</div>}
-                  {w.synonyms && !w.contrastTip && (
-                    <div className="text-sm text-slate-300">
-                      <span className="text-slate-400 font-medium">Đồng nghĩa:</span>{!w.synonymsInBook && <AiTag />} {renderAnnotatedWords(w.synonyms)}<CopyBtn text={w.synonyms} />
+              <div className="vocab-meaning mt-3 text-slate-100 font-medium break-words">{w.meaning}</div>
+              <div className="vocab-collapse" aria-hidden={compactVocab || undefined} inert={compactVocab ? true : undefined}>
+                <div className="vocab-collapse-inner">
+                  {gameMemory[String(w.word).toLowerCase().trim()]?.debt>0 && <span className="mt-2 inline-block rounded-full bg-amber-950 px-2 py-1 text-xs text-amber-200">Ưu tiên ôn · Hay quên</span>}
+                  {w.definition && (
+                    <div className="mt-3 border-l-2 border-violet-500 pl-3">
+                      <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wide text-violet-300">
+                        <span>English definition</span>
+                        <div className="flex gap-1">
+                          <CopyBtn text={w.definition} />
+                          <SpeakBtn text={w.definition} className="shrink-0 rounded-md bg-violet-800/70 px-2 py-1 normal-case text-violet-100 hover:bg-violet-700" title="Đọc định nghĩa tiếng Anh">🔊 Đọc</SpeakBtn>
+                        </div>
+                      </div>
+                      <div className="mt-1 text-sm text-slate-200 leading-relaxed">{clickableText(w.definition)}</div>
+                      {w.definitionVietnamese && <div className="mt-1 text-sm text-slate-400 leading-relaxed">{w.definitionVietnamese}</div>}
                     </div>
                   )}
-                  {w.antonyms && !w.contrastTip && (
-                    <div className="text-sm text-slate-300">
-                      <span className="text-slate-400 font-medium">Trái nghĩa:</span>{!w.antonymsInBook && <AiTag />} {renderAnnotatedWords(w.antonyms)}<CopyBtn text={w.antonyms} />
+                  {w.easyReading && (
+                    <div className="mt-3 rounded-lg bg-sky-950/60 border border-sky-900 px-3 py-2 text-sm text-sky-100">
+                      <span className="font-semibold text-sky-300">Dễ đọc:</span> {w.easyReading}
                     </div>
                   )}
-                  {w.contrastTip && <div data-testid="vocab-contrast-tip" className="mt-3 rounded-lg border border-amber-800/60 bg-amber-950/30 p-3 text-sm"><div className="font-semibold text-amber-300">Mẹo nhớ cực ngắn<AiTag /></div>{renderContrastTip(w.contrastTip, w.contrastExamples)}</div>}
-                  {w.collocations?.length > 0 && <div className="mt-3 rounded-lg border border-teal-800/70 bg-teal-950/40 p-3"><div className="text-xs font-semibold uppercase tracking-wide text-teal-300">Collocation</div>{w.collocations.map((c, ci) => <div key={ci} className="mt-2 text-sm"><div className="font-medium text-teal-100">{clickableText(c.phrase)}<CopyBtn text={c.phrase} /> <SpeakBtn text={c.phrase} className="text-xs text-teal-300 hover:text-white">🔊</SpeakBtn></div><div className="mt-1 text-teal-200/70">{c.meaning}{c.note && ` — ${c.note}`}</div></div>)}</div>}
-                  {w.note && <div className="text-sm text-amber-400 mt-2">💡 {w.note}</div>}
+                  <details className="mt-3 group/details">
+                    <summary className="cursor-pointer text-sm text-slate-400 hover:text-blue-300 select-none">Xem ví dụ, mẹo dùng</summary>
+                    <div className="mt-3 border-t border-slate-700 pt-3">
+                      <div className="text-sm text-slate-300 mb-2">
+                        <span className="text-slate-500">Ví dụ:</span> {clickableText(w.example)}<CopyBtn text={w.example} /><SpeakBtn text={w.example} aria-label="Nghe ví dụ" title="Nghe ví dụ" className="ml-2 text-sm text-slate-300 hover:text-white">🔊</SpeakBtn>
+                        {w.exampleVietnamese && <div className="text-slate-400 italic mt-1">{w.exampleVietnamese}</div>}
+                      </div>
+                      {w.pending && <div className="text-sm text-blue-300">Đang bổ sung nghĩa và mẹo dùng...</div>}
+                      {w.synonyms && !w.contrastTip && (
+                        <div className="text-sm text-slate-300">
+                          <span className="text-slate-400 font-medium">Đồng nghĩa:</span>{!w.synonymsInBook && <AiTag />} {renderAnnotatedWords(w.synonyms)}<CopyBtn text={w.synonyms} />
+                        </div>
+                      )}
+                      {w.antonyms && !w.contrastTip && (
+                        <div className="text-sm text-slate-300">
+                          <span className="text-slate-400 font-medium">Trái nghĩa:</span>{!w.antonymsInBook && <AiTag />} {renderAnnotatedWords(w.antonyms)}<CopyBtn text={w.antonyms} />
+                        </div>
+                      )}
+                      {w.contrastTip && <div data-testid="vocab-contrast-tip" className="mt-3 rounded-lg border border-amber-800/60 bg-amber-950/30 p-3 text-sm"><div className="font-semibold text-amber-300">Mẹo nhớ cực ngắn<AiTag /></div>{renderContrastTip(w.contrastTip, w.contrastExamples)}</div>}
+                      {w.collocations?.length > 0 && <div className="mt-3 rounded-lg border border-teal-800/70 bg-teal-950/40 p-3"><div className="text-xs font-semibold uppercase tracking-wide text-teal-300">Collocation</div>{w.collocations.map((c, ci) => <div key={ci} className="mt-2 text-sm"><div className="font-medium text-teal-100">{clickableText(c.phrase)}<CopyBtn text={c.phrase} /> <SpeakBtn text={c.phrase} className="text-xs text-teal-300 hover:text-white">🔊</SpeakBtn></div><div className="mt-1 text-teal-200/70">{c.meaning}{c.note && ` — ${c.note}`}</div></div>)}</div>}
+                      {w.note && <div className="text-sm text-amber-400 mt-2">💡 {w.note}</div>}
+                    </div>
+                  </details>
                 </div>
-              </details>
+              </div>
             </div>
           ))}
         </div>}
