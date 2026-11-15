@@ -1,4 +1,4 @@
-export const normalize = value => String(value || '').normalize('NFKC').toLowerCase().trim().replace(/\s+/g,' ').replace(/[.!?]+$/,'');
+export const normalize = value => String(value || '').normalize('NFKC').replace(/[\u2018\u2019\u02BC]/g,"'").toLowerCase().trim().replace(/\s+/g,' ').replace(/[.!?]+$/,'');
 export function gameWords(input) {
  const seen=new Set();
  return (Array.isArray(input)?input:[]).filter(w=>w && !w.pending && typeof w.word==='string' && typeof w.meaning==='string' && w.word.trim() && w.meaning.trim()).filter(w=>{const key=normalize(w.word);if(seen.has(key))return false;seen.add(key);return true;}).slice(0,30);
