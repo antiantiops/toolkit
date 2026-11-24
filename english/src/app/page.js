@@ -10,6 +10,7 @@ import LookupLanguage from "./LookupLanguage";
 import { useLanguage } from "./LanguageContext";
 import ImageCrop from "./ImageCrop";
 import WritingProgress from "./WritingProgress";
+import GrammarProgress from "./GrammarProgress";
 import LessonChat from "./LessonChat";
 import Listening from "./Listening";
 import ListeningImage from "./ListeningImage";
@@ -320,6 +321,7 @@ export default function Home() {
       setGPreview(null);
       setGImage(null);
       setGImageId(null);
+      setGJob(null);
       setGRetry(null);
       setGPractice(false);
       setGPracticeData(null);
@@ -426,6 +428,8 @@ export default function Home() {
     setGPreview(URL.createObjectURL(file));
     setGImage(file);
     setGImageId(null);
+    setGJob(null);
+    setGRetry(null);
     setGrammar(null);
     setGPracticeData(null);
     setGError(null);
@@ -1316,7 +1320,8 @@ export default function Home() {
         </div>
 
         {/* Error notification */}
-        {gJob && <p role="status" className="mb-3 text-sm text-blue-200">{gJob.stage === "extract" ? "Đang đọc ảnh..." : `Đã xử lý ${gJob.progress?.completed || 0}/2 phần`}</p>}
+        {gJob && <p role="status" className="mb-3 text-sm text-blue-200">{gJob.stage === "reconnecting" ? `Mất kết nối tạm thời. Đang tự nối lại, không cần gửi lại ảnh. Mã hỗ trợ: ${gJob.jobId}` : gJob.stage === "extract" ? "Đang đọc ảnh..." : `Đã xử lý ${gJob.progress?.completed || 0}/${gJob.progress?.total || 4} phần`}</p>}
+        <GrammarProgress job={gJob} />
         {gRetry && !gLoading && <button onClick={() => analyzeGrammar()} className="mb-3 rounded-lg bg-amber-600 px-4 py-2">{ptext("Thử lại phần lỗi")}</button>}
         <ErrorBanner message={gError} onDismiss={() => setGError(null)} />
 

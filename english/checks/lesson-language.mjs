@@ -53,7 +53,7 @@ function makeMockResult(fields) {
   return res;
 }
 
-// 2.1 Test grammar mode with vi (instruction should be untouched, legacy keys present)
+// 2.1 Test grammar mode with vi and non-vi (partitioned prompt, legacy keys preserved)
 {
   const capturedPrompts = [];
   const mockCall = async (prompt, opts) => {
@@ -77,11 +77,29 @@ function makeMockResult(fields) {
   await runLesson(jobVi, mockCall);
   assert.equal(jobVi.status, 'completed', 'jobVi completed');
   const enrichPrompts = capturedPrompts.filter(p => p.opts.stage.startsWith('part-'));
-  assert.equal(enrichPrompts.length, 2);
+  assert.equal(enrichPrompts.length, 4);
   for (const { prompt } of enrichPrompts) {
     assert.ok(!prompt.includes('TARGET LANGUAGE OVERRIDE'), 'vi prompt has no TARGET LANGUAGE OVERRIDE');
-    assert.ok(prompt.includes(PROMPT), 'Original grammar template prompt included');
-    assert.ok(prompt.includes('titleVietnamese'), 'Legacy key preserved');
+    assert.ok(prompt.includes('Create a patient Vietnamese teacher-led lesson'), 'Teacher-led grammar header included');
+    assert.ok(prompt.includes('Generate ONLY this partition'), 'Partitioned grammar prompt used');
+  }
+  assert.ok(enrichPrompts.some(({ prompt }) => prompt.includes('titleVietnamese')), 'Partition 1 preserves legacy key titleVietnamese');
+
+  capturedPrompts.length = 0;
+  const jobEn = {
+    id: 'job-en-1',
+    mode: 'grammar',
+    targetLang: 'en',
+    images: ['http://example.com/img1.jpg'],
+    result: {},
+  };
+  await runLesson(jobEn, mockCall);
+  assert.equal(jobEn.status, 'completed', 'jobEn completed');
+  const enPrompts = capturedPrompts.filter(p => p.opts.stage.startsWith('part-'));
+  assert.equal(enPrompts.length, 4);
+  for (const { prompt } of enPrompts) {
+    assert.ok(prompt.includes('TARGET LANGUAGE OVERRIDE — mandatory:'), 'en grammar prompt has override');
+    assert.ok(prompt.includes('must be English'), 'en grammar prompt specifies English');
   }
 }
 

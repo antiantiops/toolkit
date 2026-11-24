@@ -10,6 +10,14 @@ export function writingGroups(dual) {
     ['task'], ['sections'], ['usefulPhrases','checklist','tips','yourTurn'],
   ];
 }
+export function grammarGroups() {
+  return [
+    ['title', 'titleVietnamese', 'learningGoal', 'everydayContext', 'keyIdea'],
+    ['rules'],
+    ['comparison', 'commonMistakes'],
+    ['notes', 'checkYourself', 'summary'],
+  ];
+}
 export function getPath(value, path) { return path.split('.').reduce((v,k) => v?.[k],value); }
 export function setPath(value, path, data) {
   const keys=path.split('.'); let target=value;
@@ -17,8 +25,20 @@ export function setPath(value, path, data) {
   target[keys.at(-1)]=data;
 }
 export function partPrompt(template, fields) {
-  const schema=JSON.parse(template.slice(template.indexOf('{'),template.lastIndexOf('}')+1));
-  const selected={};
-  for(const field of fields) { const value=getPath(schema,field); if(value===undefined) throw new Error(`Unknown Writing field: ${field}`); setPath(selected,field,value); }
-  return `${template.slice(0,template.indexOf('Return ONLY'))}\nGenerate ONLY this partition. Do not generate other lesson sections. Keep explanations concise without omitting source sentences. Return ONLY valid JSON matching this schema (null allowed for task on a sample-only page):\n${JSON.stringify(selected)}`;
+  const firstBrace = template.indexOf('{'), lastBrace = template.lastIndexOf('}');
+  const schema = JSON.parse(template.slice(firstBrace, lastBrace + 1));
+  const selected = {};
+  for (const field of fields) {
+    const value = getPath(schema, field);
+    if (value === undefined) throw new Error(`Unknown lesson field: ${field}`);
+    setPath(selected, field, value);
+  }
+  const returnJsonIdx = template.indexOf('Return JSON:');
+  const returnOnlyIdx = template.indexOf('Return ONLY');
+  const headerIdx = returnJsonIdx !== -1 && returnJsonIdx < firstBrace ? returnJsonIdx : returnOnlyIdx;
+  const prefix = template.slice(0, headerIdx).trimEnd();
+  const suffixRules = lastBrace + 1 < template.length
+    ? template.slice(lastBrace + 1).replace(/Return ONLY[^\n]*/g, '').trim()
+    : '';
+  return `${prefix}${suffixRules ? `\n\n${suffixRules}` : ''}\nGenerate ONLY this partition. Do not generate other lesson sections. Keep explanations concise without omitting source sentences. Return ONLY valid JSON matching this schema (null allowed for task on a sample-only page):\n${JSON.stringify(selected)}`;
 }

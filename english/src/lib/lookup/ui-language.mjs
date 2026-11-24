@@ -1518,6 +1518,10 @@ export const UI_TRANSLATIONS = Object.freeze({
   "Không cần chọn từng từ. Sau mỗi lượt chat, AI tự lưu tối đa 3 từ, cụm hoặc mẫu câu đáng học, kèm nghĩa và ví dụ đúng ngữ cảnh. Không có mục phù hợp thì không lưu.": {"en": "No need to pick words manually. After each chat turn, AI auto-saves up to 3 useful words, phrases, or sentence patterns with contextual meanings and examples. Nothing is saved if none match.", "ja": "単語を手動で選ぶ必要はありません。チャットごとに、AIが文脈に合った意味や例文とともに、学ぶ価値のある単語・フレーズ・構文を最大3つ自動保存します。適切なものがない場合は保存されません。", "ko": "단어를 직접 고를 필요가 없습니다. 매 턴 후 AI가 문맥에 맞는 의미 및 예문과 함께 유용한 단어, 숙어, 문장 패턴을 최대 3개까지 자동 저장합니다. 적절한 항목이 없으면 저장하지 않습니다.", "zh-TW": "無須逐字手動選取。每次對話後，AI 會自動儲存最多 3 個值得學習的字詞、片語或句型，並附上符合語境的釋義與例句。若無合適項目則不儲存。"},
   "Tự lưu đang bật. Bạn có thể tắt ngay trong khung chat, hoặc bấm Hoàn tác sau khi lưu. My Words gắn nhãn Chat. AI có thể chọn chưa đúng; hãy kiểm tra khi ôn.": {"en": "Auto-save is on. You can toggle it off in chat or click Undo right after saving. My Words tags them as Chat. AI might misjudge occasionally; verify while reviewing.", "ja": "自動保存はオンです。チャット内でオフに切り替えるか、保存直後に「元に戻す」を押せます。My WordsではChatタグが付きます。AIの抽出が正確でない場合もあるため、復習時に確認してください。", "ko": "자동 저장이 켜져 있습니다. 채팅창에서 끄거나 저장 직후 실행 취소를 누를 수 있습니다. My Words에 Chat 태그가 지정됩니다. AI 선택이 완벽하지 않을 수 있으니 복습할 때 확인하세요.", "zh-TW": "自動儲存已開啟。您可直接在聊天室關閉，或在儲存後點擊「復原」。My Words 會標記為 Chat。AI 偶爾可能有誤，複習時請多加確認。"},
   "Đã hiểu": {"en": "Got it", "ja": "了解", "ko": "확인", "zh-TW": "了解"},
+  "Ý chính & tình huống": {"en": "Key Idea & Context", "ja": "要点と場面", "ko": "핵심 개념 및 상황", "zh-TW": "重點與情境"},
+  "Công thức & ví dụ": {"en": "Formulas & Examples", "ja": "公式と例文", "ko": "공식 및 예문", "zh-TW": "公式與例句"},
+  "Phân biệt & lỗi thường gặp": {"en": "Comparison & Mistakes", "ja": "比較とよくある間違い", "ko": "비교 및 흔한 실수", "zh-TW": "比較與常見錯誤"},
+  "Mẹo nhớ, tự kiểm tra & tóm tắt": {"en": "Notes, Check & Summary", "ja": "メモ・確認・まとめ", "ko": "팁, 자가 점검 및 요약", "zh-TW": "記憶小撇步、自我測驗與總結"},
 });
 
 export function translateUi(text, locale = 'vi') {
