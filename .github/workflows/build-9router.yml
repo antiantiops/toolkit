@@ -17,7 +17,7 @@ env:
   # Updated by 9router Release Watch from decolua/9router GitHub tags.
   DEFAULT_ROUTER_VERSION: "0.5.123"
   DEFAULT_ROUTER_TAG: "v0.5.123"
-  DEFAULT_ROUTER_COMMIT: "6b8b7ceb9f8809b6df73a4c3bf4d6c98295cd734"
+  DEFAULT_ROUTER_COMMIT: "5ae63d22847e07042e235b40e1d926b65e509013"
 
 jobs:
   build-and-push:
