@@ -1522,6 +1522,11 @@ export const UI_TRANSLATIONS = Object.freeze({
   "Công thức & ví dụ": {"en": "Formulas & Examples", "ja": "公式と例文", "ko": "공식 및 예문", "zh-TW": "公式與例句"},
   "Phân biệt & lỗi thường gặp": {"en": "Comparison & Mistakes", "ja": "比較とよくある間違い", "ko": "비교 및 흔한 실수", "zh-TW": "比較與常見錯誤"},
   "Mẹo nhớ, tự kiểm tra & tóm tắt": {"en": "Notes, Check & Summary", "ja": "メモ・確認・まとめ", "ko": "팁, 자가 점검 및 요약", "zh-TW": "記憶小撇步、自我測驗與總結"},
+  "Đang tải MP3 từ ieltsextremes.com…": {"en": "Downloading MP3 from ieltsextremes.com…", "ja": "ieltsextremes.com から MP3 を読み込み中…", "ko": "ieltsextremes.com에서 MP3 불러오는 중…", "zh-TW": "正在從 ieltsextremes.com 下載 MP3…"},
+  "Nhập link MP3 trực tiếp (chỉ phát, chưa có transcript)": {"en": "Paste direct MP3 link (playback only, no transcript yet)", "ja": "MP3直リンクを入力（再生のみ・文字起こし未対応）", "ko": "직접 MP3 링크 입력 (재생 전용, 아직 스크립트 없음)", "zh-TW": "輸入直接 MP3 連結（僅供播放，尚無逐字稿）"},
+  "Chỉ hỗ trợ link HTTPS trực tiếp từ ieltsextremes.com (tối đa 40 MB).": {"en": "Only direct HTTPS links from ieltsextremes.com are supported (up to 40 MB).", "ja": "ieltsextremes.com の直接 HTTPS リンクのみ対応しています（最大 40 MB）。", "ko": "ieltsextremes.com의 직접 HTTPS 링크만 지원됩니다(최대 40 MB).", "zh-TW": "僅支援來自 ieltsextremes.com 的直接 HTTPS 連結（上限 40 MB）。"},
+  "Tải link MP3": {"en": "Load MP3 link", "ja": "MP3リンクを読み込む", "ko": "MP3 링크 불러오기", "zh-TW": "載入 MP3 連結"},
+  "Chế độ chỉ phát · chưa có transcript cho file nhập từ link.": {"en": "Playback-only mode · no transcript yet for link-imported audio.", "ja": "再生専用モード・リンクから読み込んだ音声の文字起こしはまだありません。", "ko": "재생 전용 모드 · 링크로 가져온 오디오에는 아직 스크립트가 없습니다.", "zh-TW": "僅供播放模式・透過連結匯入的音訊尚無逐字稿。"},
 });
 
 export function translateUi(text, locale = 'vi') {

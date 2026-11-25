@@ -7,7 +7,7 @@ const dir=()=>path.join(process.env.CACHE_DIR||path.join(os.tmpdir(),'vocab_cach
 function file(owner){if(!/^account_[a-f0-9]{64}$/.test(owner))throw Error('Invalid owner');fs.mkdirSync(dir(),{recursive:true});return path.join(dir(),owner+'.json');}
 export function history(owner){const f=file(owner);if(!fs.existsSync(f))return [];const rows=JSON.parse(fs.readFileSync(f,'utf8'));return rows.filter(x=>Date.now()-x.createdAt<HISTORY_TTL);}
 export function archiveListening(owner,lesson){
- if(!lesson?.sentences?.length&&!lesson?.result?.segments?.length)return;
+ if(!lesson?.sentences?.length&&!lesson?.result?.segments?.length&&!lesson?.audio?.id)return;
  const rows=history(owner),key=createHash('sha256').update(JSON.stringify(lesson)).digest('hex');
  if(rows.some(x=>x.key===key||x.previousKeys?.includes(key)))return;
  const row={id:randomUUID(),key,createdAt:Date.now(),source:lesson.source==='text'?'text':lesson.audio?'audio':'image',title:lesson.audio?.name||lesson.title||lesson.sentences?.[0]?.en?.slice(0,100)||'Bài nghe từ ảnh',lesson};
