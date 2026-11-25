@@ -1,3 +1,12 @@
+const redact = s => {
+  let out = String(s || '');
+  if (process.env.NINEROUTER_KEY) out = out.replaceAll(process.env.NINEROUTER_KEY, '[redacted]');
+  return out
+    .replace(/Bearer\s+\S+/gi, 'Bearer [redacted]')
+    .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]*)?\b/g, '[redacted]')
+    .replace(/(["']?(?:access_?token|refresh_?token|id_?token|api_?key|authorization|x-api-key|token|secret)["']?\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s&,;}\]]+)/gi, '$1[redacted]');
+};
+
 export async function callJson(content, { requestId, stage, maxTokens = 4096, shape = "array", model = process.env.NINEROUTER_MODEL || 'ag/gemini-3.8-flash-high', fallbackModel, timeoutMs = 120000 } = {}) {
   const started = Date.now();
   const headers = { 'Content-Type': 'application/json' };
@@ -10,8 +19,23 @@ export async function callJson(content, { requestId, stage, maxTokens = 4096, sh
       body: JSON.stringify({ model, messages: [{ role: 'user', content }], stream: false, max_tokens: maxTokens, temperature: 0.2 }),
     });
     log('response', { status: res.status });
-    const data = await res.json();
-    if (!res.ok) throw new Error(`9router HTTP ${res.status}: ${String(data.error?.message || data.error || data.message || 'Unknown upstream error').slice(0, 600)}`);
+    const raw = await res.text();
+    const trimmed = raw.trim();
+    const snippet = trimmed ? redact(trimmed.replace(/\s+/g, ' ')).slice(0, 600) : '';
+    let data = null;
+    let jsonError = null;
+    if (trimmed) {
+      try { data = JSON.parse(trimmed); } catch (err) { jsonError = err; }
+    }
+    if (!res.ok) {
+      const rawMsg = data && typeof data === 'object' ? (data.error?.message || data.error || data.message) : null;
+      const msg = rawMsg && typeof rawMsg === 'object' ? JSON.stringify(rawMsg) : rawMsg;
+      const detail = msg ? redact(String(msg)).slice(0, 600) : (snippet || 'Empty upstream response');
+      throw new Error(`9router HTTP ${res.status}: ${detail}`);
+    }
+    if (!trimmed || jsonError || !data || typeof data !== 'object') {
+      throw new Error(`9router invalid JSON response: ${snippet || 'Empty upstream response'}`);
+    }
     if (fallbackModel && model.startsWith('ag/') && data.choices?.[0]?.finish_reason === 'recitation') {
       log('fallback', { model, fallbackModel, reason: 'recitation' });
       return await callJson(content, { requestId, stage, maxTokens, shape, model: fallbackModel, timeoutMs });
@@ -25,7 +49,7 @@ export async function callJson(content, { requestId, stage, maxTokens = 4096, sh
     log('complete', { count: shape === 'array' ? result.length : Object.keys(result).length });
     return result;
   } catch (e) {
-    const error = new Error(`${e.name}: ${e.message}`.replace(/Bearer\s+\S+/gi, 'Bearer [redacted]'));
+    const error = new Error(redact(`${e.name}: ${e.message}`));
     log('failed', { error: error.message, causeCode: String(e.cause?.code || '').slice(0, 80), causeName: String(e.cause?.name || '').slice(0, 80), timeoutMs });
     throw error;
   }
