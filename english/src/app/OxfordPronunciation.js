@@ -218,7 +218,7 @@ export default function OxfordPronunciation({ word, pronunciation, ipa, onLoaded
         <button type="button" onClick={() => setRetry(n => n + 1)} className="min-h-11 px-2 underline">Thử lại</button>
         {oxfordListenUrl && <a href={oxfordListenUrl} className="inline-flex min-h-11 items-center px-1 text-violet-200 underline hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-400">Nghe trên Oxford</a>}
       </div>
-    </> : <span className="text-xs text-slate-400" role="status">Đang tải phát âm Oxford…</span>}
+    </> : <span className="text-xs text-slate-400" aria-live="polite">Đang tải phát âm Oxford…</span>}
     {value && error && (
       <div className="mt-1 space-y-1">
         <div role="alert" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-amber-300">

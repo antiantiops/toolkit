@@ -1,6 +1,7 @@
 "use client";
 import {useState} from 'react';
 import ContrastTip from "../ContrastTip";
+import OxfordPronunciation from '../OxfordPronunciation';
 import SpeakBtn from '../SpeakBtn';
 function CopyBtn({text}) {
  const [copied,setCopied]=useState(false),[error,setError]=useState(false);
@@ -10,21 +11,12 @@ function CopyBtn({text}) {
 export default function AnswerCard({word:w}) {
  return <div data-game-vocabulary-card className="mt-3 rounded-xl border border-slate-700 bg-slate-900 p-4 sm:p-5">
               <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="flex items-center gap-1 text-lg sm:text-xl font-bold text-blue-400 break-words"><span>{w.word}</span><CopyBtn text={w.word} /></div>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm italic text-purple-400">
-                    {w.pronunciation?.uk || w.pronunciation?.us ? (
-                      <>
-                        {w.pronunciation.uk && <span>🇬🇧 UK: {w.pronunciation.uk}</span>}
-                        {w.pronunciation.us && <span>🇺🇸 US: {w.pronunciation.us}</span>}
-                      </>
-                    ) : (
-                      <span>{w.ipa}</span>
-                    )}
-                    {w.partOfSpeech && <span className="rounded-full border border-blue-800 bg-blue-950 px-2 py-0.5 text-xs font-semibold not-italic text-blue-200">{w.partOfSpeech}</span>}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1 text-lg sm:text-xl font-bold text-blue-400 break-words"><span>{w.word}</span><CopyBtn text={w.word} />{w.partOfSpeech && <span className="rounded-full border border-blue-800 bg-blue-950 px-2 py-0.5 text-xs font-semibold not-italic text-blue-200">{w.partOfSpeech}</span>}</div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm italic text-purple-400 break-words">
+                    <OxfordPronunciation word={w.word} pronunciation={w.pronunciation} ipa={w.ipa} />
                   </div>
                 </div>
-                <SpeakBtn text={w.word} className="shrink-0 w-10 h-10 rounded-full bg-emerald-600 hover:bg-emerald-500 flex items-center justify-center text-lg transition-colors" title="Nghe phát âm">🔊</SpeakBtn>
               </div>
               <div className="mt-3 text-slate-100 font-medium">{w.meaning}</div>
               {w.definition && (
