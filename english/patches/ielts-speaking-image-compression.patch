@@ -1,0 +1,342 @@
+--- a/src/app/IeltsSpeaking.js
++++ b/src/app/IeltsSpeaking.js
+@@ -56,6 +56,171 @@
+   },
+ ];
+ 
++const COMPRESSION_STEPS = [
++  { maxDim: 2560, qualities: [0.85, 0.72] },
++  { maxDim: 2048, qualities: [0.78, 0.65] },
++  { maxDim: 1600, qualities: [0.72, 0.58] },
++  { maxDim: 1280, qualities: [0.65, 0.5] },
++  { maxDim: 960, qualities: [0.55, 0.42] },
++];
++
++function compressedJpegName(name) {
++  const raw = String(name || "").trim();
++  if (!raw) return "speaking-prompt.jpg";
++  const stem = raw.replace(/\.[^./\\]+$/, "");
++  return `${stem || "speaking-prompt"}.jpg`;
++}
++
++async function decodeImageSource(file, signal) {
++  if (signal?.aborted) {
++    throw new DOMException("Aborted", "AbortError");
++  }
++
++  if (typeof createImageBitmap === "function") {
++    try {
++      const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
++      if (signal?.aborted) {
++        bitmap.close?.();
++        throw new DOMException("Aborted", "AbortError");
++      }
++      if (!Number.isFinite(bitmap.width) || !Number.isFinite(bitmap.height) || bitmap.width <= 0 || bitmap.height <= 0) {
++        bitmap.close?.();
++        throw new Error("Không đọc được kích thước hợp lệ của ảnh.");
++      }
++      return {
++        source: bitmap,
++        width: bitmap.width,
++        height: bitmap.height,
++        cleanup: () => bitmap.close?.(),
++      };
++    } catch (err) {
++      if (err?.name === "AbortError" || signal?.aborted) {
++        throw new DOMException("Aborted", "AbortError");
++      }
++    }
++  }
++
++  if (typeof Image === "undefined" || typeof URL === "undefined" || typeof URL.createObjectURL !== "function") {
++    throw new Error("Trình duyệt không hỗ trợ xử lý ảnh tự động.");
++  }
++
++  const objectUrl = URL.createObjectURL(file);
++  try {
++    const img = await new Promise((resolve, reject) => {
++      const el = new Image();
++      const onAbort = () => {
++        el.onload = null;
++        el.onerror = null;
++        el.src = "";
++        reject(new DOMException("Aborted", "AbortError"));
++      };
++      if (signal) {
++        if (signal.aborted) {
++          onAbort();
++          return;
++        }
++        signal.addEventListener("abort", onAbort, { once: true });
++      }
++      el.onload = () => {
++        signal?.removeEventListener("abort", onAbort);
++        resolve(el);
++      };
++      el.onerror = () => {
++        signal?.removeEventListener("abort", onAbort);
++        reject(new Error("Không đọc được ảnh này trên trình duyệt. Vui lòng chọn ảnh JPEG, PNG hoặc WebP hợp lệ khác."));
++      };
++      el.src = objectUrl;
++    });
++    const width = img.naturalWidth || img.width;
++    const height = img.naturalHeight || img.height;
++    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
++      throw new Error("Không đọc được kích thước hợp lệ của ảnh.");
++    }
++    return {
++      source: img,
++      width,
++      height,
++      cleanup: () => URL.revokeObjectURL(objectUrl),
++    };
++  } catch (err) {
++    URL.revokeObjectURL(objectUrl);
++    throw err;
++  }
++}
++
++function canvasToJpegBlob(canvas, quality) {
++  if (typeof canvas?.toBlob !== "function") {
++    return Promise.reject(new Error("Trình duyệt không hỗ trợ nén ảnh JPEG."));
++  }
++  return new Promise((resolve) => {
++    canvas.toBlob((blob) => resolve(blob || null), "image/jpeg", quality);
++  });
++}
++
++async function compressOversizedImage(inputFile, signal) {
++  const decoded = await decodeImageSource(inputFile, signal);
++  const canvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
++  if (!canvas) {
++    decoded.cleanup();
++    throw new Error("Trình duyệt không tạo được bộ xử lý ảnh.");
++  }
++
++  let drawnW = 0;
++  let drawnH = 0;
++  let lowestQualityForDims = Infinity;
++
++  try {
++    const ctx = canvas.getContext("2d");
++    if (!ctx) {
++      throw new Error("Trình duyệt không tạo được bộ xử lý ảnh.");
++    }
++
++    for (const step of COMPRESSION_STEPS) {
++      if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
++
++      const scale = Math.min(1, step.maxDim / Math.max(decoded.width, decoded.height));
++      const targetW = Math.max(1, Math.round(decoded.width * scale));
++      const targetH = Math.max(1, Math.round(decoded.height * scale));
++
++      if (targetW !== drawnW || targetH !== drawnH) {
++        canvas.width = targetW;
++        canvas.height = targetH;
++        ctx.fillStyle = "#ffffff";
++        ctx.fillRect(0, 0, targetW, targetH);
++        ctx.imageSmoothingEnabled = true;
++        ctx.imageSmoothingQuality = "high";
++        ctx.drawImage(decoded.source, 0, 0, targetW, targetH);
++        drawnW = targetW;
++        drawnH = targetH;
++        lowestQualityForDims = Infinity;
++      }
++
++      for (const quality of step.qualities) {
++        if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
++        if (quality >= lowestQualityForDims) continue;
++        lowestQualityForDims = quality;
++
++        const blob = await canvasToJpegBlob(canvas, quality);
++        if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
++        if (blob && blob.size > 0 && blob.size <= MAX_IMAGE_BYTES) {
++          return new File([blob], compressedJpegName(inputFile.name), {
++            type: "image/jpeg",
++            lastModified: inputFile.lastModified || Date.now(),
++          });
++        }
++      }
++    }
++
++    throw new Error(
++      "Không thể nén ảnh xuống ≤ 4 MiB mà vẫn giữ độ rõ. Vui lòng chụp lại gần hơn hoặc chọn ảnh có độ phân giải thấp hơn."
++    );
++  } finally {
++    decoded.cleanup();
++    canvas.width = 0;
++    canvas.height = 0;
++  }
++}
++
+ export default function IeltsSpeaking({ clickableText }) {
+   const wordText = (t) => (clickableText ? clickableText(t || "") : t);
+   const isEnglishText = (t) => Boolean(t && /[A-Za-z]/.test(t) && !/[\u00C0-\u024F\u1E00-\u1EFF]/.test(t));
+@@ -79,6 +244,8 @@
+   const storyInputId = useId();
+ 
+   const fileRef = useRef(null);
++  const filePrepAbortRef = useRef(null);
++  const filePrepSeqRef = useRef(0);
+   const analyzeAbortRef = useRef(null);
+   const guideAbortRef = useRef(null);
+   const analyzeSeqRef = useRef(0);
+@@ -91,6 +258,7 @@
+   const prefSaveChainRef = useRef(Promise.resolve());
+ 
+   const [file, setFile] = useState(null);
++  const [preparingFile, setPreparingFile] = useState(false);
+   const [previewUrl, setPreviewUrl] = useState(null);
+   const [band, setBand] = useState("6.5");
+   const [prefStatus, setPrefStatus] = useState("idle"); // idle | loading | saving | saved | loadError | saveError
+@@ -182,10 +350,13 @@
+     loadBandPreference();
+     restoreSpeakingSession();
+     return () => {
++      filePrepSeqRef.current += 1;
+       analyzeSeqRef.current += 1;
+       guideSeqRef.current += 1;
+       prefLoadSeqRef.current += 1;
+       prefEditSeqRef.current += 1;
++      filePrepAbortRef.current?.abort();
++      filePrepAbortRef.current = null;
+       analyzeAbortRef.current?.abort();
+       guideAbortRef.current?.abort();
+       prefLoadAbortRef.current?.abort();
+@@ -194,12 +365,16 @@
+   }, []);
+ 
+   const cancelAllRequests = () => {
++    filePrepSeqRef.current += 1;
+     analyzeSeqRef.current += 1;
+     guideSeqRef.current += 1;
++    filePrepAbortRef.current?.abort();
+     analyzeAbortRef.current?.abort();
+     guideAbortRef.current?.abort();
++    filePrepAbortRef.current = null;
+     analyzeAbortRef.current = null;
+     guideAbortRef.current = null;
++    setPreparingFile(false);
+     setAnalyzing(false);
+     setGuidingKey(null);
+   };
+@@ -214,23 +389,47 @@
+     setGuides(EMPTY_GUIDES);
+   };
+ 
+-  const handleSelectFile = (nextFile) => {
++  const handleSelectFile = async (nextFile) => {
+     resetResultsOnly();
++    setFile(null);
+     if (!nextFile) {
+-      setFile(null);
+       return;
+     }
+     if (nextFile.type && !ALLOWED_IMAGE_MIME.has(nextFile.type.toLowerCase())) {
+-      setFile(null);
+       setAnalyzeError("Chỉ hỗ trợ ảnh JPEG, PNG hoặc WebP.");
+       return;
+     }
+-    if (nextFile.size <= 0 || nextFile.size > MAX_IMAGE_BYTES) {
+-      setFile(null);
+-      setAnalyzeError("Ảnh phải có dung lượng tối đa 4 MiB.");
++    if (nextFile.size <= 0) {
++      setAnalyzeError("Ảnh trống hoặc không hợp lệ. Vui lòng chọn ảnh khác.");
++      return;
++    }
++    if (nextFile.size <= MAX_IMAGE_BYTES) {
++      setFile(nextFile);
+       return;
+     }
+-    setFile(nextFile);
++
++    const seq = ++filePrepSeqRef.current;
++    const controller = new AbortController();
++    filePrepAbortRef.current = controller;
++    setPreparingFile(true);
++    setAnalyzeError(null);
++
++    try {
++      const prepared = await compressOversizedImage(nextFile, controller.signal);
++      if (seq !== filePrepSeqRef.current || controller.signal.aborted) return;
++      setFile(prepared);
++    } catch (err) {
++      if (err?.name === "AbortError" || seq !== filePrepSeqRef.current || controller.signal.aborted) return;
++      setFile(null);
++      setAnalyzeError(
++        err?.message || "Không thể nén ảnh xuống ≤ 4 MiB. Vui lòng chọn ảnh JPEG, PNG hoặc WebP nhỏ hơn."
++      );
++    } finally {
++      if (seq === filePrepSeqRef.current) {
++        setPreparingFile(false);
++        if (filePrepAbortRef.current === controller) filePrepAbortRef.current = null;
++      }
++    }
+   };
+ 
+   const persistBandPreference = (nextBand, editSeq) => {
+@@ -294,7 +493,7 @@
+ 
+   const handleAnalyze = async (e) => {
+     e.preventDefault();
+-    if (!file || analyzing) return;
++    if (!file || preparingFile || analyzing) return;
+ 
+     const seq = ++analyzeSeqRef.current;
+     guideSeqRef.current += 1;
+@@ -479,7 +678,7 @@
+                 htmlFor={fileInputId}
+                 className="block text-xs font-semibold uppercase tracking-wider text-rose-300 mb-2"
+               >
+-                Ảnh đề bài IELTS Speaking (JPEG, PNG, WebP · tối đa 4 MiB)
++                Ảnh đề bài IELTS Speaking (JPEG, PNG, WebP · tự động nén nếu &gt; 4 MiB)
+               </label>
+ 
+               {previewUrl ? (
+@@ -514,18 +713,23 @@
+               ) : (
+                 <button
+                   type="button"
++                  disabled={analyzing}
+                   onClick={() => fileRef.current?.click()}
+                   onDragOver={(e) => e.preventDefault()}
+                   onDrop={(e) => {
+                     e.preventDefault();
++                    if (analyzing) return;
+                     const dropped = e.dataTransfer.files?.[0];
+                     if (dropped) handleSelectFile(dropped);
+                   }}
++                  aria-busy={preparingFile}
+                   className="w-full rounded-xl border-2 border-dashed border-rose-600/50 hover:border-rose-400 bg-slate-950/40 px-4 py-8 text-center transition-colors"
+                 >
+                   <div className="text-3xl mb-2" aria-hidden="true">🎤</div>
+-                  <div className="text-sm font-semibold text-slate-200">Chọn hoặc kéo thả 1 ảnh đề IELTS Speaking</div>
+-                  <div className="mt-1 text-xs text-slate-400">JPEG, PNG hoặc WebP · ≤ 4 MiB</div>
++                  <div className="text-sm font-semibold text-slate-200">
++                    {preparingFile ? "Đang nén ảnh xuống ≤ 4 MiB..." : "Chọn hoặc kéo thả 1 ảnh đề IELTS Speaking"}
++                  </div>
++                  <div className="mt-1 text-xs text-slate-400">JPEG, PNG hoặc WebP · tự động nén nếu &gt; 4 MiB</div>
+                 </button>
+               )}
+ 
+@@ -607,12 +811,17 @@
+           <div className="flex flex-wrap items-center gap-3">
+             <button
+               type="submit"
+-              disabled={!file || analyzing || guidingKey !== null}
+-              aria-busy={analyzing}
++              disabled={!file || preparingFile || analyzing || guidingKey !== null}
++              aria-busy={preparingFile || analyzing}
+               className="min-h-11 w-full sm:w-auto rounded-xl bg-rose-600 hover:bg-rose-500 disabled:bg-slate-700 disabled:cursor-not-allowed px-6 py-3 text-sm sm:text-base font-semibold text-white transition-colors"
+             >
+-              {analyzing ? "Đang phân tích đề..." : "Phân tích đề"}
++              {preparingFile ? "Đang nén ảnh..." : analyzing ? "Đang phân tích đề..." : "Phân tích đề"}
+             </button>
++            {preparingFile && (
++              <span role="status" aria-live="polite" className="text-xs text-amber-300">
++                Ảnh lớn hơn 4 MiB — đang tự động nén xuống ≤ 4 MiB...
++              </span>
++            )}
+             {analyzing && (
+               <span role="status" className="text-xs text-rose-300">
+                 Đang đọc câu hỏi từ ảnh và dịch nghĩa sang tiếng Việt...
